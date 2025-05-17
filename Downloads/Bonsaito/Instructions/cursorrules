@@ -1,0 +1,23 @@
+# Cursor Rules
+
+## Best Practices for Using Cursor
+
+- Be clear and specific in your requests.
+- Provide relevant context, such as code snippets or error messages.
+- Use step-by-step instructions for complex tasks.
+- Ask for explanations if you don't understand a suggestion.
+- Review and test code changes before deploying.
+- Use version control to track changes.
+- Communicate goals and constraints up front.
+- Request summaries or documentation as needed.
+
+## How to Ask for Help
+- Describe the problem and what you've tried.
+- Share relevant files or error logs.
+- Specify your tech stack and environment.
+
+## Tips for Effective Collaboration
+- Break large tasks into smaller steps.
+- Use checklists for multi-step features.
+- Ask for code reviews or refactoring suggestions.
+- Request best practices for security and performance. 
