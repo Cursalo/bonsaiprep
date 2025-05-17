@@ -2,6 +2,13 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
+// Standard CORS headers. Adjust as necessary for your security requirements.
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*', // Or specify your frontend's origin e.g., 'https://your-app.vercel.app'
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type', // Ensure 'content-type' is present
+};
+
 // IMPORTANT: Google Cloud Vision API Integration
 // 1. Enable the Cloud Vision API in your Google Cloud Platform project.
 // 2. Create an API key for the Vision API.
@@ -22,10 +29,15 @@ const supabaseAdmin = createClient(
 );
 
 serve(async (req) => {
+  // Handle OPTIONS preflight request
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: CORS_HEADERS, status: 200 });
+  }
+
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
       status: 405,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' }, // Also include CORS headers on error
     });
   }
 
@@ -35,7 +47,7 @@ serve(async (req) => {
     if (!fileUrl && !storagePath) {
       return new Response(JSON.stringify({ error: 'Missing fileUrl or storagePath' }), {
         status: 400,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' }, // Also include CORS headers on error
       });
     }
 
@@ -159,7 +171,7 @@ serve(async (req) => {
       console.log("Extracted text using page-level annotations fallback.")
       return new Response(JSON.stringify({ extractedText: pageText.trim() }), {
         status: 200,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' }, // Also include CORS headers
       });
     }
     
@@ -168,14 +180,14 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({ extractedText: extractedText.trim() }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' }, // Also include CORS headers
     });
 
   } catch (error) {
     console.error('Error in OCR PDF function:', error.message, error.stack);
     return new Response(JSON.stringify({ error: error.message || 'Internal Server Error' }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' }, // Also include CORS headers
     });
   }
 });

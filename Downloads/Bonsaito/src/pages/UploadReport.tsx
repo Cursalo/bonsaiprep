@@ -17,6 +17,7 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { useDropzone } from 'react-dropzone';
 import { uploadFileToSupabase, ocrPdfFromSupabase } from '../services/ocrService'; 
 import { generateQuestionsFromMistakes, GeneratedQuestion } from '../services/aiService';
+import { supabase } from '../supabaseClient';
 
 const UploadReport: React.FC = () => {
   const [drawerOpen, setDrawerOpen] = useState<boolean>(false); 
@@ -46,6 +47,13 @@ const UploadReport: React.FC = () => {
       setIsLoading(true);
       
       try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          setError('No active session. Please log in again.');
+          setIsLoading(false);
+          return;
+        }
+
         setLoadingMessage('Uploading PDF to secure storage...');
         // You might want to make this public if your OCR function needs a public URL
         // and your bucket policies allow. Otherwise, pass storagePath.

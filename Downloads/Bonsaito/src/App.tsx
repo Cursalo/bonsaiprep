@@ -12,6 +12,9 @@ import NotFound from './pages/NotFound';
 import Lessons from './pages/Lessons';
 import AdminDashboard from './pages/AdminDashboard';
 
+// Import components
+import ProtectedRoute from './components/ProtectedRoute';
+
 // Import providers
 import SkillsProvider from './components/SkillsProvider';
 
@@ -54,10 +57,15 @@ function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/upload" element={<UploadReport />} />
-            <Route path="/lessons" element={<Lessons />} />
-            <Route path="/admin" element={<AdminDashboard />} />
+            {/* Protected Routes */}
+            <Route element={<ProtectedRoute />}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/upload" element={<UploadReport />} />
+              <Route path="/lessons" element={<Lessons />} />
+              {/* Add other routes that need protection here, e.g., profile, etc. */}
+            </Route>
+            {/* Admin Route - can also be protected or have its own role-based protection */}
+            <Route path="/admin" element={<AdminDashboard />} /> 
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Router>
