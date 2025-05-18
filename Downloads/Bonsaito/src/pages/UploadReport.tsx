@@ -49,7 +49,7 @@ import { uploadFileToSupabase, ocrPdfFromSupabase } from '../services/ocrService
 import { generateQuestionsFromMistakes, GeneratedQuestion } from '../services/aiService';
 import { supabase } from '../supabaseClient';
 import { useSkills } from '../components/SkillsProvider';
-import Lottie from 'lottie-react';
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 
 // Define an interface for user answers
 interface StudentAnswers {
@@ -89,9 +89,6 @@ const UploadReport: React.FC = () => {
   const [questionSkillMap, setQuestionSkillMap] = useState<QuestionSkillMapping>({});
   const [showTreeGrowthBadge, setShowTreeGrowthBadge] = useState<boolean>(false);
   const [treeBadgeCount, setTreeBadgeCount] = useState<number>(0);
-  
-  // Add state for Lottie animation data
-  const [animationData, setAnimationData] = useState<any>(null);
   
   // Group questions by topic for better organization
   const questionsByTopic = React.useMemo(() => {
@@ -154,25 +151,6 @@ const UploadReport: React.FC = () => {
       mapQuestionsToSkills(generatedQuestions);
     }
   }, [generatedQuestions, mapQuestionsToSkills]);
-
-  // Add an effect to fetch the Lottie animation data
-  useEffect(() => {
-    // Function to fetch animation data
-    const fetchAnimationData = async () => {
-      try {
-        const response = await fetch('/book.json');
-        if (!response.ok) {
-          throw new Error('Failed to load animation data');
-        }
-        const data = await response.json();
-        setAnimationData(data);
-      } catch (error) {
-        console.error('Error loading Lottie animation:', error);
-      }
-    };
-
-    fetchAnimationData();
-  }, []);
 
   const handleDrawerToggle = () => {
     setDrawerOpen(!drawerOpen);
@@ -594,15 +572,12 @@ const UploadReport: React.FC = () => {
               padding: 4,
             }}
           >
-            {animationData ? (
-              <Lottie
-                animationData={animationData}
-                loop={true}
-                style={{ width: 240, height: 240 }}
-              />
-            ) : (
-              <CircularProgress size={80} />
-            )}
+            <DotLottieReact
+              src="https://lottie.host/d2496ec5-3972-45c9-8e12-74123f42fa49/GGA5w0BWEP.lottie"
+              loop
+              autoplay
+              style={{ width: 280, height: 280 }}
+            />
             <Typography variant="h6" mt={2} align="center">
               {loadingMessage || 'Processing...'}
             </Typography>
