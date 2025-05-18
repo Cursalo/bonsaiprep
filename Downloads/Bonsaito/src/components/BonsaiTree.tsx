@@ -169,6 +169,18 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
     setImageError(true);
   };
 
+  // Add global keyframes for floating animation
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.innerHTML = `@keyframes floatBonsai {
+      0% { transform: translateY(0) scale(0.5); }
+      50% { transform: translateY(-10px) scale(0.5); }
+      100% { transform: translateY(0) scale(0.5); }
+    }`;
+    document.head.appendChild(style);
+    return () => { document.head.removeChild(style); };
+  }, []);
+
   if (isLoading) {
     return (
       <Box sx={{ 
@@ -264,7 +276,10 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
               alt={`Bonsai tree progress - ${correctAnswersCount} questions correct`}
               style={{
                 ...imageProps,
-                opacity: isImageLoaded ? 1 : 0
+                opacity: isImageLoaded ? 1 : 0,
+                // Add floating animation and scale
+                animation: 'floatBonsai 3.5s ease-in-out infinite',
+                transform: `${imageProps.transform ? imageProps.transform.get() : 'translateY(0)'} scale(0.5)`
               }}
               onLoad={() => setIsImageLoaded(true)}
               onError={handleImageError}
