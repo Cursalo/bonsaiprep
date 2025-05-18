@@ -44,9 +44,10 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import LocalFloristIcon from '@mui/icons-material/LocalFlorist';
 import EmojiNatureIcon from '@mui/icons-material/EmojiNature';
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import { useDropzone } from 'react-dropzone';
-import { uploadFileToSupabase, ocrPdfFromSupabase } from '../services/ocrService'; 
-import { generateQuestionsFromMistakes, GeneratedQuestion } from '../services/aiService';
+import { uploadFileToSupabase } from '../services/ocrService'; 
+import { generateQuestionsFromMistakes, GeneratedQuestion } from '../services/geminiPdfService';
 import { supabase } from '../supabaseClient';
 import { useSkills } from '../components/SkillsProvider';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
@@ -182,9 +183,8 @@ const UploadReport: React.FC = () => {
           return;
         }
 
-        // Handle differently based on file type
+        // Handle text files the same way as before
         if (file.type === 'text/plain') {
-          // For text files, read the content directly
           setLoadingMessage('Reading text file content...');
           const text = await file.text();
           // Add realistic processing delay
@@ -193,30 +193,28 @@ const UploadReport: React.FC = () => {
           setActiveStep(2);
           
           setLoadingMessage('Analyzing report and generating personalized questions...');
-          // Add realistic processing delay before question generation - increased to 15 seconds
           await addProcessingDelay(15000);
           const questions = await generateQuestionsFromMistakes(text);
           setGeneratedQuestions(questions);
           setActiveStep(3);
         } else {
-          // PDF processing flow
-          setLoadingMessage('Uploading PDF to secure storage...');
-          const { storagePath, publicUrl } = await uploadFileToSupabase(file, 'score-reports', { publicAccess: false });
-          console.log('File uploaded:', { storagePath, publicUrl });
+          // For PDF files, now process directly with Gemini 2.5 Flash
+          setLoadingMessage('Processing PDF with Gemini 2.5 Flash...');
           
-          // Add realistic processing delay
-          await addProcessingDelay(2000);
-
-          setLoadingMessage('Extracting text from PDF (OCR process)... This may take a moment.');
-          const text = await ocrPdfFromSupabase(publicUrl, storagePath);
-          setExtractedText(text);
+          // We'll upload the file to Supabase for tracking/storage purposes
+          const { storagePath } = await uploadFileToSupabase(file, 'score-reports', { publicAccess: false });
+          console.log('File uploaded to Supabase:', { storagePath });
+          
+          // Skip text extraction step and directly process the PDF with Gemini
+          await addProcessingDelay(3000);
+          
+          // Skip the text extraction step for improved UI flow
           setActiveStep(2);
-          console.log('Text extracted:', text.substring(0, 100) + '...');
+          setLoadingMessage('Analyzing PDF and generating personalized questions...');
           
-          setLoadingMessage('Analyzing your report and building personalized questions...');
-          // Add realistic processing delay for question generation - increased to 15 seconds
+          // Generate questions directly from the PDF file using Gemini 2.5 Flash
           await addProcessingDelay(15000);
-          const questions = await generateQuestionsFromMistakes(text);
+          const questions = await generateQuestionsFromMistakes(file);
           setGeneratedQuestions(questions);
           setActiveStep(3);
         }
@@ -509,13 +507,19 @@ const UploadReport: React.FC = () => {
                 }}
               >
                 <input {...getInputProps()} />
-                <CloudUploadIcon sx={{ fontSize: 80, color: 'primary.main', mb: 2 }} />
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <CloudUploadIcon sx={{ fontSize: 60, color: 'primary.main', mb: 1 }} />
+                  <PictureAsPdfIcon sx={{ fontSize: 40, color: 'secondary.main', mb: 2 }} />
+                </Box>
                 {isDragActive ? (
                   <Typography variant="h6" color="primary.main">Drop the file here ...</Typography>
                 ) : (
                   <Typography variant="h6">Drag 'n' drop a file here, or click to select file</Typography>
                 )}
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                  (PDF files are now processed directly with Gemini 2.5 Flash)
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
                   (Max file size: 10MB. Supported formats: PDF, TXT)
                 </Typography>
               </Paper>
