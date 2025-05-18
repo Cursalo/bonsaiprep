@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Box, Typography, Paper, useTheme, Tooltip } from '@mui/material';
-import { useSpring, animated, config } from 'react-spring';
+import { useSpring, animated, config, useSpringRef, useChain } from 'react-spring';
 
 interface Skill {
   id: string;
@@ -36,7 +36,9 @@ interface Branch {
   thickness: number;
   angle: number;
   masteryRatio: number;
+  level: number;
   skills: Skill[];
+  subBranches: Branch[];
 }
 
 interface LeafCoordinates {
@@ -45,6 +47,7 @@ interface LeafCoordinates {
   size: number;
   angle: number;
   isRecentlyMastered: boolean;
+  hue: number;
 }
 
 const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
@@ -54,7 +57,8 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
   const [showTooltip, setShowTooltip] = useState<string | null>(null);
   const [animation, setAnimation] = useState<boolean>(false);
   const [firstRender, setFirstRender] = useState<boolean>(true);
-
+  const [hoveredBranch, setHoveredBranch] = useState<string | null>(null);
+  
   // Reference to track previous skills for comparison
   const prevSkillsRef = useRef<Skill[]>([]);
   
@@ -62,6 +66,11 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
   const masteredSkills = skills.filter(skill => skill.mastered);
   const masteryPercentage = Math.round((masteredSkills.length / totalSkills) * 100);
   
+  // Spring animation refs for chaining
+  const trunkSpringRef = useSpringRef();
+  const branchSpringRef = useSpringRef();
+  const leafSpringRef = useSpringRef();
+
   // Spring animations
   const percentageProps = useSpring({
     number: masteryPercentage,
@@ -69,6 +78,37 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
     config: { tension: 120, friction: 14 },
     delay: 300,
   });
+
+  const trunkProps = useSpring({
+    ref: trunkSpringRef,
+    from: { strokeDashoffset: 1000, opacity: 0.7 },
+    to: { strokeDashoffset: 0, opacity: 1 },
+    config: { tension: 80, friction: 15, duration: 1500 },
+  });
+
+  const branchProps = useSpring({
+    ref: branchSpringRef,
+    from: { strokeDashoffset: 1000, opacity: 0.5 },
+    to: { strokeDashoffset: 0, opacity: 1 },
+    config: { tension: 70, friction: 14, duration: 1200 },
+  });
+
+  const leafProps = useSpring({
+    ref: leafSpringRef,
+    from: { scale: 0, opacity: 0 },
+    to: { scale: 1, opacity: 1 },
+    config: { tension: 200, friction: 20, duration: 800 },
+  });
+
+  // Chain the animations
+  useChain(
+    firstRender 
+      ? [trunkSpringRef, branchSpringRef, leafSpringRef] 
+      : [], 
+    firstRender 
+      ? [0, 0.5, 0.8] 
+      : []
+  );
 
   const treeContainerProps = useSpring({
     from: { opacity: 0, transform: 'translateY(30px)' },
@@ -128,37 +168,56 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
         : '#5D4037', // Dark rich brown for mature tree
         
     // Set trunk dimensions based on growth
-    trunkWidth: clamp(25 + (masteryPercentage / 5), 25, 35),
-    trunkHeight: clamp(140 + masteryPercentage, 150, 220),
+    trunkWidth: clamp(30 + (masteryPercentage / 4), 30, 45),
+    trunkHeight: clamp(160 + masteryPercentage, 160, 250),
     
     // Pot style based on growth
-    potWidth: clamp(90 + (masteryPercentage / 3), 90, 110),
-    potHeight: clamp(40 + (masteryPercentage / 10), 40, 50),
+    potWidth: clamp(100 + (masteryPercentage / 3), 100, 120),
+    potHeight: clamp(45 + (masteryPercentage / 10), 45, 55),
     
-    // Leaf base color becomes more vibrant with mastery
+    // Leaf colors become more vibrant with mastery
     leafBaseColor: masteryPercentage < 30 
-      ? '#A5D6A7' // Pale green for low mastery
+      ? 'hsl(120, 50%, 75%)' // Light green for low mastery
       : masteryPercentage < 60 
-        ? '#66BB6A' // Medium green
-        : '#4CAF50', // Vibrant green for high mastery
+        ? 'hsl(130, 60%, 65%)' // Medium green
+        : 'hsl(140, 70%, 55%)', // Vibrant green for high mastery
     
     // Overall size scaling factor
-    scale: clamp(0.8 + (masteryPercentage / 100), 0.8, 1.2)
+    scale: clamp(0.85 + (masteryPercentage / 100), 0.85, 1.25)
   };
 
-  // Generate branches
+  // Generate branches with a more natural, realistic pattern
   const generateBranches = (): Branch[] => {
     const categories = Object.keys(skillsByCategory);
-    const branches: Branch[] = [];
+    const mainBranches: Branch[] = [];
     
     // If no categories, return empty array
-    if (categories.length === 0) return branches;
+    if (categories.length === 0) return mainBranches;
     
     // Determine the main trunk end point (where it starts to curve)
-    const trunkEndY = 300 - treeVitality.trunkHeight * 0.7;
+    const trunkEndY = 300 - treeVitality.trunkHeight * 0.8;
     const trunkTop = { x: 150, y: trunkEndY };
     
-    // Calculate branch points based on categories
+    // Main branch distribution angles based on number of categories
+    const totalCategories = categories.length;
+    const baseAngles = [];
+    
+    if (totalCategories === 1) {
+      // Single category - branch goes mostly upward
+      baseAngles.push(-Math.PI/2);
+    } else if (totalCategories === 2) {
+      // Two categories - split left and right
+      baseAngles.push(-Math.PI/2 - 0.4);
+      baseAngles.push(-Math.PI/2 + 0.4);
+    } else {
+      // Distribute branches in a fan pattern
+      for (let i = 0; i < totalCategories; i++) {
+        const angle = lerp(-Math.PI/2 - 0.8, -Math.PI/2 + 0.8, i / (totalCategories - 1));
+        baseAngles.push(angle);
+      }
+    }
+    
+    // Create main branches
     for (let i = 0; i < categories.length; i++) {
       const category = categories[i];
       const skills = skillsByCategory[category];
@@ -166,26 +225,9 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
       // Skip empty categories
       if (!skills || skills.length === 0) continue;
       
-      // Calculate the angle and position for this branch
-      const totalCategories = categories.length;
-      let angle;
-      
-      if (totalCategories === 1) {
-        // Single category - branch goes straight up
-        angle = -Math.PI/2;
-      } else if (i === 0) {
-        // First branch - goes left
-        angle = -Math.PI/2 - randRange(0.2, 0.6);
-      } else if (i === totalCategories - 1) {
-        // Last branch - goes right
-        angle = -Math.PI/2 + randRange(0.2, 0.6);
-      } else {
-        // Middle branches - distributed between
-        const normalizedIndex = i / (totalCategories - 1);
-        angle = lerp(-Math.PI/2 - 0.5, -Math.PI/2 + 0.5, normalizedIndex);
-        // Add slight randomness
-        angle += randRange(-0.1, 0.1);
-      }
+      // Calculate angle with small random variation
+      const baseAngle = baseAngles[i];
+      const angle = baseAngle + randRange(-0.1, 0.1);
       
       // Calculate mastery for this category
       const categorySkills = skillsByCategory[category] || [];
@@ -195,11 +237,11 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
         : 0;
       
       // Set branch length based on category mastery and skill count
-      const minLength = 40 + (skills.length * 2);
-      const maxLength = 100 + (skills.length * 3);
+      const minLength = 80 + (skills.length * 3);
+      const maxLength = 120 + (skills.length * 4);
       const branchLength = lerp(minLength, maxLength, categoryMasteryRatio);
       
-      // Calculate branch curve control points
+      // Branch direction vector
       const branchDirection = { 
         x: Math.cos(angle),
         y: Math.sin(angle)
@@ -222,11 +264,10 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
         y: trunkTop.y + branchDirection.y * branchLength * 0.6 - 15
       };
       
-      // Calculate thickness based on mastery and size
-      const thickness = 6 * (0.6 + (categoryMasteryRatio * 0.4));
+      // Thickness based on mastery and size
+      const thickness = 8 * (0.7 + (categoryMasteryRatio * 0.5));
       
-      // Generate branch object
-      branches.push({
+      const mainBranch: Branch = {
         id: `branch-${i}`,
         category,
         start: trunkTop,
@@ -236,17 +277,234 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
         thickness,
         angle,
         masteryRatio: categoryMasteryRatio,
-        skills: skills,
-      });
+        level: 0,
+        skills: [],
+        subBranches: []
+      };
       
-      // If we have many categories, limit the number of branches
-      if (branches.length >= 3) break;
+      // Generate sub-branches
+      const subBranches = generateSubBranches(mainBranch, skills, 3, 1);
+      mainBranch.subBranches = subBranches;
+      
+      mainBranches.push(mainBranch);
+    }
+    
+    return mainBranches;
+  };
+  
+  // Generate sub-branches recursively
+  const generateSubBranches = (parentBranch: Branch, skills: Skill[], maxBranches: number, level: number): Branch[] => {
+    if (level > 3 || skills.length === 0) return []; // Limit the recursion depth
+    
+    const branches: Branch[] = [];
+    const numBranches = Math.min(maxBranches, skills.length);
+    const skillsPerBranch = Math.ceil(skills.length / numBranches);
+    
+    for (let i = 0; i < numBranches; i++) {
+      // Get skills for this branch
+      const startIdx = i * skillsPerBranch;
+      const endIdx = Math.min(startIdx + skillsPerBranch, skills.length);
+      const branchSkills = skills.slice(startIdx, endIdx);
+      
+      if (branchSkills.length === 0) continue;
+      
+      // Calculate mastery for this set of skills
+      const masteredInBranch = branchSkills.filter(s => s.mastered).length;
+      const branchMasteryRatio = masteredInBranch / branchSkills.length;
+      
+      // Generate the sub-branch
+      const baseAngle = parentBranch.angle;
+      
+      // Alternate sides for more natural look
+      const sideAngle = i % 2 === 0 ? randRange(0.3, 0.7) : randRange(-0.7, -0.3);
+      
+      // As we go deeper, branches extend more horizontally
+      const levelFactor = level * 0.2;
+      const newAngle = baseAngle + sideAngle * (1 + levelFactor);
+      
+      // Calculate branch length (diminishing with level)
+      const scaleFactor = 1 - (level * 0.2);
+      const branchLength = (40 + (branchSkills.length * 5)) * scaleFactor;
+      
+      // Branch direction
+      const branchDirection = {
+        x: Math.cos(newAngle),
+        y: Math.sin(newAngle)
+      };
+      
+      // For sub-branches, start from a point along the parent branch
+      const t = 0.6 + (i / numBranches) * 0.4; // Start point along parent branch
+      const p0 = parentBranch.start;
+      const p1 = parentBranch.control1;
+      const p2 = parentBranch.control2;
+      const p3 = parentBranch.end;
+      
+      // Calculate position on the parent's bezier curve
+      const t1 = 1 - t;
+      const t1_2 = t1 * t1;
+      const t1_3 = t1_2 * t1;
+      const t_2 = t * t;
+      const t_3 = t_2 * t;
+      
+      const startX = t1_3 * p0.x + 3 * t1_2 * t * p1.x + 3 * t1 * t_2 * p2.x + t_3 * p3.x;
+      const startY = t1_3 * p0.y + 3 * t1_2 * t * p1.y + 3 * t1 * t_2 * p2.y + t_3 * p3.y;
+      const start = { x: startX, y: startY };
+      
+      // End point
+      const end = {
+        x: start.x + branchDirection.x * branchLength,
+        y: start.y + branchDirection.y * branchLength
+      };
+      
+      // Control points for natural curve
+      const control1 = {
+        x: start.x + branchDirection.x * branchLength * 0.3,
+        y: start.y + branchDirection.y * branchLength * 0.2 - 5
+      };
+      
+      const control2 = {
+        x: start.x + branchDirection.x * branchLength * 0.7,
+        y: start.y + branchDirection.y * branchLength * 0.6 - 8
+      };
+      
+      // Thickness diminishes with level
+      const thicknessScale = 1 - (level * 0.25);
+      const thickness = parentBranch.thickness * 0.6 * thicknessScale;
+      
+      const branch: Branch = {
+        id: `${parentBranch.id}-sub-${i}`,
+        category: parentBranch.category,
+        start,
+        end,
+        control1,
+        control2,
+        thickness,
+        angle: newAngle,
+        masteryRatio: branchMasteryRatio,
+        level,
+        skills: branchSkills,
+        subBranches: []
+      };
+      
+      // Generate further sub-branches if we haven't reached max level
+      if (level < 3 && branchSkills.length > 1) {
+        const furtherSubBranches = generateSubBranches(
+          branch, 
+          branchSkills, 
+          Math.max(2, branchSkills.length - 1), 
+          level + 1
+        );
+        branch.subBranches = furtherSubBranches;
+      }
+      
+      branches.push(branch);
     }
     
     return branches;
   };
   
-  const branches = generateBranches();
+  // Generate main branches
+  const mainBranches = generateBranches();
+
+  // Function to render all branches recursively
+  const renderBranches = (branches: Branch[]) => {
+    return branches.flatMap((branch, index) => [
+      <g 
+        key={branch.id} 
+        onMouseEnter={() => setHoveredBranch(branch.id)}
+        onMouseLeave={() => setHoveredBranch(null)}
+      >
+        <animated.path
+          id={branch.id}
+          d={`
+            M${branch.start.x}, ${branch.start.y}
+            C${branch.control1.x}, ${branch.control1.y}
+             ${branch.control2.x}, ${branch.control2.y}
+             ${branch.end.x}, ${branch.end.y}
+          `}
+          fill="none"
+          stroke={`url(#branchGradient-${index})`}
+          strokeWidth={branch.thickness}
+          strokeLinecap="round"
+          style={{
+            transform: hoveredBranch === branch.id 
+              ? 'scale(1.05)' 
+              : 'scale(1)',
+            transformOrigin: `${branch.start.x}px ${branch.start.y}px`,
+            transition: 'transform 0.3s ease',
+            ...branchProps
+          }}
+        />
+        
+        {/* Skills as leaves */}
+        {branch.skills.map((skill, skillIndex) => {
+          const leaf = generateLeafCoordinates(branch, skill, skillIndex);
+          return (
+            <foreignObject
+              key={`leaf-${skill.id}`}
+              id={`leaf-${skill.id}`}
+              x={leaf.x - 20}
+              y={leaf.y - 20}
+              width={40}
+              height={40}
+              style={{
+                overflow: 'visible',
+                transition: 'all 0.3s ease',
+                filter: leaf.isRecentlyMastered ? 'url(#leaf-glow)' : 'none',
+                transform: hoveredBranch === branch.id 
+                  ? 'scale(1.1) rotate(5deg)' 
+                  : 'scale(1) rotate(0deg)',
+              }}
+              onMouseEnter={() => setShowTooltip(skill.id)}
+              onMouseLeave={() => setShowTooltip(null)}
+            >
+              <svg 
+                width="40" 
+                height="40" 
+                viewBox="-20 -20 40 40"
+                style={{
+                  overflow: 'visible',
+                }}
+              >
+                <animated.g 
+                  transform={`rotate(${leaf.angle * 180 / Math.PI})`}
+                  style={{
+                    ...leafProps
+                  }}
+                >
+                  <path
+                    d="M0,-2 C3,-10 8,-15 12,-15 C18,-15 20,-8 15,0 C10,8 5,10 0,5 C-5,10 -10,8 -15,0 C-20,-8 -18,-15 -12,-15 C-8,-15 -3,-10 0,-2 Z"
+                    fill={skill.mastered 
+                      ? theme.palette.primary.main 
+                      : `hsl(${120 + (skill.masteryLevel / 5)}, ${50 + skill.masteryLevel / 2}%, ${70 - skill.masteryLevel / 3}%)`
+                    }
+                    opacity={skill.mastered ? 1 : 0.6 + (skill.masteryLevel / 250)}
+                    className={leaf.isRecentlyMastered ? 'leaf-pulse' : ''}
+                    transform={`scale(${leaf.size / 25})`}
+                  />
+                  {/* Leaf vein */}
+                  <path
+                    d="M0,-2 L0,5 M-8,-8 Q0,-2 8,-8"
+                    fill="none"
+                    stroke={skill.mastered 
+                      ? `rgba(255,255,255,0.5)` 
+                      : `rgba(255,255,255,0.3)`
+                    }
+                    strokeWidth="0.8"
+                    transform={`scale(${leaf.size / 25})`}
+                    opacity={0.8}
+                  />
+                </animated.g>
+              </svg>
+            </foreignObject>
+          );
+        })}
+        
+        {/* Render sub-branches recursively */}
+        {branch.subBranches && renderBranches(branch.subBranches)}
+      </g>
+    ]);
+  };
 
   // Generate leaf coordinates for a branch
   const generateLeafCoordinates = (branch: Branch, skill: Skill, index: number): LeafCoordinates => {
@@ -305,17 +563,21 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
     baseY += randRange(-3, 3);
     
     // Calculate leaf size based on mastery level
-    const baseSize = 6;
+    const baseSize = 7;
     const masteryBonus = skill.mastered ? 4 : (skill.masteryLevel / 25);
     const size = baseSize + masteryBonus;
+
+    // Leaf color hue varies slightly based on mastery
+    const hue = 120 + (skill.masteryLevel / 5);
     
     return {
       x: baseX,
       y: baseY,
       size,
       // Add angle information for leaf orientation
-      angle: Math.atan2(perpY, perpX) + (side * Math.PI / 4),
-      isRecentlyMastered: recentlyMastered.includes(skill.id) && skill.mastered
+      angle: Math.atan2(perpY, perpX) + (side * Math.PI / 8),
+      isRecentlyMastered: recentlyMastered.includes(skill.id) && skill.mastered,
+      hue
     };
   };
   
@@ -331,7 +593,7 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
   
   // Animation update
   useEffect(() => {
-    if (!svgRef.current || branches.length === 0) return;
+    if (!svgRef.current || mainBranches.length === 0) return;
     
     // Skip animation if it's the first render
     if (firstRender) return;
@@ -350,7 +612,7 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
       }
       
       // Animate branches
-      branches.forEach((branch, i) => {
+      mainBranches.forEach((branch, i) => {
         const branchElement = svg.querySelector(`#${branch.id}`);
         if (branchElement) {
           branchElement.classList.add('animate-grow');
@@ -373,7 +635,88 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
         }
       });
     }
-  }, [animation, branches, recentlyMastered, firstRender]);
+  }, [animation, mainBranches, recentlyMastered, firstRender]);
+
+  // Render tooltip for skills
+  const renderTooltip = () => {
+    if (!showTooltip) return null;
+    
+    const skill = skills.find(s => s.id === showTooltip);
+    if (!skill) return null;
+    
+    // Find leaf position for this skill
+    let tooltipX = 0;
+    let tooltipY = 0;
+    let found = false;
+    
+    // Recursive search function
+    const findSkillInBranches = (branches: Branch[]) => {
+      for (const branch of branches) {
+        const skillIndex = branch.skills.findIndex(s => s.id === skill.id);
+        if (skillIndex >= 0) {
+          const leaf = generateLeafCoordinates(branch, skill, skillIndex);
+          tooltipX = leaf.x;
+          tooltipY = leaf.y;
+          found = true;
+          return true;
+        }
+        
+        // Check sub-branches
+        if (branch.subBranches && branch.subBranches.length > 0) {
+          if (findSkillInBranches(branch.subBranches)) {
+            return true;
+          }
+        }
+      }
+      return false;
+    };
+    
+    findSkillInBranches(mainBranches);
+    
+    if (!found) return null;
+    
+    return (
+      <g key={`tooltip-${skill.id}`}>
+        <rect
+          x={tooltipX - 60}
+          y={tooltipY - 50}
+          width="120"
+          height="36"
+          rx="6"
+          ry="6"
+          fill="rgba(255,255,255,0.95)"
+          stroke={theme.palette.primary.main}
+          strokeWidth="1"
+          filter="drop-shadow(0px 2px 3px rgba(0,0,0,0.2))"
+        />
+        <text
+          x={tooltipX}
+          y={tooltipY - 30}
+          textAnchor="middle"
+          dominantBaseline="middle"
+          fill={theme.palette.text.primary}
+          fontSize="10"
+          fontFamily="DM Sans, sans-serif"
+        >
+          {skill.name}
+        </text>
+        {skill.mastered && (
+          <text
+            x={tooltipX}
+            y={tooltipY - 40}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fill={theme.palette.success.main}
+            fontSize="8"
+            fontFamily="DM Sans, sans-serif"
+            fontWeight="bold"
+          >
+            MASTERED
+          </text>
+        )}
+      </g>
+    );
+  };
 
   return (
     <animated.div style={treeContainerProps}>
@@ -385,7 +728,11 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
           mb: 4, 
           position: 'relative',
           overflow: 'hidden',
-          borderRadius: '4px',
+          borderRadius: '8px',
+          background: 'linear-gradient(to bottom, rgba(255,255,255,0.9), rgba(245,250,245,0.9))',
+          boxShadow: '0 8px 32px rgba(31,38,135,0.15)',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255,255,255,0.18)',
           transition: 'all 0.5s ease',
         }}
       >
@@ -400,8 +747,8 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
             mb: 3
           }}
         >
-        Your Bonsai Learning Tree
-      </Typography>
+          Your Bonsai Learning Tree
+        </Typography>
       
         <Box sx={{ 
           textAlign: 'center', 
@@ -422,14 +769,14 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
             color="text.secondary"
             sx={{ fontFamily: 'DM Sans, sans-serif' }}
           >
-          Skills Mastered
-        </Typography>
-      </Box>
+            Skills Mastered
+          </Typography>
+        </Box>
       
-      <Box sx={{ 
-        width: '100%', 
-          height: 450,
-        position: 'relative',
+        <Box sx={{ 
+          width: '100%', 
+          height: 500,
+          position: 'relative',
           borderRadius: 2,
           overflow: 'hidden',
           transition: 'all 0.5s ease',
@@ -440,21 +787,27 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
             bottom: 0,
             left: 0,
             width: '100%',
-            height: '30%',
-            background: 'linear-gradient(to top, rgba(232, 245, 233, 0.6) 0%, rgba(232, 245, 233, 0) 100%)',
+            height: '40%',
+            background: 'linear-gradient(to top, rgba(232, 245, 233, 0.7) 0%, rgba(232, 245, 233, 0) 100%)',
             zIndex: 1
           }} />
           
-          {/* Light effect */}
+          {/* Sun/light effect */}
           <Box sx={{
             position: 'absolute',
             top: 20,
             right: 25,
-            width: 60,
-            height: 60,
+            width: 100,
+            height: 100,
             borderRadius: '50%',
             background: 'radial-gradient(circle, rgba(255,236,179,0.3) 0%, rgba(255,236,179,0) 70%)',
-            zIndex: 1
+            zIndex: 1,
+            animation: 'pulse 8s infinite ease-in-out',
+            '@keyframes pulse': {
+              '0%': { opacity: 0.5, transform: 'scale(1)' },
+              '50%': { opacity: 0.8, transform: 'scale(1.1)' },
+              '100%': { opacity: 0.5, transform: 'scale(1)' }
+            }
           }} />
           
           {/* Tree SVG */}
@@ -470,9 +823,9 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
               ref={svgRef}
               width="100%" 
               height="100%" 
-              viewBox="0 0 300 450" 
+              viewBox="0 0 300 500" 
               overflow="visible"
-              style={{ marginTop: '-20px' }}
+              style={{ marginTop: '-40px' }}
             >
               <defs>
                 {/* Gradients for tree elements */}
@@ -487,8 +840,14 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
                   <stop offset="100%" stopColor={treeVitality.trunkBaseColor} />
                 </linearGradient>
                 
+                {/* Shadow gradient */}
+                <radialGradient id="shadowGradient" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+                  <stop offset="0%" stopColor="rgba(0,0,0,0.2)" />
+                  <stop offset="100%" stopColor="rgba(0,0,0,0)" />
+                </radialGradient>
+                
                 {/* Gradients for each branch */}
-                {branches.map((branch, i) => (
+                {mainBranches.map((branch, i) => (
                   <linearGradient 
                     key={`branch-gradient-${i}`}
                     id={`branchGradient-${i}`} 
@@ -525,9 +884,22 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
                     }
                     
                     @keyframes pulse {
-                      0% { opacity: 0.5; transform: scale(1); }
+                      0% { opacity: 0.8; transform: scale(1); }
                       50% { opacity: 1; transform: scale(1.1); }
-                      100% { opacity: 0.5; transform: scale(1); }
+                      100% { opacity: 0.8; transform: scale(1); }
+                    }
+                    
+                    @keyframes float {
+                      0% { transform: translateY(0); }
+                      50% { transform: translateY(-5px); }
+                      100% { transform: translateY(0); }
+                    }
+                    
+                    @keyframes sway {
+                      0% { transform: rotate(0deg); }
+                      25% { transform: rotate(1deg); }
+                      75% { transform: rotate(-1deg); }
+                      100% { transform: rotate(0deg); }
                     }
                     
                     .animate-grow {
@@ -543,182 +915,131 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
                     .leaf-pulse {
                       animation: pulse 2s infinite;
                     }
+                    
+                    .sway-slow {
+                      transform-origin: bottom;
+                      animation: sway 8s ease-in-out infinite;
+                    }
+                    
+                    .sway-medium {
+                      transform-origin: bottom;
+                      animation: sway 6s ease-in-out infinite;
+                    }
+                    
+                    .float-animation {
+                      animation: float 5s ease-in-out infinite;
+                    }
                   `}
                 </style>
               </defs>
               
+              {/* Shadow beneath the pot */}
+              <ellipse 
+                cx="150" 
+                cy={385 + treeVitality.potHeight} 
+                rx={treeVitality.potWidth * 0.9} 
+                ry="8" 
+                fill="url(#shadowGradient)"
+                opacity="0.5"
+              />
+              
               {/* Pot/Base */}
-              <g>
+              <g className="float-animation">
                 <ellipse 
                   cx="150" 
-                  cy="380" 
+                  cy="385" 
                   rx={treeVitality.potWidth} 
                   ry="15" 
                   fill="#A1887F" 
                 />
                 <path 
                   d={`
-                    M${150 - treeVitality.potWidth}, 380 
-                    L${150 - treeVitality.potWidth * 0.8}, ${380 + treeVitality.potHeight}
-                    L${150 + treeVitality.potWidth * 0.8}, ${380 + treeVitality.potHeight}
-                    L${150 + treeVitality.potWidth}, 380
+                    M${150 - treeVitality.potWidth}, 385 
+                    L${150 - treeVitality.potWidth * 0.8}, ${385 + treeVitality.potHeight}
+                    L${150 + treeVitality.potWidth * 0.8}, ${385 + treeVitality.potHeight}
+                    L${150 + treeVitality.potWidth}, 385
                   `}
                   fill="url(#potGradient)"
                 />
                 <ellipse 
                   cx="150" 
-                  cy={380 + treeVitality.potHeight} 
+                  cy={385 + treeVitality.potHeight} 
                   rx={treeVitality.potWidth * 0.8} 
                   ry="6" 
                   fill="#5D4037" 
                 />
+                
+                {/* Soil/moss in pot */}
+                <ellipse 
+                  cx="150" 
+                  cy="383" 
+                  rx={treeVitality.potWidth * 0.85} 
+                  ry="13" 
+                  fill="#3E2723" 
+                />
+                <ellipse 
+                  cx="150" 
+                  cy="382" 
+                  rx={treeVitality.potWidth * 0.8} 
+                  ry="12" 
+                  fill="#33691E" 
+                  opacity="0.4"
+                />
               </g>
               
               {/* Trunk */}
-              <g>
-                <path
+              <g className="sway-slow">
+                <animated.path
                   id="tree-trunk"
                   d={`
-                    M${150 - treeVitality.trunkWidth * 0.25}, 380
-                    C${150 - treeVitality.trunkWidth * 0.4}, ${380 - treeVitality.trunkHeight * 0.3}
-                     ${150 - treeVitality.trunkWidth * 0.2}, ${380 - treeVitality.trunkHeight * 0.7}
-                     ${150}, ${380 - treeVitality.trunkHeight}
+                    M${150 - treeVitality.trunkWidth * 0.25}, 385
+                    C${150 - treeVitality.trunkWidth * 0.3}, ${385 - treeVitality.trunkHeight * 0.3}
+                     ${150 - treeVitality.trunkWidth * 0.1}, ${385 - treeVitality.trunkHeight * 0.7}
+                     ${150}, ${385 - treeVitality.trunkHeight}
                   `}
                   fill="none"
                   stroke="url(#trunkGradient)"
                   strokeWidth={treeVitality.trunkWidth}
                   strokeLinecap="round"
+                  style={trunkProps}
                 />
+                
+                {/* Secondary smaller trunk for more realism */}
+                <animated.path
+                  d={`
+                    M${150 + treeVitality.trunkWidth * 0.15}, 385
+                    C${150 + treeVitality.trunkWidth * 0.2}, ${385 - treeVitality.trunkHeight * 0.25}
+                     ${150 + treeVitality.trunkWidth * 0.05}, ${385 - treeVitality.trunkHeight * 0.5}
+                     ${150 + treeVitality.trunkWidth * 0.05}, ${385 - treeVitality.trunkHeight * 0.65}
+                  `}
+                  fill="none"
+                  stroke="url(#trunkGradient)"
+                  strokeWidth={treeVitality.trunkWidth * 0.6}
+                  strokeLinecap="round"
+                  style={trunkProps}
+                />
+              
+                {/* Branches */}
+                {renderBranches(mainBranches)}
               </g>
-          
-          {/* Branches */}
-          {branches.map((branch, index) => (
-                <g key={branch.id}>
-                  <path
-                    id={branch.id}
-                    d={`
-                      M${branch.start.x}, ${branch.start.y}
-                      C${branch.control1.x}, ${branch.control1.y}
-                       ${branch.control2.x}, ${branch.control2.y}
-                       ${branch.end.x}, ${branch.end.y}
-                    `}
-                    fill="none"
-                    stroke={`url(#branchGradient-${index})`}
-                    strokeWidth={branch.thickness}
-                    strokeLinecap="round"
-                  />
-                  
-                  {/* Skills as leaves */}
-              {branch.skills.map((skill, skillIndex) => {
-                    const leaf = generateLeafCoordinates(branch, skill, skillIndex);
-                return (
-                      <foreignObject
-                        key={`leaf-${skill.id}`}
-                        id={`leaf-${skill.id}`}
-                        x={leaf.x - 20}
-                        y={leaf.y - 20}
-                        width={40}
-                        height={40}
-                        style={{
-                          overflow: 'visible',
-                          transition: 'all 0.3s ease',
-                        }}
-                        onMouseEnter={() => setShowTooltip(skill.id)}
-                        onMouseLeave={() => setShowTooltip(null)}
-                      >
-                        <svg 
-                          width="40" 
-                          height="40" 
-                          viewBox="-20 -20 40 40"
-                          style={{
-                            overflow: 'visible',
-                            filter: leaf.isRecentlyMastered ? 'url(#leaf-glow)' : 'none',
-                          }}
-                        >
-                          {/* Leaf shape */}
-                          <g transform={`rotate(${leaf.angle * 180 / Math.PI})`}>
-                            <path
-                              d="M0,0 C1,-5 5,-10 10,-10 C15,-8 15,0 10,5 C5,10 0,8 0,5 C0,8 -5,10 -10,5 C-15,0 -15,-8 -10,-10 C-5,-10 -1,-5 0,0 Z"
-                              fill={skill.mastered ? theme.palette.primary.main : treeVitality.leafBaseColor}
-                              opacity={skill.mastered ? 1 : 0.5 + (skill.masteryLevel / 200)}
-                              className={leaf.isRecentlyMastered ? 'leaf-pulse' : ''}
-                              transform={`scale(${leaf.size / 20})`}
-                            />
-                          </g>
-                        </svg>
-                      </foreignObject>
-                );
-              })}
-            </g>
-          ))}
-          
+              
               {/* Skill name tooltips */}
-              {showTooltip && skills.map(skill => {
-                if (skill.id === showTooltip) {
-                  // Find this skill's branch and position
-                  for (const branch of branches) {
-                    const skillIndex = branch.skills.findIndex((s: Skill) => s.id === skill.id);
-                    if (skillIndex >= 0) {
-                      const leaf = generateLeafCoordinates(branch, skill, skillIndex);
-                      return (
-                        <g key={`tooltip-${skill.id}`}>
-                          <rect
-                            x={leaf.x - 60}
-                            y={leaf.y - 50}
-                            width="120"
-                            height="30"
-                            rx="4"
-                            ry="4"
-                            fill="rgba(255,255,255,0.9)"
-                            stroke={theme.palette.primary.main}
-                            strokeWidth="1"
-                          />
-                          <text
-                            x={leaf.x}
-                            y={leaf.y - 30}
-                            textAnchor="middle"
-                            dominantBaseline="middle"
-                            fill={theme.palette.text.primary}
-                            fontSize="10"
-                            fontFamily="DM Sans, sans-serif"
-                          >
-                            {skill.name}
-                          </text>
-                          {skill.mastered && (
-                            <text
-                              x={leaf.x}
-                              y={leaf.y - 40}
-                              textAnchor="middle"
-                              dominantBaseline="middle"
-                              fill={theme.palette.success.main}
-                              fontSize="8"
-                              fontFamily="DM Sans, sans-serif"
-                              fontWeight="bold"
-                            >
-                              MASTERED
-                            </text>
-                          )}
-                        </g>
-                      );
-                    }
-                  }
-                }
-                return null;
-              })}
-        </svg>
+              {renderTooltip()}
+            </svg>
           </Box>
-        
-        {/* Tree legend */}
-        <Box 
-          sx={{ 
-            position: 'absolute', 
+          
+          {/* Tree legend */}
+          <Box 
+            sx={{ 
+              position: 'absolute', 
               bottom: 15, 
               right: 15,
-              background: 'rgba(255,255,255,0.8)', 
+              background: 'rgba(255,255,255,0.9)', 
               p: 1.5,
-              borderRadius: '4px',
+              borderRadius: '8px',
               boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
               backdropFilter: 'blur(8px)',
+              border: '1px solid rgba(255,255,255,0.5)',
               zIndex: 10
             }}
           >
@@ -741,16 +1062,16 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
               <Box 
                 component="span" 
                 sx={{ 
-              display: 'inline-block', 
-              width: 10, 
-              height: 10, 
-              borderRadius: '50%', 
-              backgroundColor: theme.palette.primary.main,
-              mr: 1
+                  display: 'inline-block', 
+                  width: 10, 
+                  height: 10, 
+                  borderRadius: '50%', 
+                  backgroundColor: theme.palette.primary.main,
+                  mr: 1
                 }}
               />
-            Mastered Skills
-          </Typography>
+              Mastered Skills
+            </Typography>
             <Typography 
               variant="caption" 
               display="block"
@@ -759,19 +1080,19 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
               <Box 
                 component="span" 
                 sx={{ 
-              display: 'inline-block', 
-              width: 10, 
-              height: 10, 
-              borderRadius: '50%', 
+                  display: 'inline-block', 
+                  width: 10, 
+                  height: 10, 
+                  borderRadius: '50%', 
                   backgroundColor: treeVitality.leafBaseColor,
-              opacity: 0.7,
-              mr: 1
+                  opacity: 0.7,
+                  mr: 1
                 }}
               />
-            Skills In Progress
-          </Typography>
+              Skills In Progress
+            </Typography>
+          </Box>
         </Box>
-      </Box>
         
         <Typography 
           align="center" 
@@ -785,7 +1106,7 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
         >
           You've mastered {masteredSkills.length} skills so far! Keep growing!
         </Typography>
-    </Paper>
+      </Paper>
     </animated.div>
   );
 };

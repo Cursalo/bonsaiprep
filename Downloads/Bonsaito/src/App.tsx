@@ -1,5 +1,5 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme, responsiveFontSizes } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { colors } from '@mui/material';
@@ -16,9 +16,11 @@ import NotFound from './pages/NotFound';
 
 // Import components
 import ProtectedRoute from './components/ProtectedRoute';
+import OnboardingFlow from './components/OnboardingFlow';
 
 // Import providers
 import { SkillsProvider } from './components/SkillsProvider';
+import { supabase } from './supabaseClient';
 
 // Create a responsive theme with DM Sans font and modern styling
 const theme = responsiveFontSizes(createTheme({
@@ -165,6 +167,47 @@ const theme = responsiveFontSizes(createTheme({
 }));
 
 function App() {
+  const [isFirstLogin, setIsFirstLogin] = useState<boolean | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Check if this is a first-time login
+  useEffect(() => {
+    const checkOnboardingStatus = async () => {
+      try {
+        // Get current user
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          // Check if user has completed onboarding
+          const { data, error } = await supabase
+            .from('user_onboarding')
+            .select('id')
+            .eq('user_id', user.id)
+            .single();
+
+          if (error && error.code !== 'PGRST116') {
+            // PGRST116 is "no rows returned" error code
+            console.error('Error checking onboarding status:', error);
+          }
+
+          // If data exists, user has completed onboarding
+          setIsFirstLogin(!data);
+        }
+      } catch (error) {
+        console.error('Error in onboarding check:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkOnboardingStatus();
+  }, []);
+
+  // Early return during loading state
+  if (loading) {
+    return null; // Or a loading spinner if preferred
+  }
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -173,9 +216,19 @@ function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/onboarding" element={<OnboardingFlow />} />
+            
             {/* Protected Routes */}
             <Route element={<ProtectedRoute />}>
-              <Route path="/dashboard" element={<Dashboard />} />
+              {/* Redirect to onboarding if first login */}
+              <Route 
+                path="/dashboard" 
+                element={
+                  isFirstLogin === true 
+                    ? <Navigate to="/onboarding" replace /> 
+                    : <Dashboard />
+                } 
+              />
               <Route path="/upload" element={<UploadReport />} />
               <Route path="/lessons" element={<Lessons />} />
               <Route path="/admin" element={<AdminDashboard />} />
