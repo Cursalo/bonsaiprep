@@ -40,7 +40,7 @@ const UploadReport: React.FC<UploadReportProps> = ({ user }) => {
       setGeneratingQuestions(true);
       toast.info('Generating personalized practice questions...', { autoClose: false, toastId: 'generating-questions' });
       
-      // Call the Gemini API to generate questions
+      // Generate questions based on the input
       const questions = await generateQuestionsFromMistakes(input);
       
       if (!questions || questions.length === 0) {
@@ -119,10 +119,10 @@ const UploadReport: React.FC<UploadReportProps> = ({ user }) => {
           
         uploadedFileUrl = publicUrl;
         
-        // Process the file directly with Gemini API
+        // Process the file
         toast.info('Processing your file...', { autoClose: false, toastId: 'processing-file' });
         
-        // For PDFs or text files, use Gemini API directly
+        // Process the file
         await generatePracticeQuestions(file);
         
         toast.dismiss('processing-file');

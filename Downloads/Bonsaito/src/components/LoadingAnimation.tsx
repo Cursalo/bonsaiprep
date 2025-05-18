@@ -24,7 +24,7 @@ const LoadingAnimation: React.FC<LoadingAnimationProps> = ({
       }}
     >
       <DotLottieReact
-        src="https://lottie.host/021e11ee-d290-4eaf-ac8a-27fed4579b9b/9DbV57Fb67.lottie"
+        src="https://lottie.host/d2496ec5-3972-45c9-8e12-74123f42fa49/GGA5w0BWEP.lottie"
         loop
         autoplay
         style={{ width, height }}

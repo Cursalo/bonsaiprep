@@ -608,148 +608,95 @@ const Dashboard: React.FC = () => {
                       
                       <Divider sx={{ my: 2, borderColor: 'rgba(255, 255, 255, 0.1)' }} />
                       
-                      {/* Score Visualization */}
-                      {userData?.targetSatScore && (
-                        <Box sx={{ mt: 3, mb: 4 }}>
-                          <Typography variant="h6" gutterBottom sx={{ 
-                            fontWeight: 'bold', 
-                            color: 'rgba(255, 255, 255, 0.87)',
-                            textShadow: '0 1px 2px rgba(0,0,0,0.2)'
-                          }}>
-                            Your SAT Score Journey
+                                             {/* Bonsai Tree Visualization */}
+                      <Box sx={{ mt: 3, mb: 4 }}>
+                        <Typography variant="h6" gutterBottom sx={{ 
+                          fontWeight: 'bold', 
+                          color: 'rgba(255, 255, 255, 0.87)',
+                          textShadow: '0 1px 2px rgba(0,0,0,0.2)'
+                        }}>
+                          Your Learning Bonsai
+                        </Typography>
+                        
+                        <Box sx={{ 
+                          position: 'relative',
+                          height: 380,
+                          background: 'linear-gradient(180deg, rgba(30, 30, 30, 0.7) 0%, rgba(18, 18, 18, 0.8) 100%)',
+                          backdropFilter: 'blur(8px)',
+                          borderRadius: 4,
+                          mt: 2,
+                          mb: 1,
+                          overflow: 'hidden',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          boxShadow: 'inset 0 2px 10px rgba(0, 0, 0, 0.2)',
+                          display: 'flex',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            bottom: 0,
+                            left: '10%',
+                            right: '10%',
+                            height: '2px',
+                            background: 'radial-gradient(ellipse at center, rgba(136, 212, 152, 0.3) 0%, rgba(0,0,0,0) 70%)',
+                            filter: 'blur(3px)',
+                          }
+                        }}>
+                          <Box sx={{
+                            position: 'absolute',
+                            top: 20,
+                            right: 25,
+                            width: 80,
+                            height: 80,
+                            borderRadius: '50%',
+                            background: 'radial-gradient(circle, rgba(255,236,179,0.3) 0%, rgba(255,236,179,0) 70%)',
+                            zIndex: 1,
+                            animation: 'pulse 8s infinite ease-in-out',
+                            '@keyframes pulse': {
+                              '0%': { opacity: 0.5, transform: 'scale(1)' },
+                              '50%': { opacity: 0.8, transform: 'scale(1.1)' },
+                              '100%': { opacity: 0.5, transform: 'scale(1)' }
+                            }
+                          }} />
+                          <BonsaiTree skills={skills} totalSkills={totalSkills} showGrowthAnimation={false} />
+                        </Box>
+                        
+                        <Box sx={{ 
+                          display: 'flex', 
+                          justifyContent: 'center', 
+                          mt: 2,
+                          gap: 2
+                        }}>
+                          <Typography 
+                            variant="h4" 
+                            sx={{ 
+                              fontWeight: 'bold', 
+                              color: '#88d498',
+                              textShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                              textAlign: 'center'
+                            }}
+                          >
+                            {progressPercentage}%
                           </Typography>
-                          
-                          <Box sx={{ 
-                            position: 'relative', 
-                            height: 70, 
-                            background: 'linear-gradient(90deg, rgba(30, 30, 30, 0.7) 0%, rgba(12, 59, 46, 0.7) 50%, rgba(40, 80, 60, 0.7) 100%)',
-                            backdropFilter: 'blur(8px)',
-                            borderRadius: 4,
-                            mt: 2,
-                            mb: 1,
-                            overflow: 'hidden',
-                            border: '1px solid rgba(255, 255, 255, 0.1)',
-                            boxShadow: 'inset 0 2px 10px rgba(0, 0, 0, 0.2)'
-                          }}>
-                            {/* Base Score Line at 400 */}
-                            <Typography 
-                              variant="caption" 
-                              sx={{ 
-                                position: 'absolute', 
-                                bottom: 0, 
-                                left: '0%', 
-                                transform: 'translateX(-50%)',
-                                color: 'rgba(255, 255, 255, 0.6)'
-                              }}
-                            >
-                              400
-                            </Typography>
-                            
-                            {/* Perfect Score Line at 1600 */}
-                            <Typography 
-                              variant="caption" 
-                              sx={{ 
-                                position: 'absolute', 
-                                bottom: 0, 
-                                left: '100%', 
-                                transform: 'translateX(-50%)',
-                                color: 'rgba(255, 255, 255, 0.6)'
-                              }}
-                            >
-                              1600
-                            </Typography>
-                            
-                            {/* Current Score Marker */}
-                            {userData.satScore && (
-                              <>
-                                <Box sx={{ 
-                                  position: 'absolute',
-                                  left: `${((userData.satScore - 400) / 1200) * 100}%`,
-                                  top: '50%',
-                                  transform: 'translate(-50%, -50%)',
-                                  width: 12,
-                                  height: 12,
-                                  borderRadius: '50%',
-                                  bgcolor: '#88d498',
-                                  border: '2px solid rgba(255, 255, 255, 0.9)',
-                                  boxShadow: '0 0 10px rgba(136, 212, 152, 0.7)',
-                                  zIndex: 2
-                                }} />
-                                <Typography 
-                                  variant="subtitle2" 
-                                  sx={{ 
-                                    position: 'absolute', 
-                                    top: 5, 
-                                    left: `${((userData.satScore - 400) / 1200) * 100}%`, 
-                                    transform: 'translateX(-50%)',
-                                    color: '#88d498',
-                                    fontWeight: 'bold',
-                                    textShadow: '0 1px 2px rgba(0,0,0,0.4)'
-                                  }}
-                                >
-                                  Current: {userData.satScore}
-                                </Typography>
-                              </>
-                            )}
-                            
-                            {/* Target Score Marker */}
-                            <Box sx={{ 
-                              position: 'absolute',
-                              left: `${((userData.targetSatScore - 400) / 1200) * 100}%`,
-                              top: '50%',
-                              transform: 'translate(-50%, -50%)',
-                              width: 12,
-                              height: 12,
-                              borderRadius: '50%',
-                              bgcolor: '#88d498',
-                              border: '2px solid rgba(255, 255, 255, 0.9)',
-                              boxShadow: '0 0 10px rgba(136, 212, 152, 0.7)',
-                              zIndex: 2
-                            }} />
-                            <Typography 
-                              variant="subtitle2" 
-                              sx={{ 
-                                position: 'absolute', 
-                                bottom: 5, 
-                                left: `${((userData.targetSatScore - 400) / 1200) * 100}%`, 
-                                transform: 'translateX(-50%)',
-                                color: '#88d498',
-                                fontWeight: 'bold',
-                                textShadow: '0 1px 2px rgba(0,0,0,0.4)'
-                              }}
-                            >
-                              Target: {userData.targetSatScore}
-                            </Typography>
-                            
-                            {/* Score Connection Line */}
-                            {userData.satScore && (
-                              <Box sx={{ 
-                                position: 'absolute',
-                                left: `${((userData.satScore - 400) / 1200) * 100}%`,
-                                width: `${((userData.targetSatScore - userData.satScore) / 1200) * 100}%`,
-                                top: '50%',
-                                transform: 'translateY(-50%)',
-                                height: 2,
-                                background: 'linear-gradient(90deg, #88d498 0%, #6bcca1 100%)',
-                                zIndex: 1,
-                                boxShadow: '0 0 8px rgba(136, 212, 152, 0.5)'
-                              }} />
-                            )}
-                          </Box>
-                          
-                          <Typography variant="body2" sx={{ mt: 1, textAlign: 'center', color: 'rgba(255, 255, 255, 0.7)' }}>
-                            {userData.satScore 
-                              ? `You need ${userData.targetSatScore - userData.satScore} more points to reach your target score!` 
-                              : `Set your current score to track your progress toward ${userData.targetSatScore}!`}
+                          <Typography 
+                            variant="h6" 
+                            sx={{ 
+                              fontWeight: 'medium', 
+                              color: 'rgba(255, 255, 255, 0.87)',
+                              alignSelf: 'flex-end',
+                              mb: 0.5
+                            }}
+                          >
+                            Skills Mastered
                           </Typography>
                         </Box>
-                      )}
+                        
+                        <Typography variant="body2" sx={{ mt: 1, textAlign: 'center', color: 'rgba(255, 255, 255, 0.7)' }}>
+                          You've mastered {masteredSkillsCount} out of {totalSkills} skills. Keep growing!
+                        </Typography>
+                      </Box>
                       
-                      <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-                        {masteredSkillsCount < totalSkills 
-                          ? `You have mastered ${masteredSkillsCount} out of ${totalSkills} skills. Keep up the great work!` 
-                          : "Congratulations! You've mastered all skills!"}
-                      </Typography>
                       {masteredSkillsCount < totalSkills && (
                          <Box sx={{ mt: 2 }}>
                            <LinearProgress 
@@ -774,19 +721,19 @@ const Dashboard: React.FC = () => {
                       <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
                         <GradientButton 
                           variant="contained" 
+                          gradient="success" 
+                          startIcon={<QuizIcon />} 
+                          onClick={() => setShowQuiz(true)}
+                        >
+                          Grow Your Tree
+                        </GradientButton>
+                        <GradientButton 
+                          variant="contained" 
                           gradient="primary" 
                           startIcon={<PlayLessonIcon />} 
                           onClick={() => navigate('/lessons')}
                         >
                           Go to Lessons
-                        </GradientButton>
-                        <GradientButton 
-                          variant="outlined" 
-                          gradient="primary" 
-                          startIcon={<UploadIcon />} 
-                          onClick={() => navigate('/upload')}
-                        >
-                          Upload Report
                         </GradientButton>
                       </Box>
                     </GlassCard>
