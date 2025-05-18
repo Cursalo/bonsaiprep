@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Box, Typography, Paper, useTheme } from '@mui/material';
-import { useSpring, animated, config, useSprings } from 'react-spring';
+import { animated, useSpring } from 'react-spring';
+import { supabase } from '../supabaseClient';
 
 // Helper functions
 const lerp = (a: number, b: number, t: number): number => a * (1 - t) + b * t;
@@ -48,275 +49,155 @@ const FOLIAGE_SHADE_COLOR = '#7CAC6C';
 const POT_COLOR = '#8D7B6F';
 
 const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
-  const theme = useTheme(); // Keep for potential future use or if other elements need it
+  const theme = useTheme();
+  const [correctAnswersCount, setCorrectAnswersCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Define SVG dimensions at the component level
-  const svgWidth = 400;
-  const svgHeight = 450; // Adjusted height for the new design
-
-  const masteredSkillsCount = useMemo(() => {
-    return skills.filter(skill => skill.mastered).length;
-  }, [skills]);
-
-  const overallMasteryRatio = useMemo(() => {
-    return totalSkills > 0 ? masteredSkillsCount / totalSkills : 0;
-  }, [masteredSkillsCount, totalSkills]);
-
-  const skillsByCategory = useMemo(() => {
-    return skills.reduce((acc, skill) => {
-      if (!acc[skill.category]) acc[skill.category] = [];
-      acc[skill.category].push(skill);
-      return acc;
-    }, {} as Record<string, Skill[]>);
-  }, [skills]);
-
-  const treeElements = useMemo(() => {
-    const categories = Object.keys(skillsByCategory);
-    let numFoliagePads = clamp(categories.length, 1, 3); // 1 to 3 main pads
-    if (skills.length === 0) numFoliagePads = 1; // Default to one pad if no skills
-
-    // Pot - Lower, wider, shallower
-    const potHeight = 35;
-    const potWidth = 120;
-    const potY = svgHeight - potHeight - 5; // 5 for feet clearance
-    const potFeetHeight = 5;
-    const potFeetWidth = 15;
-    const potPath = `M${svgWidth/2 - potWidth/2},${potY} h${potWidth} v${potHeight} h-${potWidth} Z`;
-    const potFeet = [
-      `M${svgWidth/2 - potWidth/2 + 10},${potY + potHeight} h${potFeetWidth} v${potFeetHeight} h-${potFeetWidth} Z`,
-      `M${svgWidth/2 + potWidth/2 - 10 - potFeetWidth},${potY + potHeight} h${potFeetWidth} v${potFeetHeight} h-${potFeetWidth} Z`,
-    ];
-
-    // Trunk - Single graceful curve, leaning
-    const trunkBaseWidth = clamp(18 + overallMasteryRatio * 12, 15, 30);
-    const trunkTopWidth = trunkBaseWidth * 0.5;
-    const trunkHeight = clamp(90 + overallMasteryRatio * 40, 70, 130);
+  // Determine which bonsai image to show (1.png to 11.png)
+  const getBonsaiImageNumber = () => {
+    // Default to image 1 (empty bonsai)
+    if (correctAnswersCount === 0) return 1;
     
-    const trunkStartX = svgWidth / 2;
-    const trunkStartY = potY;
-    const trunkEndX = trunkStartX + randRange(15, 30) * (Math.random() > 0.5 ? 1 : -1); // Lean
-    const trunkEndY = trunkStartY - trunkHeight;
+    // Map the number of correct answers to the appropriate image
+    // 1-10 correct answers maps to images 2-11
+    return Math.min(correctAnswersCount + 1, 11);
+  };
 
-    // Control points for a C-like curve
-    const cp1X = trunkStartX + (trunkEndX - trunkStartX) * 0.1 + randRange(-20, 20);
-    const cp1Y = trunkStartY - trunkHeight * 0.3;
-    const cp2X = trunkStartX + (trunkEndX - trunkStartX) * 0.9 + randRange(-15, 15);
-    const cp2Y = trunkStartY - trunkHeight * 0.8;
-
-    // Path for tapering trunk
-    const trunkPath = `
-      M ${trunkStartX - trunkBaseWidth / 2}, ${trunkStartY}
-      C ${cp1X - trunkBaseWidth * 0.4}, ${cp1Y},
-        ${cp2X - trunkTopWidth * 0.6}, ${cp2Y},
-        ${trunkEndX - trunkTopWidth / 2}, ${trunkEndY}
-      L ${trunkEndX + trunkTopWidth / 2}, ${trunkEndY}
-      C ${cp2X + trunkTopWidth * 0.6}, ${cp2Y},
-        ${cp1X + trunkBaseWidth * 0.4}, ${cp1Y},
-        ${trunkStartX + trunkBaseWidth / 2}, ${trunkStartY}
-      Z
-    `;
-
-    const foliagePads: FoliagePadElement[] = [];
-    const padBaseSize = clamp(40 + overallMasteryRatio * 20, 35, 60);
-
-    // Define points along the trunk curve where foliage pads can be placed
-    // Simple approach: divide trunk height into sections
-    const numPadAttachmentPoints = numFoliagePads;
-    const attachmentPoints: Point[] = [];
-    for (let i = 0; i < numPadAttachmentPoints; i++) {
-        const t = (i + 1) / (numPadAttachmentPoints + 1); // Distribute along 0.25 to 0.75 of trunk height approx.
-        // Calculate point on Bezier curve (simplified for this example)
-        // A proper calculation would use the Bezier formula based on t
-        const pX = lerp(lerp(cp1X, cp2X, t), lerp(trunkStartX, trunkEndX, t), t) + randRange(-10,10) ;
-        const pY = lerp(lerp(cp1Y, cp2Y, t), lerp(trunkStartY, trunkEndY, t), t) + randRange(-15,5);
-        attachmentPoints.push({x: pX, y: pY });
-    }
-    if (numFoliagePads === 1) { // Center single pad more towards the top
-        attachmentPoints[0] = {x: trunkEndX + randRange(-5,5), y: trunkEndY + randRange(-5,10)};
-    }
-
-
-    for (let i = 0; i < numFoliagePads; i++) {
-      const basePoint = attachmentPoints[i % attachmentPoints.length]; // Cycle through attachment points if more pads than points
-      const padRx = padBaseSize * randRange(0.9, 1.2);
-      const padRy = padBaseSize * randRange(0.7, 1.0);
-      const rotation = randRange(-15, 15);
-
-      // Layered effect for foliage pad
-      const layers = [
-        { color: FOLIAGE_SHADE_COLOR, opacity: 0.8, scale: 1.0 },        // Base, slightly darker
-        { color: FOLIAGE_HIGHLIGHT_COLOR, opacity: 0.85, scale: 0.85 }, // Middle highlight
-        { color: FOLIAGE_HIGHLIGHT_COLOR, opacity: 0.6, scale: 0.65 }   // Smaller, brighter highlight
-      ];
-
-      foliagePads.push({
-        id: `foliage-${i}`,
-        cx: basePoint.x,
-        cy: basePoint.y,
-        rx: padRx,
-        ry: padRy,
-        rotation,
-        layers
-      });
-    }
-
-    return { potPath, potFeet, trunkPath, foliagePads };
-
-  }, [skillsByCategory, overallMasteryRatio, skills.length, svgWidth, svgHeight]);
+  const bonsaiImageNumber = getBonsaiImageNumber();
+  const bonsaiImagePath = `/bonsaipng/${bonsaiImageNumber}.png`;
 
   // Animations
-  const containerAnimation = useSpring({ opacity: 1, from: { opacity: 0 }, config: {...config.gentle, duration: 500} });
-  const potAnim = useSpring({ opacity: 1, transform: 'translateY(0px)', from: { opacity: 0, transform: 'translateY(20px)' }, delay: 100, config: config.gentle });
-  const trunkAnim = useSpring({ opacity: 1, transform: 'scaleY(1)', from: { opacity: 0, transform: 'scaleY(0.5)' }, delay: 250, config: config.gentle, transformOrigin: 'bottom' });
-  
-  const foliageAnims = useSprings(
-    treeElements.foliagePads.length,
-    treeElements.foliagePads.map((pad, i) => ({
-      opacity: 1,
-      transform: 'scale(1)',
-      from: { opacity: 0, transform: 'scale(0.5)' },
-      delay: 400 + i * 150,
-      config: config.wobbly,
-    }))
-  );
+  const containerAnimation = useSpring({ 
+    opacity: 1, 
+    from: { opacity: 0 }, 
+    config: { duration: 500 } 
+  });
+
+  const imageAnimation = useSpring({
+    transform: 'translateY(0px)',
+    from: { transform: 'translateY(20px)' },
+    config: { tension: 100, friction: 10 },
+  });
+
+  // Fetch the user's question data to determine how many questions were answered correctly
+  useEffect(() => {
+    const fetchUserProgress = async () => {
+      setIsLoading(true);
+      try {
+        // Get the current user
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user) {
+          console.error('No user logged in');
+          setIsLoading(false);
+          return;
+        }
+
+        // Get the completed questions for the user
+        const { data, error } = await supabase
+          .from('practice_questions')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('completed', true);
+
+        if (error) {
+          throw error;
+        }
+
+        // Calculate how many questions were answered correctly
+        const correctAnswers = data ? data.filter(q => q.correct === true).length : 0;
+        setCorrectAnswersCount(correctAnswers);
+      } catch (error) {
+        console.error('Error fetching user progress:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserProgress();
+  }, []);
 
   return (
     <animated.div style={containerAnimation}>
-      <Box 
+      <Paper 
+        elevation={0} 
         sx={{ 
-          backgroundImage: 'url(/altar2.png)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
+          p: 3, 
+          mb: 4, 
           borderRadius: '20px',
-          p: 2
+          backgroundColor: 'transparent',
+          position: 'relative',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundImage: 'url(/altar2.png)',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            opacity: 0.85,
+            borderRadius: '20px',
+            zIndex: 0,
+          }
         }}
       >
-        <Box sx={{ position: 'relative' }}>
-          <div className="MuiBox-root css-14lrhfz"></div>
-          <Paper 
-            elevation={0} 
+        <Box sx={{ position: 'relative', zIndex: 1 }}>
+          <Typography 
+            variant="h5" 
+            gutterBottom 
+            align="center" 
             sx={{ 
-              p: 3, 
-              mb: 4, 
-              borderRadius: '20px',
-              backgroundColor: 'transparent',
-              position: 'relative',
+              fontWeight: 'bold', 
+              color: '#2C1810',
+              textShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              mb: 3
             }}
           >
+            Your Learning Bonsai
+          </Typography>
+          
+          <Box sx={{ 
+            width: '100%', 
+            height: 450, 
+            position: 'relative',
+            mt: 2,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            flexDirection: 'column'
+          }}>
+            <animated.div style={imageAnimation}>
+              <Box 
+                component="img" 
+                src={bonsaiImagePath}
+                alt={`Bonsai tree growth stage ${bonsaiImageNumber}`}
+                sx={{
+                  maxWidth: '100%',
+                  height: 'auto',
+                  maxHeight: 350,
+                  filter: 'drop-shadow(0px 5px 15px rgba(0,0,0,0.3))',
+                }}
+              />
+            </animated.div>
+            
             <Typography 
-              variant="h5" 
-              gutterBottom 
+              variant="body1" 
               align="center" 
               sx={{ 
-                fontWeight: 'bold', 
+                mt: 3, 
+                fontWeight: 'medium',
                 color: '#2C1810',
-                textShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                mb: 3
               }}
             >
-              Your Learning Bonsai
+              {correctAnswersCount === 0 
+                ? "Complete practice questions to grow your bonsai!" 
+                : `You've answered ${correctAnswersCount} question${correctAnswersCount === 1 ? '' : 's'} correctly!`}
             </Typography>
-            <Box sx={{ 
-              width: '100%', 
-              height: svgHeight, 
-              position: 'relative', 
-              mt: 2,
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center'
-            }}>
-              <svg 
-                width="100%" 
-                height="100%" 
-                viewBox={`0 0 ${svgWidth} ${svgHeight}`} 
-                style={{ overflow: 'visible' }}
-                preserveAspectRatio="xMidYMid meet"
-              >
-                {/* Ambient Glow Effect */}
-                <defs>
-                  <radialGradient id="treeGlow" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
-                    <stop offset="0%" stopColor="#FFF8E1" stopOpacity="0.3" />
-                    <stop offset="100%" stopColor="#FFF8E1" stopOpacity="0" />
-                  </radialGradient>
-                </defs>
-                
-                <circle 
-                  cx={svgWidth / 2} 
-                  cy={svgHeight / 2} 
-                  r={Math.min(svgWidth, svgHeight) / 2.5} 
-                  fill="url(#treeGlow)" 
-                />
-
-                {/* Pot */}
-                <animated.g style={potAnim}>
-                  <path d={treeElements.potPath} fill={POT_COLOR} />
-                  {treeElements.potFeet.map((footPath, i) => (
-                    <path key={`pot-foot-${i}`} d={footPath} fill={POT_COLOR} />
-                  ))}
-                </animated.g>
-
-                {/* Trunk with enhanced shadow */}
-                <animated.g style={trunkAnim}>
-                  <path
-                    d={treeElements.trunkPath}
-                    fill={TRUNK_COLOR}
-                    filter="url(#trunkShadow)"
-                  />
-                </animated.g>
-
-                {/* Foliage */}
-                {treeElements.foliagePads.map((pad, index) => (
-                  <animated.g
-                    key={pad.id}
-                    style={foliageAnims[index]}
-                    transform={`rotate(${pad.rotation} ${pad.cx} ${pad.cy})`}
-                  >
-                    {pad.layers.map((layer, layerIndex) => (
-                      <ellipse
-                        key={`${pad.id}-layer-${layerIndex}`}
-                        cx={pad.cx}
-                        cy={pad.cy}
-                        rx={pad.rx * layer.scale}
-                        ry={pad.ry * layer.scale}
-                        fill={layer.color}
-                        opacity={layer.opacity}
-                        filter="url(#foliageShadow)"
-                      />
-                    ))}
-                  </animated.g>
-                ))}
-
-                {/* Enhanced Shadows */}
-                <defs>
-                  <filter id="trunkShadow" x="-20%" y="-20%" width="140%" height="140%">
-                    <feGaussianBlur in="SourceAlpha" stdDeviation="2" />
-                    <feOffset dx="2" dy="2" result="offsetblur" />
-                    <feComponentTransfer>
-                      <feFuncA type="linear" slope="0.3" />
-                    </feComponentTransfer>
-                    <feMerge>
-                      <feMergeNode />
-                      <feMergeNode in="SourceGraphic" />
-                    </feMerge>
-                  </filter>
-
-                  <filter id="foliageShadow" x="-20%" y="-20%" width="140%" height="140%">
-                    <feGaussianBlur in="SourceAlpha" stdDeviation="1.5" />
-                    <feOffset dx="1" dy="1" result="offsetblur" />
-                    <feComponentTransfer>
-                      <feFuncA type="linear" slope="0.2" />
-                    </feComponentTransfer>
-                    <feMerge>
-                      <feMergeNode />
-                      <feMergeNode in="SourceGraphic" />
-                    </feMerge>
-                  </filter>
-                </defs>
-              </svg>
-            </Box>
-          </Paper>
+          </Box>
         </Box>
-      </Box>
+      </Paper>
     </animated.div>
   );
 };
