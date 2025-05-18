@@ -163,19 +163,6 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
           position: 'relative',
           height: '100%',
           overflow: 'hidden',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundImage: 'url(/altar2.png)',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            opacity: 0.85,
-            zIndex: 0,
-          }
         }}
       >
         <Box sx={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>

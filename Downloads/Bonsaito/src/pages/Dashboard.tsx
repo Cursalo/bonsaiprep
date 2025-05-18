@@ -302,13 +302,14 @@ const getBackgroundStyle = () => {
 const Dashboard: React.FC = () => {
   const { skills, totalSkills, masteredSkillsCount /*, updateSkillProgress */ } = useSkills(); // Commented out updateSkillProgress
   const [drawerOpen, setDrawerOpen] = useState<boolean>(false);
-  const [tabValue, setTabValue] = useState<number>(0);
+  const [currentTab, setCurrentTab] = useState<number>(0);
   const [showQuiz, setShowQuiz] = useState<boolean>(false);
   const [quizResults, setQuizResults] = useState<{skillId: string; score: number}[]>([]);
   const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
   const [showTreeAnimation, setShowTreeAnimation] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
   const [userData, setUserData] = useState<UserOnboardingData | null>(null);
-  const [loadingUserData, setLoadingUserData] = useState<boolean>(true);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -343,7 +344,7 @@ const Dashboard: React.FC = () => {
       } catch (error) {
         console.error("Error fetching user session:", error);
       } finally {
-        setLoadingUserData(false);
+        setLoading(false);
       }
     };
 
@@ -370,13 +371,14 @@ const Dashboard: React.FC = () => {
   };
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue);
+    setCurrentTab(newValue);
   };
 
   const handleQuizComplete = (results: {skillId: string; score: number}[]) => {
     setQuizResults(results);
     setShowQuiz(false);
     setSnackbarOpen(true);
+    setSnackbarMessage("Quiz Completed! Your skills have been updated.");
   };
 
   const handleCloseSnackbar = () => {
@@ -388,7 +390,7 @@ const Dashboard: React.FC = () => {
 
   return (
     <ThemeProvider theme={darkTheme}>
-      <Box sx={getBackgroundStyle()}>
+      <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#121212' }}>
         {/* App Bar */}
         <AppBar position="fixed">
           <Toolbar>
@@ -408,7 +410,7 @@ const Dashboard: React.FC = () => {
               bgcolor: 'primary.main',
               boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)'
             }}>
-              {loadingUserData ? '' : userData?.firstName?.charAt(0) || 'U'}
+              {loading ? '' : userData?.firstName?.charAt(0) || 'U'}
             </Avatar>
           </Toolbar>
         </AppBar>
@@ -534,828 +536,850 @@ const Dashboard: React.FC = () => {
           component="main"
           sx={{
             flexGrow: 1,
-            p: 3,
-            pt: '80px', // Adjusted to account for AppBar
-            width: '100%',
-            overflowY: 'auto',
-            minHeight: '100vh'
+            minHeight: '100vh',
+            bgcolor: 'background.default',
+            position: 'relative',
+            '&::before': {
+              content: '""',
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundImage: 'url(/altar2.png)',
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+              opacity: 0.4,
+              pointerEvents: 'none',
+              zIndex: 0,
+              filter: 'brightness(0.9) contrast(1.1)',
+            }
           }}
         >
-          <Container maxWidth="lg">
-            <FadeIn duration={800}>
-              <Box sx={{ 
-                borderBottom: 1, 
-                borderColor: 'rgba(255, 255, 255, 0.1)', 
-                mb: 3,
-                pb: 1
-              }}>
-                <Tabs 
-                  value={tabValue} 
-                  onChange={handleTabChange} 
-                  aria-label="dashboard tabs" 
-                  variant="scrollable"
-                  scrollButtons="auto"
-                  sx={{
-                    '& .MuiTab-root': {
-                      color: 'rgba(255, 255, 255, 0.7)',
-                      fontSize: '1rem',
-                      '&.Mui-selected': {
-                        color: 'rgba(255, 255, 255, 0.95)'
+          <Box sx={{ 
+            position: 'relative', 
+            zIndex: 1,
+            minHeight: '100vh',
+            backdropFilter: 'blur(5px)',
+            background: 'linear-gradient(180deg, rgba(18, 18, 18, 0.7) 0%, rgba(18, 18, 18, 0.85) 100%)',
+          }}>
+            <Toolbar />
+            <Container maxWidth="lg" sx={{ mt: 4, mb: 4, position: 'relative' }}>
+              <FadeIn duration={800}>
+                <Box sx={{ 
+                  borderBottom: 1, 
+                  borderColor: 'rgba(255, 255, 255, 0.1)', 
+                  mb: 3,
+                  pb: 1
+                }}>
+                  <Tabs 
+                    value={currentTab} 
+                    onChange={handleTabChange} 
+                    aria-label="dashboard tabs" 
+                    variant="scrollable"
+                    scrollButtons="auto"
+                    sx={{
+                      '& .MuiTab-root': {
+                        color: 'rgba(255, 255, 255, 0.7)',
+                        fontSize: '1rem',
+                        '&.Mui-selected': {
+                          color: 'rgba(255, 255, 255, 0.95)'
+                        }
                       }
-                    }
-                  }}
-                >
-                  <Tab label="Overview" icon={<InsightsIcon />} sx={{ minWidth: 120 }} />
-                  <Tab label="My Bonsai" icon={<EmojiNatureIcon />} sx={{ minWidth: 120 }} />
-                  <Tab label="Skill Progress" icon={<LocalFloristIcon />} sx={{ minWidth: 120 }} />
-                  <Tab label="Profile" icon={<PersonIcon />} sx={{ minWidth: 120 }} />
-                </Tabs>
-              </Box>
-            </FadeIn>
+                    }}
+                  >
+                    <Tab label="Overview" icon={<InsightsIcon />} sx={{ minWidth: 120 }} />
+                    <Tab label="My Bonsai" icon={<EmojiNatureIcon />} sx={{ minWidth: 120 }} />
+                    <Tab label="Skill Progress" icon={<LocalFloristIcon />} sx={{ minWidth: 120 }} />
+                    <Tab label="Profile" icon={<PersonIcon />} sx={{ minWidth: 120 }} />
+                  </Tabs>
+                </Box>
+              </FadeIn>
 
-            <TabPanel value={tabValue} index={0}>
-              {/* Overview Content */}
-              <Grid container spacing={3}>
-                <Grid item xs={12} md={8}>
-                  <FadeIn>
-                    <GlassCard sx={{ mb: 3, p: 3, height: '100%', boxShadow: '0 10px 30px rgba(0,0,0,0.3)', border: '1px solid rgba(136, 212, 152, 0.2)' }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                        <Avatar 
-                          sx={{ 
-                            width: 64, 
-                            height: 64, 
-                            bgcolor: 'primary.main',
-                            boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
-                            mr: 2
-                          }}
-                        >
-                          {loadingUserData ? '' : userData?.firstName?.charAt(0) || 'U'}
-                        </Avatar>
-                        <Box>
-                          <Typography variant="h4" gutterBottom sx={{ 
-                            fontWeight: 'bold',
-                            color: 'rgba(255, 255, 255, 0.87)',
-                            textShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                            m: 0 
-                          }}>
-                            Welcome back, {loadingUserData ? 'User' : userData?.firstName || 'User'}!
-                          </Typography>
-                          <Typography variant="body1" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-                            Let's continue your SAT preparation journey.
-                          </Typography>
-                        </Box>
-                      </Box>
-                      
-                      <Divider sx={{ my: 2, borderColor: 'rgba(255, 255, 255, 0.1)' }} />
-                      
-                      {/* SAT Score Summary Section */}
-                      {userData && !loadingUserData && (
-                        <Box sx={{ 
-                          p: 2, 
-                          mb: 3, 
-                          borderRadius: 2, 
-                          background: 'linear-gradient(to right, rgba(12, 59, 46, 0.6), rgba(30, 30, 30, 0.4))',
-                          border: '1px solid rgba(255, 255, 255, 0.1)',
-                          backdropFilter: 'blur(8px)',
-                          boxShadow: 'inset 0 1px 1px rgba(255, 255, 255, 0.1)'
-                        }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                            <SchoolIcon sx={{ color: '#88d498', mr: 1 }} />
-                            <Typography variant="h6" sx={{ 
-                              fontWeight: 'bold', 
+              <TabPanel value={currentTab} index={0}>
+                {/* Overview Content */}
+                <Grid container spacing={3}>
+                  <Grid item xs={12} md={8}>
+                    <FadeIn>
+                      <GlassCard sx={{ mb: 3, p: 3, height: '100%', boxShadow: '0 10px 30px rgba(0,0,0,0.3)', border: '1px solid rgba(136, 212, 152, 0.2)' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                          <Avatar 
+                            sx={{ 
+                              width: 64, 
+                              height: 64, 
+                              bgcolor: 'primary.main',
+                              boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
+                              mr: 2
+                            }}
+                          >
+                            {loading ? '' : userData?.firstName?.charAt(0) || 'U'}
+                          </Avatar>
+                          <Box>
+                            <Typography variant="h4" gutterBottom sx={{ 
+                              fontWeight: 'bold',
                               color: 'rgba(255, 255, 255, 0.87)',
-                              textShadow: '0 1px 2px rgba(0,0,0,0.2)'
+                              textShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                              m: 0 
                             }}>
-                              Your SAT Journey
+                              Welcome back, {loading ? 'User' : userData?.firstName || 'User'}!
                             </Typography>
+                            <Typography variant="body1" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                              Let's continue your SAT preparation journey.
+                            </Typography>
+                          </Box>
+                        </Box>
+                        
+                        <Divider sx={{ my: 2, borderColor: 'rgba(255, 255, 255, 0.1)' }} />
+                        
+                        {/* SAT Score Summary Section */}
+                        {userData && !loading && (
+                          <Box sx={{ 
+                            p: 2, 
+                            mb: 3, 
+                            borderRadius: 2, 
+                            background: 'linear-gradient(to right, rgba(12, 59, 46, 0.6), rgba(30, 30, 30, 0.4))',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            backdropFilter: 'blur(8px)',
+                            boxShadow: 'inset 0 1px 1px rgba(255, 255, 255, 0.1)'
+                          }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                              <SchoolIcon sx={{ color: '#88d498', mr: 1 }} />
+                              <Typography variant="h6" sx={{ 
+                                fontWeight: 'bold', 
+                                color: 'rgba(255, 255, 255, 0.87)',
+                                textShadow: '0 1px 2px rgba(0,0,0,0.2)'
+                              }}>
+                                Your SAT Journey
+                              </Typography>
+                            </Box>
+                            
+                            <Box sx={{ 
+                              display: 'flex', 
+                              justifyContent: 'space-between',
+                              flexWrap: 'wrap',
+                              mt: 2
+                            }}>
+                              <Box sx={{ 
+                                textAlign: 'center', 
+                                p: 1.5, 
+                                minWidth: 120,
+                                backdropFilter: 'blur(5px)',
+                                borderRadius: 2,
+                                background: 'rgba(0,0,0,0.2)',
+                                flex: 1,
+                                mr: 1,
+                                mb: { xs: 1, sm: 0 }
+                              }}>
+                                <Typography variant="overline" sx={{ color: 'rgba(255, 255, 255, 0.6)' }}>
+                                  Current Score
+                                </Typography>
+                                <Typography variant="h5" sx={{ 
+                                  fontWeight: 'bold', 
+                                  color: userData.satScore ? '#88d498' : 'rgba(255,255,255,0.5)'
+                                }}>
+                                  {userData.satScore || 'Not set'}
+                                </Typography>
+                              </Box>
+                              
+                              <Box sx={{ 
+                                textAlign: 'center', 
+                                p: 1.5, 
+                                minWidth: 120,
+                                backdropFilter: 'blur(5px)',
+                                borderRadius: 2,
+                                background: 'rgba(0,0,0,0.2)',
+                                flex: 1,
+                                mr: 1,
+                                mb: { xs: 1, sm: 0 }
+                              }}>
+                                <Typography variant="overline" sx={{ color: 'rgba(255, 255, 255, 0.6)' }}>
+                                  Target Score
+                                </Typography>
+                                <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#f5cb5c' }}>
+                                  {userData.targetSatScore}
+                                </Typography>
+                              </Box>
+                              
+                              <Box sx={{ 
+                                textAlign: 'center', 
+                                p: 1.5, 
+                                minWidth: 120,
+                                backdropFilter: 'blur(5px)',
+                                borderRadius: 2,
+                                background: 'rgba(0,0,0,0.2)',
+                                flex: 1,
+                                mb: { xs: 1, sm: 0 }
+                              }}>
+                                <Typography variant="overline" sx={{ color: 'rgba(255, 255, 255, 0.6)' }}>
+                                  Points to Go
+                                </Typography>
+                                <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#e27d60' }}>
+                                  {userData.satScore ? (userData.targetSatScore - userData.satScore) : '?'}
+                                </Typography>
+                              </Box>
+                            </Box>
+                          </Box>
+                        )}
+                                 
+                        {/* Bonsai Tree Visualization */}
+                        <Box sx={{ mt: 3, mb: 4 }}>
+                          <Typography variant="h6" gutterBottom sx={{ 
+                            fontWeight: 'bold', 
+                            color: 'rgba(255, 255, 255, 0.87)',
+                            textShadow: '0 1px 2px rgba(0,0,0,0.2)'
+                          }}>
+                            Your Learning Bonsai
+                          </Typography>
+                          
+                          <Box sx={{ 
+                            position: 'relative',
+                            height: 380,
+                            background: 'linear-gradient(180deg, rgba(30, 30, 30, 0.7) 0%, rgba(18, 18, 18, 0.8) 100%)',
+                            backdropFilter: 'blur(8px)',
+                            borderRadius: 4,
+                            mt: 2,
+                            mb: 1,
+                            overflow: 'hidden',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            boxShadow: 'inset 0 2px 10px rgba(0, 0, 0, 0.2)',
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            '&::before': {
+                              content: '""',
+                              position: 'absolute',
+                              bottom: 0,
+                              left: '10%',
+                              right: '10%',
+                              height: '2px',
+                              background: 'radial-gradient(ellipse at center, rgba(136, 212, 152, 0.3) 0%, rgba(0,0,0,0) 70%)',
+                              filter: 'blur(3px)',
+                            }
+                          }}>
+                            <Box sx={{
+                              position: 'absolute',
+                              top: 20,
+                              right: 25,
+                              width: 80,
+                              height: 80,
+                              borderRadius: '50%',
+                              background: 'radial-gradient(circle, rgba(255,236,179,0.3) 0%, rgba(255,236,179,0) 70%)',
+                              zIndex: 1,
+                              animation: 'pulse 8s infinite ease-in-out',
+                              '@keyframes pulse': {
+                                '0%': { opacity: 0.5, transform: 'scale(1)' },
+                                '50%': { opacity: 0.8, transform: 'scale(1.1)' },
+                                '100%': { opacity: 0.5, transform: 'scale(1)' }
+                              }
+                            }} />
+                            <BonsaiTree skills={skills} totalSkills={totalSkills} />
                           </Box>
                           
                           <Box sx={{ 
                             display: 'flex', 
-                            justifyContent: 'space-between',
-                            flexWrap: 'wrap',
-                            mt: 2
+                            justifyContent: 'center', 
+                            mt: 2,
+                            gap: 2
                           }}>
-                            <Box sx={{ 
-                              textAlign: 'center', 
-                              p: 1.5, 
-                              minWidth: 120,
-                              backdropFilter: 'blur(5px)',
-                              borderRadius: 2,
-                              background: 'rgba(0,0,0,0.2)',
-                              flex: 1,
-                              mr: 1,
-                              mb: { xs: 1, sm: 0 }
-                            }}>
-                              <Typography variant="overline" sx={{ color: 'rgba(255, 255, 255, 0.6)' }}>
-                                Current Score
-                              </Typography>
-                              <Typography variant="h5" sx={{ 
+                            <Typography 
+                              variant="h4" 
+                              sx={{ 
                                 fontWeight: 'bold', 
-                                color: userData.satScore ? '#88d498' : 'rgba(255,255,255,0.5)'
-                              }}>
-                                {userData.satScore || 'Not set'}
-                              </Typography>
-                            </Box>
-                            
-                            <Box sx={{ 
-                              textAlign: 'center', 
-                              p: 1.5, 
-                              minWidth: 120,
-                              backdropFilter: 'blur(5px)',
-                              borderRadius: 2,
-                              background: 'rgba(0,0,0,0.2)',
-                              flex: 1,
-                              mr: 1,
-                              mb: { xs: 1, sm: 0 }
-                            }}>
-                              <Typography variant="overline" sx={{ color: 'rgba(255, 255, 255, 0.6)' }}>
-                                Target Score
-                              </Typography>
-                              <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#f5cb5c' }}>
-                                {userData.targetSatScore}
-                              </Typography>
-                            </Box>
-                            
-                            <Box sx={{ 
-                              textAlign: 'center', 
-                              p: 1.5, 
-                              minWidth: 120,
-                              backdropFilter: 'blur(5px)',
-                              borderRadius: 2,
-                              background: 'rgba(0,0,0,0.2)',
-                              flex: 1,
-                              mb: { xs: 1, sm: 0 }
-                            }}>
-                              <Typography variant="overline" sx={{ color: 'rgba(255, 255, 255, 0.6)' }}>
-                                Points to Go
-                              </Typography>
-                              <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#e27d60' }}>
-                                {userData.satScore ? (userData.targetSatScore - userData.satScore) : '?'}
-                              </Typography>
-                            </Box>
+                                color: '#88d498',
+                                textShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                                textAlign: 'center'
+                              }}
+                            >
+                              {progressPercentage}%
+                            </Typography>
+                            <Typography 
+                              variant="h6" 
+                              sx={{ 
+                                fontWeight: 'medium', 
+                                color: 'rgba(255, 255, 255, 0.87)',
+                                alignSelf: 'flex-end',
+                                mb: 0.5
+                              }}
+                            >
+                              Skills Mastered
+                            </Typography>
                           </Box>
+                          
+                          <Typography variant="body2" sx={{ mt: 1, textAlign: 'center', color: 'rgba(255, 255, 255, 0.7)' }}>
+                            You've mastered {masteredSkillsCount} out of {totalSkills} skills. Keep growing!
+                          </Typography>
                         </Box>
-                      )}
-                             
-                      {/* Bonsai Tree Visualization */}
-                      <Box sx={{ mt: 3, mb: 4 }}>
+                        
+                        {masteredSkillsCount < totalSkills && (
+                           <Box sx={{ mt: 2 }}>
+                             <LinearProgress 
+                               variant="determinate" 
+                               value={progressPercentage} 
+                               sx={{ 
+                                 height: 10, 
+                                 borderRadius: 5, 
+                                 mb: 1,
+                                 backgroundColor: 'rgba(30, 30, 30, 0.5)',
+                                 '& .MuiLinearProgress-bar': {
+                                   backgroundColor: '#88d498',
+                                   boxShadow: '0 0 5px rgba(136, 212, 152, 0.5)'
+                                 }
+                               }} 
+                             />
+                             <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.6)' }}>
+                               {progressPercentage}% complete
+                             </Typography>
+                           </Box>
+                        )}
+                        <Box sx={{ mt: 3, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                          <GradientButton 
+                            variant="contained" 
+                            gradient="success" 
+                            startIcon={<QuizIcon />} 
+                            onClick={() => setShowQuiz(true)}
+                          >
+                            Grow Your Tree
+                          </GradientButton>
+                          <GradientButton 
+                            variant="contained" 
+                            gradient="primary" 
+                            startIcon={<PlayLessonIcon />} 
+                            onClick={() => navigate('/lessons')}
+                          >
+                            Go to Lessons
+                          </GradientButton>
+                          <GradientButton 
+                            variant="contained" 
+                            gradient="secondary" 
+                            startIcon={<UploadIcon />} 
+                            onClick={() => navigate('/upload')}
+                          >
+                            Practice
+                          </GradientButton>
+                        </Box>
+                      </GlassCard>
+                    </FadeIn>
+                  </Grid>
+                  <Grid item xs={12} md={4}>
+                    <SlideIn direction="right">
+                      <GlassCard sx={{ p: 3, height: '100%', borderLeft: '4px solid #88d498', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)' }}>
                         <Typography variant="h6" gutterBottom sx={{ 
                           fontWeight: 'bold', 
                           color: 'rgba(255, 255, 255, 0.87)',
-                          textShadow: '0 1px 2px rgba(0,0,0,0.2)'
+                          textShadow: '0 1px 2px rgba(0,0,0,0.2)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1
+                        }}>
+                          <span role="img" aria-label="lightbulb" style={{ fontSize: '1.5rem' }}>💡</span> Daily Tip
+                        </Typography>
+                        <Divider sx={{ my: 1.5, borderColor: 'rgba(255, 255, 255, 0.1)' }} />
+                        <Typography variant="body1" sx={{ 
+                          color: 'rgba(255, 255, 255, 0.8)',
+                          lineHeight: 1.6,
+                          fontStyle: 'italic',
+                          p: 1,
+                          borderRadius: 1,
+                          background: 'rgba(0,0,0,0.1)',
+                          boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.1)',
+                          my: 2
+                        }}>
+                          "Practice consistently, even if it's just for 15-30 minutes each day. Consistency builds momentum!"
+                        </Typography>
+                        
+                        {userData && userData.motivation && (
+                          <Box sx={{ mt: 3 }}>
+                            <Typography variant="subtitle2" sx={{ 
+                              color: 'rgba(255, 255, 255, 0.7)',
+                              fontWeight: 500,
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 1,
+                              mb: 1
+                            }}>
+                              <span role="img" aria-label="motivation" style={{ fontSize: '1.2rem' }}>✨</span> Your Motivation
+                            </Typography>
+                            <Typography variant="body2" sx={{ 
+                              color: 'rgba(255, 255, 255, 0.9)',
+                              p: 1.5,
+                              borderRadius: 1,
+                              background: 'rgba(136, 212, 152, 0.1)',
+                              border: '1px solid rgba(136, 212, 152, 0.2)',
+                              boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.1)',
+                              fontWeight: 500
+                            }}>
+                              "{userData.motivation}"
+                            </Typography>
+                          </Box>
+                        )}
+                        
+                        <Box sx={{ 
+                          mt: 3, 
+                          display: 'flex', 
+                          justifyContent: 'center', 
+                          alignItems: 'center',
+                          flexDirection: 'column',
+                          gap: 1
+                        }}>
+                          <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.6)' }}>
+                            Study streak: <span style={{ color: '#f5cb5c', fontWeight: 'bold' }}>3 days</span> 🔥
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.6)' }}>
+                            Keep it up!
+                          </Typography>
+                        </Box>
+                      </GlassCard>
+                    </SlideIn>
+                  </Grid>
+                </Grid>
+              </TabPanel>
+
+              <TabPanel value={currentTab} index={1}>
+                {/* Bonsai Tree Content */}
+                <ScaleIn>
+                  <GlassCard sx={{ 
+                    overflow: 'hidden',
+                    p: 0,
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+                    border: '1px solid rgba(136, 212, 152, 0.2)'
+                  }}>
+                    {/* Header */}
+                    <Box sx={{ 
+                      bgcolor: 'rgba(12, 59, 46, 0.8)',
+                      p: 2,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
+                    }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <EmojiNatureIcon sx={{ 
+                          color: '#88d498', 
+                          mr: 1, 
+                          fontSize: 28,
+                          filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.3))'
+                        }} />
+                        <Typography variant="h5" sx={{ 
+                          color: 'rgba(255, 255, 255, 0.87)', 
+                          fontWeight: 'bold',
+                          textShadow: '0 2px 4px rgba(0,0,0,0.3)'
                         }}>
                           Your Learning Bonsai
                         </Typography>
-                        
-                        <Box sx={{ 
-                          position: 'relative',
-                          height: 380,
-                          background: 'linear-gradient(180deg, rgba(30, 30, 30, 0.7) 0%, rgba(18, 18, 18, 0.8) 100%)',
-                          backdropFilter: 'blur(8px)',
-                          borderRadius: 4,
-                          mt: 2,
-                          mb: 1,
-                          overflow: 'hidden',
-                          border: '1px solid rgba(255, 255, 255, 0.1)',
-                          boxShadow: 'inset 0 2px 10px rgba(0, 0, 0, 0.2)',
-                          display: 'flex',
-                          justifyContent: 'center',
-                          alignItems: 'center',
-                          '&::before': {
-                            content: '""',
-                            position: 'absolute',
-                            bottom: 0,
-                            left: '10%',
-                            right: '10%',
-                            height: '2px',
-                            background: 'radial-gradient(ellipse at center, rgba(136, 212, 152, 0.3) 0%, rgba(0,0,0,0) 70%)',
-                            filter: 'blur(3px)',
-                          }
-                        }}>
-                          <Box sx={{
-                            position: 'absolute',
-                            top: 20,
-                            right: 25,
-                            width: 80,
-                            height: 80,
-                            borderRadius: '50%',
-                            background: 'radial-gradient(circle, rgba(255,236,179,0.3) 0%, rgba(255,236,179,0) 70%)',
-                            zIndex: 1,
-                            animation: 'pulse 8s infinite ease-in-out',
-                            '@keyframes pulse': {
-                              '0%': { opacity: 0.5, transform: 'scale(1)' },
-                              '50%': { opacity: 0.8, transform: 'scale(1.1)' },
-                              '100%': { opacity: 0.5, transform: 'scale(1)' }
-                            }
-                          }} />
-                          <BonsaiTree skills={skills} totalSkills={totalSkills} />
-                        </Box>
-                        
-                        <Box sx={{ 
-                          display: 'flex', 
-                          justifyContent: 'center', 
-                          mt: 2,
-                          gap: 2
-                        }}>
-                          <Typography 
-                            variant="h4" 
-                            sx={{ 
-                              fontWeight: 'bold', 
-                              color: '#88d498',
-                              textShadow: '0 2px 4px rgba(0,0,0,0.3)',
-                              textAlign: 'center'
-                            }}
-                          >
-                            {progressPercentage}%
-                          </Typography>
-                          <Typography 
-                            variant="h6" 
-                            sx={{ 
-                              fontWeight: 'medium', 
-                              color: 'rgba(255, 255, 255, 0.87)',
-                              alignSelf: 'flex-end',
-                              mb: 0.5
-                            }}
-                          >
-                            Skills Mastered
-                          </Typography>
-                        </Box>
-                        
-                        <Typography variant="body2" sx={{ mt: 1, textAlign: 'center', color: 'rgba(255, 255, 255, 0.7)' }}>
-                          You've mastered {masteredSkillsCount} out of {totalSkills} skills. Keep growing!
-                        </Typography>
+                      </Box>
+                      <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                        Growth Level: {masteredSkillsCount} / {totalSkills}
+                      </Typography>
+                    </Box>
+                    
+                    {/* Tree Visualization */}
+                    <Box sx={{ 
+                      background: 'linear-gradient(180deg, rgba(30, 30, 30, 0.9) 0%, rgba(18, 18, 18, 0.95) 100%)',
+                      p: 4,
+                      textAlign: 'center'
+                    }}>
+                      <Box sx={{ 
+                        position: 'relative',
+                        mb: 2,
+                        height: 400,
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        '&::before': {
+                          content: '""',
+                          position: 'absolute',
+                          bottom: 0,
+                          left: '10%',
+                          right: '10%',
+                          height: '2px',
+                          background: 'radial-gradient(ellipse at center, rgba(136, 212, 152, 0.3) 0%, rgba(0,0,0,0) 70%)',
+                          filter: 'blur(3px)',
+                        }
+                      }}>
+                        <BonsaiTree skills={skills} totalSkills={totalSkills} />
                       </Box>
                       
-                      {masteredSkillsCount < totalSkills && (
-                         <Box sx={{ mt: 2 }}>
-                           <LinearProgress 
-                             variant="determinate" 
-                             value={progressPercentage} 
-                             sx={{ 
-                               height: 10, 
-                               borderRadius: 5, 
-                               mb: 1,
-                               backgroundColor: 'rgba(30, 30, 30, 0.5)',
-                               '& .MuiLinearProgress-bar': {
-                                 backgroundColor: '#88d498',
-                                 boxShadow: '0 0 5px rgba(136, 212, 152, 0.5)'
-                               }
-                             }} 
-                           />
-                           <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.6)' }}>
-                             {progressPercentage}% complete
-                           </Typography>
-                         </Box>
-                      )}
-                      <Box sx={{ mt: 3, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                        <GradientButton 
-                          variant="contained" 
-                          gradient="success" 
-                          startIcon={<QuizIcon />} 
+                      <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center', gap: 2 }}>
+                        <GradientButton
+                          variant="contained"
+                          gradient="success"
+                          size="large"
                           onClick={() => setShowQuiz(true)}
+                          startIcon={<QuizIcon />}
                         >
                           Grow Your Tree
                         </GradientButton>
-                        <GradientButton 
-                          variant="contained" 
-                          gradient="primary" 
-                          startIcon={<PlayLessonIcon />} 
-                          onClick={() => navigate('/lessons')}
-                        >
-                          Go to Lessons
-                        </GradientButton>
-                        <GradientButton 
-                          variant="contained" 
-                          gradient="secondary" 
-                          startIcon={<UploadIcon />} 
+                        <GradientButton
+                          variant="outlined"
+                          gradient="primary"
+                          size="large"
                           onClick={() => navigate('/upload')}
+                          startIcon={<UploadIcon />}
                         >
-                          Practice
+                          Upload Report
                         </GradientButton>
                       </Box>
-                    </GlassCard>
-                  </FadeIn>
-                </Grid>
-                <Grid item xs={12} md={4}>
-                  <SlideIn direction="right">
-                    <GlassCard sx={{ p: 3, height: '100%', borderLeft: '4px solid #88d498', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)' }}>
-                      <Typography variant="h6" gutterBottom sx={{ 
-                        fontWeight: 'bold', 
-                        color: 'rgba(255, 255, 255, 0.87)',
-                        textShadow: '0 1px 2px rgba(0,0,0,0.2)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1
-                      }}>
-                        <span role="img" aria-label="lightbulb" style={{ fontSize: '1.5rem' }}>💡</span> Daily Tip
-                      </Typography>
-                      <Divider sx={{ my: 1.5, borderColor: 'rgba(255, 255, 255, 0.1)' }} />
-                      <Typography variant="body1" sx={{ 
-                        color: 'rgba(255, 255, 255, 0.8)',
-                        lineHeight: 1.6,
-                        fontStyle: 'italic',
-                        p: 1,
-                        borderRadius: 1,
-                        background: 'rgba(0,0,0,0.1)',
-                        boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.1)',
-                        my: 2
-                      }}>
-                        "Practice consistently, even if it's just for 15-30 minutes each day. Consistency builds momentum!"
-                      </Typography>
-                      
-                      {userData && userData.motivation && (
-                        <Box sx={{ mt: 3 }}>
-                          <Typography variant="subtitle2" sx={{ 
-                            color: 'rgba(255, 255, 255, 0.7)',
-                            fontWeight: 500,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 1,
-                            mb: 1
-                          }}>
-                            <span role="img" aria-label="motivation" style={{ fontSize: '1.2rem' }}>✨</span> Your Motivation
-                          </Typography>
-                          <Typography variant="body2" sx={{ 
-                            color: 'rgba(255, 255, 255, 0.9)',
-                            p: 1.5,
-                            borderRadius: 1,
-                            background: 'rgba(136, 212, 152, 0.1)',
-                            border: '1px solid rgba(136, 212, 152, 0.2)',
-                            boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.1)',
-                            fontWeight: 500
-                          }}>
-                            "{userData.motivation}"
-                          </Typography>
-                        </Box>
-                      )}
-                      
-                      <Box sx={{ 
-                        mt: 3, 
-                        display: 'flex', 
-                        justifyContent: 'center', 
-                        alignItems: 'center',
-                        flexDirection: 'column',
-                        gap: 1
-                      }}>
-                        <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.6)' }}>
-                          Study streak: <span style={{ color: '#f5cb5c', fontWeight: 'bold' }}>3 days</span> 🔥
-                        </Typography>
-                        <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.6)' }}>
-                          Keep it up!
-                        </Typography>
-                      </Box>
-                    </GlassCard>
-                  </SlideIn>
-                </Grid>
-              </Grid>
-            </TabPanel>
-
-            <TabPanel value={tabValue} index={1}>
-              {/* Bonsai Tree Content */}
-              <ScaleIn>
-                <GlassCard sx={{ 
-                  overflow: 'hidden',
-                  p: 0,
-                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
-                  border: '1px solid rgba(136, 212, 152, 0.2)'
-                }}>
-                  {/* Header */}
-                  <Box sx={{ 
-                    bgcolor: 'rgba(12, 59, 46, 0.8)',
-                    p: 2,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
-                  }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <EmojiNatureIcon sx={{ 
-                        color: '#88d498', 
-                        mr: 1, 
-                        fontSize: 28,
-                        filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.3))'
-                      }} />
-                      <Typography variant="h5" sx={{ 
-                        color: 'rgba(255, 255, 255, 0.87)', 
-                        fontWeight: 'bold',
-                        textShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                      }}>
-                        Your Learning Bonsai
-                      </Typography>
                     </Box>
-                    <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-                      Growth Level: {masteredSkillsCount} / {totalSkills}
+                  </GlassCard>
+                </ScaleIn>
+              </TabPanel>
+
+              <TabPanel value={currentTab} index={2}>
+                {/* Skill Progress Content */}
+                <Grid container spacing={3}>
+                  <Grid item xs={12}>
+                    <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', color: '#113946' }}>Skill Progress</Typography>
+                    <Typography variant="body1" color="textSecondary" sx={{ mb: 2 }}>
+                      Track your progress in different SAT skill areas.
                     </Typography>
-                  </Box>
-                  
-                  {/* Tree Visualization */}
+                  </Grid>
+                  {skills.map((skill, index) => (
+                    <Grid item xs={12} sm={6} md={4} key={skill.id}>
+                      <StaggeredList index={index}>
+                        {[
+                          <GlassCard sx={{ p: 2, height: '100%' }} key={`glass-${skill.id}`}>
+                            <Typography variant="h6" sx={{ fontWeight: 500, color: '#1B4D3E' }}>{skill.name}</Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', my: 1 }}>
+                              <Box sx={{ width: '100%', mr: 1 }}>
+                                <LinearProgress 
+                                  variant="determinate" 
+                                  value={'progress' in skill ? (skill.progress as number) * 100 : 0} 
+                                  sx={{ height: 8, borderRadius: 4 }} 
+                                />
+                              </Box>
+                              <Box sx={{ minWidth: 35 }}>
+                                <Typography variant="body2" color="textSecondary">
+                                  {`${Math.round('progress' in skill ? (skill.progress as number) * 100 : 0)}%`}
+                                </Typography>
+                              </Box>
+                            </Box>
+                            <Typography variant="caption" color="textSecondary">{skill.description}</Typography>
+                          </GlassCard>
+                        ]}
+                      </StaggeredList>
+                    </Grid>
+                  ))}
+                </Grid>
+              </TabPanel>
+
+              <TabPanel value={currentTab} index={3}>
+                {/* Profile Content */}
+                <FadeIn>
                   <Box sx={{ 
-                    background: 'linear-gradient(180deg, rgba(30, 30, 30, 0.9) 0%, rgba(18, 18, 18, 0.95) 100%)',
-                    p: 4,
-                    textAlign: 'center'
+                    borderRadius: 4, 
+                    overflow: 'hidden',
+                    boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)'
                   }}>
+                    {/* Header Banner with Personal Info */}
                     <Box sx={{ 
+                      p: 4, 
+                      background: 'linear-gradient(135deg, #113946 0%, #3E606F 100%)',
                       position: 'relative',
-                      mb: 2,
-                      height: 400,
-                      display: 'flex',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      '&::before': {
-                        content: '""',
-                        position: 'absolute',
-                        bottom: 0,
-                        left: '10%',
-                        right: '10%',
-                        height: '2px',
-                        background: 'radial-gradient(ellipse at center, rgba(136, 212, 152, 0.3) 0%, rgba(0,0,0,0) 70%)',
-                        filter: 'blur(3px)',
-                      }
+                      overflow: 'hidden'
                     }}>
-                      <BonsaiTree skills={skills} totalSkills={totalSkills} />
+                      {/* Decorative Elements */}
+                      <Box sx={{ 
+                        position: 'absolute', 
+                        top: -20, 
+                        right: -20, 
+                        width: 200, 
+                        height: 200, 
+                        borderRadius: '50%', 
+                        background: 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%)'
+                      }} />
+                      <Box sx={{ 
+                        position: 'absolute', 
+                        bottom: -30, 
+                        left: -30, 
+                        width: 150, 
+                        height: 150, 
+                        borderRadius: '50%', 
+                        background: 'radial-gradient(circle, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 70%)'
+                      }} />
+                    
+                      {loading ? (
+                        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '150px' }}>
+                          <CircularProgress sx={{ color: '#fff' }} />
+                        </Box>
+                      ) : userData ? (
+                        <Grid container spacing={2} alignItems="center">
+                          <Grid item>
+                            <Avatar sx={{ 
+                              width: 100, 
+                              height: 100,
+                              bgcolor: '#1a936f',
+                              fontSize: '2.5rem',
+                              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)'
+                            }}>
+                              {userData.firstName.charAt(0)}{userData.lastName.charAt(0)}
+                            </Avatar>
+                          </Grid>
+                          <Grid item xs>
+                            <Typography variant="h3" sx={{ color: '#fff', fontWeight: 'bold', mb: 0.5 }}>
+                              {userData.firstName} {userData.lastName}
+                            </Typography>
+                            <Typography variant="h6" sx={{ color: 'rgba(255, 255, 255, 0.8)', mb: 1 }}>
+                              {userData.city}, {userData.country}
+                            </Typography>
+                            <Box sx={{ 
+                              display: 'inline-block', 
+                              px: 2, 
+                              py: 0.5, 
+                              borderRadius: 2,
+                              bgcolor: 'rgba(255, 255, 255, 0.15)',
+                              backdropFilter: 'blur(5px)',
+                              color: '#fff'
+                            }}>
+                              <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                                {userData.subscriptionPlan.charAt(0).toUpperCase() + userData.subscriptionPlan.slice(1)} Plan
+                              </Typography>
+                            </Box>
+                          </Grid>
+                        </Grid>
+                      ) : (
+                        <Alert severity="warning">Could not load user profile data.</Alert>
+                      )}
                     </Box>
                     
-                    <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center', gap: 2 }}>
-                      <GradientButton
-                        variant="contained"
-                        gradient="success"
-                        size="large"
-                        onClick={() => setShowQuiz(true)}
-                        startIcon={<QuizIcon />}
-                      >
-                        Grow Your Tree
-                      </GradientButton>
-                      <GradientButton
-                        variant="outlined"
-                        gradient="primary"
-                        size="large"
-                        onClick={() => navigate('/upload')}
-                        startIcon={<UploadIcon />}
-                      >
-                        Upload Report
-                      </GradientButton>
-                    </Box>
-                  </Box>
-                </GlassCard>
-              </ScaleIn>
-            </TabPanel>
-
-            <TabPanel value={tabValue} index={2}>
-              {/* Skill Progress Content */}
-              <Grid container spacing={3}>
-                <Grid item xs={12}>
-                  <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', color: '#113946' }}>Skill Progress</Typography>
-                  <Typography variant="body1" color="textSecondary" sx={{ mb: 2 }}>
-                    Track your progress in different SAT skill areas.
-                  </Typography>
-                </Grid>
-                {skills.map((skill, index) => (
-                  <Grid item xs={12} sm={6} md={4} key={skill.id}>
-                    <StaggeredList index={index}>
-                      {[
-                        <GlassCard sx={{ p: 2, height: '100%' }} key={`glass-${skill.id}`}>
-                          <Typography variant="h6" sx={{ fontWeight: 500, color: '#1B4D3E' }}>{skill.name}</Typography>
-                          <Box sx={{ display: 'flex', alignItems: 'center', my: 1 }}>
-                            <Box sx={{ width: '100%', mr: 1 }}>
-                              <LinearProgress 
-                                variant="determinate" 
-                                value={'progress' in skill ? (skill.progress as number) * 100 : 0} 
-                                sx={{ height: 8, borderRadius: 4 }} 
-                              />
-                            </Box>
-                            <Box sx={{ minWidth: 35 }}>
-                              <Typography variant="body2" color="textSecondary">
-                                {`${Math.round('progress' in skill ? (skill.progress as number) * 100 : 0)}%`}
+                    {/* Profile Details Cards */}
+                    {userData && (
+                      <Box sx={{ bgcolor: '#fff', p: 3 }}>
+                        <Grid container spacing={3}>
+                          {/* SAT Score Card */}
+                          <Grid item xs={12} md={6}>
+                            <GlassCard sx={{ 
+                              p: 3, 
+                              height: '100%',
+                              borderTop: '4px solid #3498db',
+                              transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+                              '&:hover': {
+                                transform: 'translateY(-5px)',
+                                boxShadow: '0 12px 20px rgba(0, 0, 0, 0.1)'
+                              }
+                            }}>
+                              <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', color: '#113946' }}>
+                                SAT Score Progress
                               </Typography>
-                            </Box>
-                          </Box>
-                          <Typography variant="caption" color="textSecondary">{skill.description}</Typography>
-                        </GlassCard>
-                      ]}
-                    </StaggeredList>
-                  </Grid>
-                ))}
-              </Grid>
-            </TabPanel>
-
-            <TabPanel value={tabValue} index={3}>
-              {/* Profile Content */}
-              <FadeIn>
-                <Box sx={{ 
-                  borderRadius: 4, 
-                  overflow: 'hidden',
-                  boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)'
-                }}>
-                  {/* Header Banner with Personal Info */}
-                  <Box sx={{ 
-                    p: 4, 
-                    background: 'linear-gradient(135deg, #113946 0%, #3E606F 100%)',
-                    position: 'relative',
-                    overflow: 'hidden'
-                  }}>
-                    {/* Decorative Elements */}
-                    <Box sx={{ 
-                      position: 'absolute', 
-                      top: -20, 
-                      right: -20, 
-                      width: 200, 
-                      height: 200, 
-                      borderRadius: '50%', 
-                      background: 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%)'
-                    }} />
-                    <Box sx={{ 
-                      position: 'absolute', 
-                      bottom: -30, 
-                      left: -30, 
-                      width: 150, 
-                      height: 150, 
-                      borderRadius: '50%', 
-                      background: 'radial-gradient(circle, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 70%)'
-                    }} />
-                  
-                    {loadingUserData ? (
-                      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '150px' }}>
-                        <CircularProgress sx={{ color: '#fff' }} />
-                      </Box>
-                    ) : userData ? (
-                      <Grid container spacing={2} alignItems="center">
-                        <Grid item>
-                          <Avatar sx={{ 
-                            width: 100, 
-                            height: 100,
-                            bgcolor: '#1a936f',
-                            fontSize: '2.5rem',
-                            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)'
-                          }}>
-                            {userData.firstName.charAt(0)}{userData.lastName.charAt(0)}
-                          </Avatar>
-                        </Grid>
-                        <Grid item xs>
-                          <Typography variant="h3" sx={{ color: '#fff', fontWeight: 'bold', mb: 0.5 }}>
-                            {userData.firstName} {userData.lastName}
-                          </Typography>
-                          <Typography variant="h6" sx={{ color: 'rgba(255, 255, 255, 0.8)', mb: 1 }}>
-                            {userData.city}, {userData.country}
-                          </Typography>
-                          <Box sx={{ 
-                            display: 'inline-block', 
-                            px: 2, 
-                            py: 0.5, 
-                            borderRadius: 2,
-                            bgcolor: 'rgba(255, 255, 255, 0.15)',
-                            backdropFilter: 'blur(5px)',
-                            color: '#fff'
-                          }}>
-                            <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
-                              {userData.subscriptionPlan.charAt(0).toUpperCase() + userData.subscriptionPlan.slice(1)} Plan
-                            </Typography>
-                          </Box>
-                        </Grid>
-                      </Grid>
-                    ) : (
-                      <Alert severity="warning">Could not load user profile data.</Alert>
-                    )}
-                  </Box>
-                  
-                  {/* Profile Details Cards */}
-                  {userData && (
-                    <Box sx={{ bgcolor: '#fff', p: 3 }}>
-                      <Grid container spacing={3}>
-                        {/* SAT Score Card */}
-                        <Grid item xs={12} md={6}>
-                          <GlassCard sx={{ 
-                            p: 3, 
-                            height: '100%',
-                            borderTop: '4px solid #3498db',
-                            transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-                            '&:hover': {
-                              transform: 'translateY(-5px)',
-                              boxShadow: '0 12px 20px rgba(0, 0, 0, 0.1)'
-                            }
-                          }}>
-                            <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', color: '#113946' }}>
-                              SAT Score Progress
-                            </Typography>
-                            
-                            <Box sx={{ 
-                              display: 'flex', 
-                              alignItems: 'flex-end', 
-                              justifyContent: 'space-between',
-                              mb: 2
-                            }}>
-                              <Box>
-                                <Typography variant="body2" color="textSecondary">Current Score</Typography>
-                                <Typography variant="h3" sx={{ fontWeight: 'bold', color: userData.satScore ? '#3498db' : '#999' }}>
-                                  {userData.satScore || 'N/A'}
-                                </Typography>
-                              </Box>
                               
-                              <Box sx={{ mx: 2, mb: 1 }}>
-                                <Typography variant="h4" color="textSecondary">→</Typography>
-                              </Box>
-                              
-                              <Box>
-                                <Typography variant="body2" color="textSecondary" align="right">Target Score</Typography>
-                                <Typography variant="h3" align="right" sx={{ fontWeight: 'bold', color: '#27ae60' }}>
-                                  {userData.targetSatScore}
-                                </Typography>
-                              </Box>
-                            </Box>
-                            
-                            {userData.satScore && (
-                              <>
-                                <Box sx={{ position: 'relative', mt: 2, mb: 1 }}>
-                                  <LinearProgress 
-                                    variant="determinate" 
-                                    value={((userData.satScore - 400) / (userData.targetSatScore - 400)) * 100} 
-                                    sx={{ 
-                                      height: 10, 
-                                      borderRadius: 5,
-                                      background: 'linear-gradient(90deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.05) 100%)'
-                                    }} 
-                                  />
-                                </Box>
-                                <Typography variant="body2" align="center" sx={{ mt: 1 }}>
-                                  {Math.round(((userData.satScore - 400) / (userData.targetSatScore - 400)) * 100)}% to goal
-                                </Typography>
-                              </>
-                            )}
-                          </GlassCard>
-                        </Grid>
-                        
-                        {/* Motivation Card */}
-                        <Grid item xs={12} md={6}>
-                          <GlassCard sx={{ 
-                            p: 3, 
-                            height: '100%',
-                            borderTop: '4px solid #9b59b6',
-                            transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-                            '&:hover': {
-                              transform: 'translateY(-5px)',
-                              boxShadow: '0 12px 20px rgba(0, 0, 0, 0.1)'
-                            },
-                            display: 'flex',
-                            flexDirection: 'column'
-                          }}>
-                            <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', color: '#113946' }}>
-                              Your Motivation
-                            </Typography>
-                            
-                            <Box sx={{ 
-                              flex: 1,
-                              display: 'flex',
-                              flexDirection: 'column',
-                              justifyContent: 'center',
-                              alignItems: 'center',
-                              p: 2
-                            }}>
                               <Box sx={{ 
-                                width: 60, 
-                                height: 60, 
-                                borderRadius: '50%', 
-                                bgcolor: 'rgba(155, 89, 182, 0.1)',
-                                display: 'flex',
-                                justifyContent: 'center',
-                                alignItems: 'center',
+                                display: 'flex', 
+                                alignItems: 'flex-end', 
+                                justifyContent: 'space-between',
                                 mb: 2
                               }}>
-                                <FlagIcon sx={{ fontSize: 30, color: '#9b59b6' }} />
-                              </Box>
-                              <Typography 
-                                variant="h6" 
-                                align="center" 
-                                sx={{ 
-                                  fontStyle: 'italic', 
-                                  color: '#333',
-                                  position: 'relative',
-                                  '&:before': {
-                                    content: '"""',
-                                    position: 'absolute',
-                                    left: -15,
-                                    top: -10,
-                                    fontSize: '2rem',
-                                    color: 'rgba(155, 89, 182, 0.2)',
-                                  },
-                                  '&:after': {
-                                    content: '"""',
-                                    position: 'absolute',
-                                    right: -15,
-                                    bottom: -20,
-                                    fontSize: '2rem',
-                                    color: 'rgba(155, 89, 182, 0.2)',
-                                  }
-                                }}
-                              >
-                                {userData.motivation}
-                              </Typography>
-                            </Box>
-                          </GlassCard>
-                        </Grid>
-                        
-                        {/* Additional Personal Info Card */}
-                        <Grid item xs={12} md={6}>
-                          <GlassCard sx={{ 
-                            p: 3, 
-                            height: '100%',
-                            borderTop: '4px solid #e74c3c',
-                            transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-                            '&:hover': {
-                              transform: 'translateY(-5px)',
-                              boxShadow: '0 12px 20px rgba(0, 0, 0, 0.1)'
-                            }
-                          }}>
-                            <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', color: '#113946' }}>
-                              Personal Details
-                            </Typography>
-                            
-                            <Grid container spacing={2} sx={{ mt: 1 }}>
-                              <Grid item xs={6}>
-                                <Typography variant="body2" color="textSecondary">Age</Typography>
-                                <Typography variant="h6">{userData.age} years</Typography>
-                              </Grid>
-                              <Grid item xs={6}>
-                                <Typography variant="body2" color="textSecondary">Location</Typography>
-                                <Typography variant="h6">{userData.city}, {userData.country}</Typography>
-                              </Grid>
-                              <Grid item xs={12}>
-                                <Divider sx={{ my: 1 }} />
-                                <Typography variant="body2" color="textSecondary">Email</Typography>
-                                <Typography variant="h6">student@example.com</Typography>
-                              </Grid>
-                            </Grid>
-                          </GlassCard>
-                        </Grid>
-                        
-                        {/* Subscription Plan Card */}
-                        <Grid item xs={12} md={6}>
-                          <GlassCard sx={{ 
-                            p: 3, 
-                            height: '100%',
-                            borderTop: '4px solid #f1c40f',
-                            transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-                            '&:hover': {
-                              transform: 'translateY(-5px)',
-                              boxShadow: '0 12px 20px rgba(0, 0, 0, 0.1)'
-                            },
-                            display: 'flex',
-                            flexDirection: 'column'
-                          }}>
-                            <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', color: '#113946' }}>
-                              Subscription Plan
-                            </Typography>
-                            
-                            <Box sx={{ 
-                              mt: 2,
-                              p: 2,
-                              bgcolor: userData.subscriptionPlan === 'pro' ? 'rgba(241, 196, 15, 0.1)' : 'transparent',
-                              borderRadius: 2,
-                              border: userData.subscriptionPlan === 'pro' ? '1px dashed #f1c40f' : 'none'
-                            }}>
-                              <Typography 
-                                variant="h4" 
-                                align="center" 
-                                sx={{ 
-                                  fontWeight: 'bold', 
-                                  color: userData.subscriptionPlan === 'pro' ? '#f1c40f' : '#666',
-                                  textTransform: 'uppercase',
-                                  mb: 1
-                                }}
-                              >
-                                {userData.subscriptionPlan}
-                              </Typography>
-                              
-                              {userData.subscriptionPlan === 'pro' ? (
-                                <Typography variant="body1" align="center">
-                                  You have access to all premium features including personalized study plans, unlimited practice questions, and expert support.
-                                </Typography>
-                              ) : (
-                                <Typography variant="body1" align="center">
-                                  Upgrade to Pro to unlock personalized study plans, unlimited practice questions, and expert support.
-                                </Typography>
-                              )}
-                              
-                              {userData.subscriptionPlan !== 'pro' && (
-                                <Box sx={{ textAlign: 'center', mt: 2 }}>
-                                  <GradientButton
-                                    variant="contained"
-                                    color="primary"
-                                  >
-                                    Upgrade Now
-                                  </GradientButton>
+                                <Box>
+                                  <Typography variant="body2" color="textSecondary">Current Score</Typography>
+                                  <Typography variant="h3" sx={{ fontWeight: 'bold', color: userData.satScore ? '#3498db' : '#999' }}>
+                                    {userData.satScore || 'N/A'}
+                                  </Typography>
                                 </Box>
+                                
+                                <Box sx={{ mx: 2, mb: 1 }}>
+                                  <Typography variant="h4" color="textSecondary">→</Typography>
+                                </Box>
+                                
+                                <Box>
+                                  <Typography variant="body2" color="textSecondary" align="right">Target Score</Typography>
+                                  <Typography variant="h3" align="right" sx={{ fontWeight: 'bold', color: '#27ae60' }}>
+                                    {userData.targetSatScore}
+                                  </Typography>
+                                </Box>
+                              </Box>
+                              
+                              {userData.satScore && (
+                                <>
+                                  <Box sx={{ position: 'relative', mt: 2, mb: 1 }}>
+                                    <LinearProgress 
+                                      variant="determinate" 
+                                      value={((userData.satScore - 400) / (userData.targetSatScore - 400)) * 100} 
+                                      sx={{ 
+                                        height: 10, 
+                                        borderRadius: 5,
+                                        background: 'linear-gradient(90deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.05) 100%)'
+                                      }} 
+                                    />
+                                  </Box>
+                                  <Typography variant="body2" align="center" sx={{ mt: 1 }}>
+                                    {Math.round(((userData.satScore - 400) / (userData.targetSatScore - 400)) * 100)}% to goal
+                                  </Typography>
+                                </>
                               )}
-                            </Box>
-                          </GlassCard>
+                            </GlassCard>
+                          </Grid>
+                          
+                          {/* Motivation Card */}
+                          <Grid item xs={12} md={6}>
+                            <GlassCard sx={{ 
+                              p: 3, 
+                              height: '100%',
+                              borderTop: '4px solid #9b59b6',
+                              transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+                              '&:hover': {
+                                transform: 'translateY(-5px)',
+                                boxShadow: '0 12px 20px rgba(0, 0, 0, 0.1)'
+                              },
+                              display: 'flex',
+                              flexDirection: 'column'
+                            }}>
+                              <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', color: '#113946' }}>
+                                Your Motivation
+                              </Typography>
+                              
+                              <Box sx={{ 
+                                flex: 1,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                p: 2
+                              }}>
+                                <Box sx={{ 
+                                  width: 60, 
+                                  height: 60, 
+                                  borderRadius: '50%', 
+                                  bgcolor: 'rgba(155, 89, 182, 0.1)',
+                                  display: 'flex',
+                                  justifyContent: 'center',
+                                  alignItems: 'center',
+                                  mb: 2
+                                }}>
+                                  <FlagIcon sx={{ fontSize: 30, color: '#9b59b6' }} />
+                                </Box>
+                                <Typography 
+                                  variant="h6" 
+                                  align="center" 
+                                  sx={{ 
+                                    fontStyle: 'italic', 
+                                    color: '#333',
+                                    position: 'relative',
+                                    '&:before': {
+                                      content: '"""',
+                                      position: 'absolute',
+                                      left: -15,
+                                      top: -10,
+                                      fontSize: '2rem',
+                                      color: 'rgba(155, 89, 182, 0.2)',
+                                    },
+                                    '&:after': {
+                                      content: '"""',
+                                      position: 'absolute',
+                                      right: -15,
+                                      bottom: -20,
+                                      fontSize: '2rem',
+                                      color: 'rgba(155, 89, 182, 0.2)',
+                                    }
+                                  }}
+                                >
+                                  {userData.motivation}
+                                </Typography>
+                              </Box>
+                            </GlassCard>
+                          </Grid>
+                          
+                          {/* Additional Personal Info Card */}
+                          <Grid item xs={12} md={6}>
+                            <GlassCard sx={{ 
+                              p: 3, 
+                              height: '100%',
+                              borderTop: '4px solid #e74c3c',
+                              transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+                              '&:hover': {
+                                transform: 'translateY(-5px)',
+                                boxShadow: '0 12px 20px rgba(0, 0, 0, 0.1)'
+                              }
+                            }}>
+                              <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', color: '#113946' }}>
+                                Personal Details
+                              </Typography>
+                              
+                              <Grid container spacing={2} sx={{ mt: 1 }}>
+                                <Grid item xs={6}>
+                                  <Typography variant="body2" color="textSecondary">Age</Typography>
+                                  <Typography variant="h6">{userData.age} years</Typography>
+                                </Grid>
+                                <Grid item xs={6}>
+                                  <Typography variant="body2" color="textSecondary">Location</Typography>
+                                  <Typography variant="h6">{userData.city}, {userData.country}</Typography>
+                                </Grid>
+                                <Grid item xs={12}>
+                                  <Divider sx={{ my: 1 }} />
+                                  <Typography variant="body2" color="textSecondary">Email</Typography>
+                                  <Typography variant="h6">student@example.com</Typography>
+                                </Grid>
+                              </Grid>
+                            </GlassCard>
+                          </Grid>
+                          
+                          {/* Subscription Plan Card */}
+                          <Grid item xs={12} md={6}>
+                            <GlassCard sx={{ 
+                              p: 3, 
+                              height: '100%',
+                              borderTop: '4px solid #f1c40f',
+                              transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+                              '&:hover': {
+                                transform: 'translateY(-5px)',
+                                boxShadow: '0 12px 20px rgba(0, 0, 0, 0.1)'
+                              },
+                              display: 'flex',
+                              flexDirection: 'column'
+                            }}>
+                              <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', color: '#113946' }}>
+                                Subscription Plan
+                              </Typography>
+                              
+                              <Box sx={{ 
+                                mt: 2,
+                                p: 2,
+                                bgcolor: userData.subscriptionPlan === 'pro' ? 'rgba(241, 196, 15, 0.1)' : 'transparent',
+                                borderRadius: 2,
+                                border: userData.subscriptionPlan === 'pro' ? '1px dashed #f1c40f' : 'none'
+                              }}>
+                                <Typography 
+                                  variant="h4" 
+                                  align="center" 
+                                  sx={{ 
+                                    fontWeight: 'bold', 
+                                    color: userData.subscriptionPlan === 'pro' ? '#f1c40f' : '#666',
+                                    textTransform: 'uppercase',
+                                    mb: 1
+                                  }}
+                                >
+                                  {userData.subscriptionPlan}
+                                </Typography>
+                                
+                                {userData.subscriptionPlan === 'pro' ? (
+                                  <Typography variant="body1" align="center">
+                                    You have access to all premium features including personalized study plans, unlimited practice questions, and expert support.
+                                  </Typography>
+                                ) : (
+                                  <Typography variant="body1" align="center">
+                                    Upgrade to Pro to unlock personalized study plans, unlimited practice questions, and expert support.
+                                  </Typography>
+                                )}
+                                
+                                {userData.subscriptionPlan !== 'pro' && (
+                                  <Box sx={{ textAlign: 'center', mt: 2 }}>
+                                    <GradientButton
+                                      variant="contained"
+                                      color="primary"
+                                    >
+                                      Upgrade Now
+                                    </GradientButton>
+                                  </Box>
+                                )}
+                              </Box>
+                            </GlassCard>
+                          </Grid>
                         </Grid>
-                      </Grid>
-                    </Box>
-                  )}
-                </Box>
-              </FadeIn>
-            </TabPanel>
-
-          </Container>
+                      </Box>
+                    )}
+                  </Box>
+                </FadeIn>
+              </TabPanel>
+            </Container>
+          </Box>
         </Box>
 
         {/* SkillQuiz dialog */}
@@ -1371,7 +1395,7 @@ const Dashboard: React.FC = () => {
           open={snackbarOpen}
           autoHideDuration={6000}
           onClose={handleCloseSnackbar}
-          message="Quiz Completed! Your skills have been updated."
+          message={snackbarMessage}
         />
       </Box>
     </ThemeProvider>
