@@ -163,10 +163,10 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills, showGrowth
   const treeVitality = {
     // Trunk color darkens as tree matures
     trunkBaseColor: masteryPercentage < 30 
-      ? '#8D6E63' // Lighter brown for younger tree
+      ? '#6d4c41' // Lighter brown for younger tree
       : masteryPercentage < 70
-        ? '#795548' // Medium brown
-        : '#5D4037', // Dark rich brown for mature tree
+        ? '#5d4037' // Medium brown
+        : '#4e342e', // Dark rich brown for mature tree
         
     // Set trunk dimensions based on growth
     trunkWidth: clamp(30 + (masteryPercentage / 4), 30, 45),
@@ -178,10 +178,10 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills, showGrowth
     
     // Leaf colors become more vibrant with mastery
     leafBaseColor: masteryPercentage < 30 
-      ? 'hsl(120, 50%, 75%)' // Light green for low mastery
+      ? '#88d498' // Light green for low mastery
       : masteryPercentage < 60 
-        ? 'hsl(130, 60%, 65%)' // Medium green
-        : 'hsl(140, 70%, 55%)', // Vibrant green for high mastery
+        ? '#6bcca1' // Medium green
+        : '#4fc3a8', // Vibrant green for high mastery
     
     // Overall size scaling factor
     scale: clamp(0.85 + (masteryPercentage / 100), 0.85, 1.25)
