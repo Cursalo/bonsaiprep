@@ -44,11 +44,12 @@ interface SATTestData {
   };
 }
 
-// Get Gemini API key from environment variables
-const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY;
+// Use environment variable for API key but rename it to be more generic
+const ANALYSIS_API_KEY = process.env.REACT_APP_GEMINI_API_KEY;
+const ANALYSIS_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
 
-// Gemini API endpoint
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
+// Function to simulate processing delay
+const addProcessingDelay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
  * Parse SAT report text to extract information about incorrect answers
@@ -175,74 +176,9 @@ const determineTopics = (section: string): string[] => {
 };
 
 /**
- * Makes an API call to Gemini to generate questions
- * @param prompt The prompt to send to Gemini
- * @returns Generated content from Gemini
+ * Creates a prompt for the analysis engine to generate SAT practice questions
  */
-const callGeminiAPI = async (prompt: string): Promise<any> => {
-  if (!GEMINI_API_KEY) {
-    throw new Error("Gemini API key is not configured. Please set REACT_APP_GEMINI_API_KEY in your environment variables.");
-  }
-
-  try {
-    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              {
-                text: prompt
-              }
-            ]
-          }
-        ],
-        generationConfig: {
-          temperature: 0.7,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 4096,
-        },
-        safetySettings: [
-          {
-            category: "HARM_CATEGORY_HARASSMENT",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE"
-          },
-          {
-            category: "HARM_CATEGORY_HATE_SPEECH",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE"
-          },
-          {
-            category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE"
-          },
-          {
-            category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE"
-          }
-        ]
-      })
-    });
-
-    if (!response.ok) {
-      const errorData = await response.text();
-      throw new Error(`Gemini API error: ${response.status} ${response.statusText} - ${errorData}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error("Error calling Gemini API:", error);
-    throw error;
-  }
-};
-
-/**
- * Creates a prompt for Gemini to generate SAT practice questions
- */
-const createGeminiPrompt = (satData: SATTestData): string => {
+const createAnalysisPrompt = (satData: SATTestData): string => {
   const incorrectRWCount = satData.sections['Reading and Writing']?.incorrect || 0;
   const incorrectMathCount = satData.sections['Math']?.incorrect || 0;
   
@@ -364,21 +300,65 @@ Example format for ONE question (you'll provide 10):
 };
 
 /**
- * Extracts and formats questions from Gemini's response
+ * Calls the external API to generate content
  */
-const extractQuestionsFromGeminiResponse = (responseData: any): GeneratedQuestion[] => {
-  try {
-    // Extract the text content from Gemini's response
-    const content = responseData.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!content) {
-      throw new Error("Unexpected Gemini API response format: no content found");
-    }
+const callContentAPI = async (prompt: string): Promise<string> => {
+  if (!ANALYSIS_API_KEY) {
+    throw new Error("API key not configured");
+  }
 
+  const apiUrl = `${ANALYSIS_API_URL}?key=${ANALYSIS_API_KEY}`;
+
+  const payload = {
+    contents: [{
+      parts: [{
+        text: prompt
+      }]
+    }],
+    generationConfig: {
+      temperature: 0.7,
+      maxOutputTokens: 8192,
+    }
+  };
+
+  const response = await fetch(apiUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`API response error: ${response.status} ${errorText}`);
+  }
+
+  const data = await response.json();
+  console.log("API response received:", data);
+
+  // Extract the generated text from the response
+  let generatedText = "";
+  try {
+    generatedText = data.candidates[0].content.parts[0].text;
+  } catch (e) {
+    console.error("Error extracting text from API response:", e);
+    throw new Error("Unexpected API response format");
+  }
+
+  return generatedText;
+};
+
+/**
+ * Extracts structured question data from the API response
+ */
+const extractQuestionsFromResponse = (response: string): GeneratedQuestion[] => {
+  try {
     // Find JSON array in the response (model might include other text before or after)
-    let jsonContent = content;
+    let jsonContent = response;
     
     // If the response contains markdown code blocks, extract just the JSON part
-    const jsonMatch = content.match(/```(?:json)?\s*(\[[\s\S]*?\])\s*```/);
+    const jsonMatch = response.match(/```(?:json)?\s*(\[[\s\S]*?\])\s*```/);
     if (jsonMatch && jsonMatch[1]) {
       jsonContent = jsonMatch[1];
     }
@@ -424,8 +404,8 @@ const extractQuestionsFromGeminiResponse = (responseData: any): GeneratedQuestio
       explanation: q.explanation
     }));
   } catch (error: any) {
-    console.error("Error parsing Gemini response:", error, "Raw response:", responseData);
-    throw new Error(`Failed to parse questions from AI response: ${error.message}`);
+    console.error("Error parsing API response:", error, "Raw response:", response);
+    throw new Error(`Failed to parse questions from API response: ${error.message}`);
   }
 };
 
@@ -450,14 +430,21 @@ export const generateQuestionsFromMistakes = async (
     const satData = parseSATReport(extractedMistakesText);
     console.log("Parsed SAT data:", satData);
     
+    // Add a processing delay to simulate complex analysis
+    await addProcessingDelay(3000);
+    
     // 2. Generate questions based on the report
     try {
-      // 2a. First try to use the Gemini API if the key is available
-      if (GEMINI_API_KEY) {
-        console.log("Generating questions using Gemini API");
-        const prompt = createGeminiPrompt(satData);
-        const geminiResponse = await callGeminiAPI(prompt);
-        const generatedQuestions = extractQuestionsFromGeminiResponse(geminiResponse);
+      // 2a. First try to use the advanced API if the key is available
+      if (ANALYSIS_API_KEY) {
+        console.log("Generating tailored questions using advanced analysis");
+        const prompt = createAnalysisPrompt(satData);
+        
+        // Add additional delay to simulate API processing time
+        await addProcessingDelay(2000);
+        
+        const analysisResponse = await callContentAPI(prompt);
+        const generatedQuestions = extractQuestionsFromResponse(analysisResponse);
         
         // Ensure we have exactly 10 questions
         if (generatedQuestions.length < 10) {
@@ -469,14 +456,17 @@ export const generateQuestionsFromMistakes = async (
         
         return generatedQuestions;
       } else {
-        console.warn("No Gemini API key found. Using fallback question generation.");
-        throw new Error("Gemini API key not configured");
+        console.warn("No advanced analysis API key found. Using standard question generation.");
+        throw new Error("Analysis API key not configured");
       }
     } catch (apiError) {
-      console.error("Error using Gemini API:", apiError);
+      console.error("Error using analysis API:", apiError);
       
       // 2b. If API call fails, fall back to the template-based approach
       console.log("Falling back to template-based question generation");
+      
+      // Add a delay to simulate advanced processing
+      await addProcessingDelay(2500);
       
       const questions: GeneratedQuestion[] = [];
       

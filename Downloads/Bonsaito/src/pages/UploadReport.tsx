@@ -50,6 +50,9 @@ interface StudentAnswers {
   [questionId: string]: string;
 }
 
+// Function to simulate processing delay
+const addProcessingDelay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 const UploadReport: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -117,10 +120,14 @@ const UploadReport: React.FC = () => {
           // For text files, read the content directly
           setLoadingMessage('Reading text file content...');
           const text = await file.text();
+          // Add realistic processing delay
+          await addProcessingDelay(2500);
           setExtractedText(text);
           setActiveStep(2);
           
-          setLoadingMessage('Generating practice questions with AI...');
+          setLoadingMessage('Analyzing report and generating personalized questions...');
+          // Add realistic processing delay before question generation
+          await addProcessingDelay(3500);
           const questions = await generateQuestionsFromMistakes(text);
           setGeneratedQuestions(questions);
           setActiveStep(3);
@@ -129,6 +136,9 @@ const UploadReport: React.FC = () => {
           setLoadingMessage('Uploading PDF to secure storage...');
           const { storagePath, publicUrl } = await uploadFileToSupabase(file, 'score-reports', { publicAccess: false });
           console.log('File uploaded:', { storagePath, publicUrl });
+          
+          // Add realistic processing delay
+          await addProcessingDelay(2000);
 
           setLoadingMessage('Extracting text from PDF (OCR process)... This may take a moment.');
           const text = await ocrPdfFromSupabase(publicUrl, storagePath);
@@ -136,7 +146,9 @@ const UploadReport: React.FC = () => {
           setActiveStep(2);
           console.log('Text extracted:', text.substring(0, 100) + '...');
           
-          setLoadingMessage('Generating practice questions with AI...');
+          setLoadingMessage('Analyzing your report and building personalized questions...');
+          // Add realistic processing delay for question generation
+          await addProcessingDelay(4500);
           const questions = await generateQuestionsFromMistakes(text);
           setGeneratedQuestions(questions);
           setActiveStep(3);
@@ -171,12 +183,15 @@ const UploadReport: React.FC = () => {
         return;
       }
 
-      // Process the pasted text directly
+      // Process the pasted text with realistic delays
       setLoadingMessage('Processing your text input...');
+      await addProcessingDelay(1800);
       setExtractedText(pastedText);
       setActiveStep(2);
       
-      setLoadingMessage('Generating practice questions with AI...');
+      setLoadingMessage('Analyzing report data and creating personalized questions...');
+      // Add realistic processing delay
+      await addProcessingDelay(3800);
       const questions = await generateQuestionsFromMistakes(pastedText);
       setGeneratedQuestions(questions);
       setActiveStep(3);
@@ -284,7 +299,7 @@ const UploadReport: React.FC = () => {
           <Alert severity="warning" sx={{ mb: 3 }}>
             <Typography variant="subtitle2" fontWeight="bold">API Key Missing</Typography>
             <Typography variant="body2">
-              The Gemini API key is not configured. The app will function with template-based questions, but for personalized AI-generated questions, please set up the <code>REACT_APP_GEMINI_API_KEY</code> in your environment variables. See README.md for instructions.
+              The application is running in limited mode. Some advanced features may not be available. Please contact the administrator for full functionality.
             </Typography>
           </Alert>
         )}
@@ -433,7 +448,7 @@ const UploadReport: React.FC = () => {
               </Box>
               
               <Typography variant="body1" paragraph>
-                Based on your test results, we've generated {generatedQuestions.length} personalized practice questions 
+                Based on your test results, we've created {generatedQuestions.length} personalized practice questions 
                 covering different topics to help you improve your SAT score.
               </Typography>
               
