@@ -176,27 +176,10 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onSelectPlan }) =
                 borderRadius: 4,
                 position: 'relative',
                 overflow: 'hidden',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                background: 'linear-gradient(135deg, #0c3b2e 0%, #1a936f 100%)',
                 transition: 'all 0.3s ease-in-out',
               }}
             >
-              <Box 
-                sx={{ 
-                  position: 'absolute', 
-                  top: 20, 
-                  right: 20,
-                  zIndex: 1
-                }}
-              >
-                <Chip 
-                  label="RECOMMENDED" 
-                  sx={{ 
-                    bgcolor: 'rgba(255, 255, 255, 0.2)',
-                    color: 'white',
-                    fontWeight: 'bold'
-                  }} 
-                />
-              </Box>
               <CardHeader
                 title={
                   <Typography variant="h4" component="h2" fontWeight="bold" color="white">
@@ -241,7 +224,7 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onSelectPlan }) =
                   {proFeatures.map((feature, index) => (
                     <ListItem key={index} disableGutters>
                       <ListItemIcon sx={{ minWidth: 40 }}>
-                        <CheckIcon sx={{ color: 'white' }} />
+                        <CheckIcon sx={{ color: 'rgba(136, 212, 152, 0.9)' }} />
                       </ListItemIcon>
                       <ListItemText 
                         primary={feature} 
@@ -263,10 +246,12 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onSelectPlan }) =
                     py: 1.5, 
                     borderRadius: 2,
                     fontSize: '1rem',
-                    bgcolor: 'white',
-                    color: '#764ba2',
+                    background: 'linear-gradient(90deg, #1a936f 0%, #114b5f 100%)',
+                    color: 'rgba(255, 255, 255, 0.95)',
+                    fontWeight: 500,
                     '&:hover': {
-                      bgcolor: 'rgba(255,255,255,0.9)',
+                      background: 'linear-gradient(90deg, #114b5f 0%, #1a936f 100%)',
+                      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)'
                     }
                   }}
                 >
