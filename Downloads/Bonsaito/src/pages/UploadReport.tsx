@@ -878,9 +878,6 @@ const UploadReport: React.FC = () => {
                       </Typography>
                     )}
                     <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.6)', mt: 1 }}>
-                      (PDF files are now processed directly with Gemini 1.5 Flash)
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.6)', mt: 0.5 }}>
                       (Max file size: 10MB. Supported formats: PDF, TXT)
                     </Typography>
                   </Box>
