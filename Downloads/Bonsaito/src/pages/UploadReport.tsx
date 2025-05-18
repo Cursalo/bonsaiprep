@@ -90,6 +90,9 @@ const UploadReport: React.FC = () => {
   const [showTreeGrowthBadge, setShowTreeGrowthBadge] = useState<boolean>(false);
   const [treeBadgeCount, setTreeBadgeCount] = useState<number>(0);
   
+  // Add state for Lottie animation data
+  const [animationData, setAnimationData] = useState<any>(null);
+  
   // Group questions by topic for better organization
   const questionsByTopic = React.useMemo(() => {
     const grouped: Record<string, GeneratedQuestion[]> = {};
@@ -151,6 +154,25 @@ const UploadReport: React.FC = () => {
       mapQuestionsToSkills(generatedQuestions);
     }
   }, [generatedQuestions, mapQuestionsToSkills]);
+
+  // Add an effect to fetch the Lottie animation data
+  useEffect(() => {
+    // Function to fetch animation data
+    const fetchAnimationData = async () => {
+      try {
+        const response = await fetch('/book.json');
+        if (!response.ok) {
+          throw new Error('Failed to load animation data');
+        }
+        const data = await response.json();
+        setAnimationData(data);
+      } catch (error) {
+        console.error('Error loading Lottie animation:', error);
+      }
+    };
+
+    fetchAnimationData();
+  }, []);
 
   const handleDrawerToggle = () => {
     setDrawerOpen(!drawerOpen);
@@ -563,15 +585,27 @@ const UploadReport: React.FC = () => {
         )}
 
         {isLoading && (
-          <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', mt: 6, mb: 4 }}>
-            <Box sx={{ width: '240px', height: '240px', mb: 3 }}>
-              <Lottie 
-                animationData={'/book.lottie'} 
+          <Box 
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 4,
+            }}
+          >
+            {animationData ? (
+              <Lottie
+                animationData={animationData}
                 loop={true}
-                style={{ width: '100%', height: '100%' }}
+                style={{ width: 240, height: 240 }}
               />
-            </Box>
-            <Typography variant="h6" sx={{ mt: 3, fontWeight: 'bold' }}>{loadingMessage || 'Processing your report...'}</Typography>
+            ) : (
+              <CircularProgress size={80} />
+            )}
+            <Typography variant="h6" mt={2} align="center">
+              {loadingMessage || 'Processing...'}
+            </Typography>
           </Box>
         )}
 
