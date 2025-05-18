@@ -68,10 +68,7 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
   const bonsaiImageNumber = getBonsaiImageNumber();
   
   // Construct the image path using the base URL
-  const baseUrl = process.env.NODE_ENV === 'production' 
-    ? 'https://bonsaiprep-4e8cd0rd4-cursalos-projects.vercel.app'
-    : '';
-  const bonsaiImagePath = `${baseUrl}/bonsaipng/${bonsaiImageNumber}.png`;
+  const bonsaiImagePath = `/bonsaipng/${bonsaiImageNumber}.png`;
   const altarImagePath = '/altar2.png';
 
   // Log the image path for debugging
