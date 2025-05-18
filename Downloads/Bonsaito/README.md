@@ -11,6 +11,36 @@ Bonsaito is an application that helps students prepare for the SAT by generating
 - Organize questions by topic and difficulty level
 - Provide detailed explanations for each question
 
+## UI/UX Features
+
+The application has been enhanced with a beautiful, modern user interface featuring:
+
+### Phthalo Green Theme
+- Rich phthalo green gradient backgrounds
+- High contrast, readable text
+- Dark mode optimized for reduced eye strain
+- Elegant glass-morphism effect throughout the interface
+
+### Animation Components
+- Fluid, natural animations using React Spring
+- Various animation types: fade, scale, float, slide, and more
+- Staggered list animations for smooth UI transitions
+- Shimmer effects for buttons and interactive elements
+
+### Custom Components
+- **GlassCard**: Beautiful glass-effect cards with subtle hover animations
+- **GradientButton**: Stylish gradient buttons with shimmer effects
+- **LoadingSpinner**: Custom loading spinner with glow effects
+- **AnimationEffects**: Collection of reusable animation components
+
+### Enhanced Features
+- 8px rounded corners throughout the interface
+- Subtle shadows and depth effects
+- Responsive design that looks great on all devices
+- Smooth animations and transitions between pages
+
+The UI is designed to provide a premium experience while keeping performance in mind. All animations are optimized for smooth rendering even on lower-end devices.
+
 ## Setup Instructions
 
 ### Prerequisites

@@ -241,16 +241,26 @@ const OnboardingFlow: React.FC = () => {
     setDirection('forward');
     
     // Special handling for the score report step to generate questions
-    if (activeStep === 6 && data.scoreReport && !data.generatedQuestions?.length) {
-      try {
-        setProcessingReport(true);
-        // Generate questions from the score report
-        const questions = await generateQuestionsFromMistakes(data.scoreReport);
-        setData({ ...data, generatedQuestions: questions });
-        setProcessingReport(false);
-      } catch (error) {
-        console.error("Error generating questions:", error);
-        setProcessingReport(false);
+    if (activeStep === 6) {
+      if ((data.scoreReport && !data.generatedQuestions?.length) || 
+          (data.scoreReportFile && !data.generatedQuestions?.length)) {
+        try {
+          setProcessingReport(true);
+          
+          // Generate questions from the score report text or file
+          let questions;
+          if (data.scoreReportFile) {
+            questions = await generateQuestionsFromMistakes(data.scoreReportFile);
+          } else if (data.scoreReport) {
+            questions = await generateQuestionsFromMistakes(data.scoreReport);
+          }
+          
+          setData({ ...data, generatedQuestions: questions });
+          setProcessingReport(false);
+        } catch (error) {
+          console.error("Error generating questions:", error);
+          setProcessingReport(false);
+        }
       }
     }
     
@@ -394,6 +404,18 @@ const OnboardingFlow: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // Add a useDropzone hook for file handling
+  const { getRootProps, getInputProps } = useDropzone({
+    accept: {
+      'application/pdf': ['.pdf'],
+    },
+    onDrop: acceptedFiles => {
+      if (acceptedFiles.length > 0) {
+        setData({ ...data, scoreReportFile: acceptedFiles[0] });
+      }
+    }
+  });
 
   // Render different step content based on activeStep
   const getStepContent = () => {
@@ -705,16 +727,36 @@ const OnboardingFlow: React.FC = () => {
               <Typography variant="body1" align="center" sx={{ mb: 2 }}>
                 Upload your SAT score report PDF
               </Typography>
-              <PdfUploader 
-                onUploadComplete={(url) => {
-                  // Store the URL in case we need it later
-                  setData({ ...data, scoreReportUrl: url });
+              <Box
+                sx={{
+                  border: '2px dashed #ccc',
+                  borderRadius: 2,
+                  p: 3,
+                  textAlign: 'center',
+                  cursor: 'pointer',
+                  '&:hover': {
+                    borderColor: 'primary.main',
+                    bgcolor: 'rgba(76, 175, 80, 0.04)'
+                  }
                 }}
-                onTextExtracted={(text) => {
-                  // Automatically fill the text area with extracted text
-                  setData({ ...data, scoreReport: text });
-                }}
-              />
+                {...getRootProps()}
+              >
+                <input {...getInputProps()} />
+                <CloudUploadIcon fontSize="large" color="primary" sx={{ mb: 2 }} />
+                <Typography variant="body1" gutterBottom>
+                  Drag & drop a PDF file here, or click to select a file
+                </Typography>
+                <Typography variant="body2" color="textSecondary">
+                  Supports PDF files only
+                </Typography>
+                {data.scoreReportFile && (
+                  <Box sx={{ mt: 2, p: 1, bgcolor: 'rgba(76, 175, 80, 0.08)', borderRadius: 1 }}>
+                    <Typography variant="body2">
+                      Selected: {data.scoreReportFile.name}
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
             </Grid>
             {processingReport && (
               <Grid item xs={12} sx={{ textAlign: 'center', mt: 2 }}>

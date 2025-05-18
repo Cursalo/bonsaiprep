@@ -1,5 +1,5 @@
-import React from 'react';
-import { Button } from '@mui/material';
+import React, { ElementType, forwardRef } from 'react';
+import { Button, ButtonProps } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useSpring, animated } from 'react-spring';
 
@@ -68,46 +68,31 @@ const AnimatedDiv = animated(styled('div')({
   height: '100%',
   background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent)',
   transform: 'translateX(-100%)',
+  zIndex: 0,
 }));
 
-export interface GradientButtonProps {
+export interface GradientButtonProps extends ButtonProps {
   gradient?: GradientType;
   withShimmer?: boolean;
   withRipple?: boolean;
   rounded?: boolean;
   elevated?: boolean;
-  children?: React.ReactNode;
-  onClick?: () => void;
-  variant?: 'text' | 'outlined' | 'contained';
-  fullWidth?: boolean;
-  disabled?: boolean;
-  type?: 'button' | 'submit' | 'reset';
-  size?: 'small' | 'medium' | 'large';
-  startIcon?: React.ReactNode;
-  endIcon?: React.ReactNode;
-  className?: string;
-  sx?: any;
+  component?: React.ElementType;
 }
 
-const GradientButton: React.FC<GradientButtonProps> = ({
-  gradient = 'primary',
-  withShimmer = true,
-  withRipple = true,
-  rounded = false,
-  elevated = true,
-  children,
-  onClick,
-  variant = 'contained',
-  fullWidth,
-  disabled,
-  type,
-  size,
-  startIcon,
-  endIcon,
-  className,
-  sx,
-  ...props
-}) => {
+const GradientButton = forwardRef<HTMLButtonElement, GradientButtonProps>((props, ref) => {
+  const {
+    gradient = 'primary',
+    withShimmer = true,
+    withRipple = true,
+    rounded = false,
+    elevated = true,
+    children,
+    sx,
+    component,
+    ...rest
+  } = props;
+
   // Animation for shimmer effect
   const shimmerProps = useSpring({
     to: async (next) => {
@@ -130,37 +115,36 @@ const GradientButton: React.FC<GradientButtonProps> = ({
     config: { mass: 1, tension: 280, friction: 20 },
   }));
 
+  const handleMouseEnter = () => {
+    setHover({
+      transform: 'scale(1.05) translateY(-3px)',
+      background: hoverGradients[gradient],
+      boxShadow: elevated ? '0 8px 16px rgba(0, 0, 0, 0.3)' : 'none',
+    });
+  };
+
+  const handleMouseLeave = () => {
+    setHover({
+      transform: 'scale(1) translateY(0px)',
+      background: gradients[gradient],
+      boxShadow: elevated ? '0 4px 12px rgba(0, 0, 0, 0.2)' : 'none',
+    });
+  };
+
   return (
     <StyledButton
-      variant={variant}
+      ref={ref}
       disableRipple={!withRipple}
-      fullWidth={fullWidth}
-      disabled={disabled}
-      type={type}
-      size={size}
-      startIcon={startIcon}
-      endIcon={endIcon}
-      className={className}
+      component={component}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
       sx={{
         ...sx,
         borderRadius: rounded ? '50px' : 8,
         color: textColors[gradient],
+        position: 'relative',
       }}
-      onClick={onClick}
-      onMouseEnter={() => 
-        setHover({
-          transform: 'scale(1.05) translateY(-3px)',
-          background: hoverGradients[gradient],
-          boxShadow: elevated ? '0 8px 16px rgba(0, 0, 0, 0.3)' : 'none',
-        })
-      }
-      onMouseLeave={() => 
-        setHover({
-          transform: 'scale(1) translateY(0px)',
-          background: gradients[gradient],
-          boxShadow: elevated ? '0 4px 12px rgba(0, 0, 0, 0.2)' : 'none',
-        })
-      }
+      {...rest}
     >
       <animated.div style={{
         position: 'absolute',
@@ -172,6 +156,7 @@ const GradientButton: React.FC<GradientButtonProps> = ({
         transform: hoverProps.transform,
         boxShadow: hoverProps.boxShadow,
         borderRadius: 'inherit',
+        zIndex: 0,
       }} />
       <span style={{ position: 'relative', zIndex: 1 }}>
         {children}
@@ -179,6 +164,8 @@ const GradientButton: React.FC<GradientButtonProps> = ({
       {withShimmer && <AnimatedDiv style={shimmerProps} />}
     </StyledButton>
   );
-};
+});
+
+GradientButton.displayName = 'GradientButton';
 
 export default GradientButton; 

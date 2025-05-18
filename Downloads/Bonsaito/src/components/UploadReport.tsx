@@ -99,10 +99,9 @@ const UploadReport: React.FC<UploadReportProps> = ({ user }) => {
     
     try {
       let uploadedFileUrl = '';
-      let textToProcess = pastedText;
       
       if (inputMethod === 'file' && file) {
-        // Handle file upload
+        // Handle file upload to storage for record-keeping
         const filePath = `${user.id}/${Date.now()}_${file.name}`;
         const { data, error } = await supabase.storage
           .from('score-reports')
@@ -119,50 +118,20 @@ const UploadReport: React.FC<UploadReportProps> = ({ user }) => {
           
         uploadedFileUrl = publicUrl;
         
-        // If it's a PDF, extract text using the OCR function
-        if (file.type === 'application/pdf') {
-          toast.info('Extracting text from PDF...', { autoClose: false, toastId: 'extracting-text' });
-          
-          try {
-            const { data: extractedData, error: extractionError } = await supabase.functions.invoke('ocr-pdf', {
-              body: { filePath }
-            });
-            
-            if (extractionError) throw extractionError;
-            
-            if (extractedData?.text) {
-              textToProcess = extractedData.text;
-              toast.dismiss('extracting-text');
-              toast.success('Successfully extracted text from PDF');
-            } else {
-              throw new Error('No text extracted from PDF');
-            }
-          } catch (extractionError: any) {
-            toast.dismiss('extracting-text');
-            toast.warning('Could not extract text from PDF. Using file directly with AI processing.');
-            
-            // If PDF processing fails, we'll use the file directly with the Gemini API
-            await generatePracticeQuestions(file);
-            
-            toast.success('Report uploaded successfully!');
-            setFile(null);
-            setPastedText('');
-            setUploading(false);
-            return; // Exit early as we've processed the file already
-          }
-        } else if (file.type === 'text/plain') {
-          // Read text file content
-          const text = await file.text();
-          textToProcess = text;
-        }
-      }
-      
-      // Generate practice questions from the text
-      if (textToProcess) {
-        await generatePracticeQuestions(textToProcess, uploadedFileUrl);
+        // Process the file directly with Gemini API
+        toast.info('Processing your file...', { autoClose: false, toastId: 'processing-file' });
+        
+        // For PDFs or text files, use Gemini API directly
+        await generatePracticeQuestions(file);
+        
+        toast.dismiss('processing-file');
+        toast.success('Report processed successfully!');
+      } else if (inputMethod === 'text' && pastedText) {
+        // Process the pasted text directly
+        await generatePracticeQuestions(pastedText);
       }
 
-      toast.success('Report uploaded successfully!');
+      // Clear form after successful processing
       setFile(null);
       setPastedText('');
       
