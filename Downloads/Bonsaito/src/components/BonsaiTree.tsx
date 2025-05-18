@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, ReactElement } from 'react';
 import { Box, Typography, Paper, useTheme, Tooltip } from '@mui/material';
 import { useSpring, animated, config, useSpringRef, useChain } from 'react-spring';
 
@@ -20,6 +20,18 @@ interface BonsaiTreeProps {
 const lerp = (a: number, b: number, t: number) => a * (1 - t) + b * t;
 const clamp = (num: number, min: number, max: number) => Math.min(Math.max(num, min), max);
 const randRange = (min: number, max: number) => Math.random() * (max - min) + min;
+
+// Helper function to get all branches (main and sub-branches) flattened into a single array
+const getAllBranches = (branches: Branch[]): Branch[] => {
+  let all_branches: Branch[] = [];
+  for (const branch of branches) {
+    all_branches.push(branch);
+    if (branch.subBranches && branch.subBranches.length > 0) {
+      all_branches = all_branches.concat(getAllBranches(branch.subBranches));
+    }
+  }
+  return all_branches;
+};
 
 // Define interfaces for branch and leaf objects
 interface BranchPoint {
@@ -52,7 +64,7 @@ interface LeafCoordinates {
   hue: number;
 }
 
-const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills, showGrowthAnimation = false }) => {
+const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills, showGrowthAnimation = false }): ReactElement => {
   const theme = useTheme();
   const svgRef = useRef<SVGSVGElement>(null);
   const [recentlyMastered, setRecentlyMastered] = useState<string[]>([]);
@@ -63,6 +75,48 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills, showGrowth
   
   // Reference to track previous skills for comparison
   const prevSkillsRef = useRef<Skill[]>([]);
+  
+  // Group skills by category
+  const skillsByCategory = skills.reduce((acc, skill) => {
+      if (!acc[skill.category]) {
+        acc[skill.category] = [];
+      }
+      acc[skill.category].push(skill);
+      return acc;
+    }, {} as Record<string, Skill[]>);
+
+  // Track skills that were recently mastered
+  useEffect(() => {
+    // Only run effect if not first render
+    if (!firstRender) {
+      const prevMasteredIds = prevSkillsRef.current
+        .filter(skill => skill.mastered)
+        .map(skill => skill.id);
+      
+      const currentMasteredIds = skills
+        .filter(skill => skill.mastered)
+        .map(skill => skill.id);
+      
+      // Find newly mastered skills
+      const newlyMastered = currentMasteredIds.filter(id => !prevMasteredIds.includes(id));
+      
+      if (newlyMastered.length > 0) {
+        setRecentlyMastered(newlyMastered);
+        setAnimation(true);
+        
+        // Reset animation state after animation completes
+        const timer = setTimeout(() => {
+          setAnimation(false);
+        }, 3000);
+        
+        return () => clearTimeout(timer);
+      }
+    } else {
+      setFirstRender(false);
+    }
+    // Update reference
+    prevSkillsRef.current = [...skills];
+  }, [skills, firstRender]);
   
   // Calculate mastery percentage
   const masteredSkills = skills.filter(skill => skill.mastered);
@@ -118,48 +172,6 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills, showGrowth
     config: config.gentle,
   });
 
-  // Group skills by category
-  const skillsByCategory = skills.reduce((acc, skill) => {
-      if (!acc[skill.category]) {
-        acc[skill.category] = [];
-      }
-      acc[skill.category].push(skill);
-      return acc;
-    }, {} as Record<string, Skill[]>);
-
-  // Track skills that were recently mastered
-  useEffect(() => {
-    // Only run effect if not first render
-    if (!firstRender) {
-      const prevMasteredIds = prevSkillsRef.current
-        .filter(skill => skill.mastered)
-        .map(skill => skill.id);
-      
-      const currentMasteredIds = skills
-        .filter(skill => skill.mastered)
-        .map(skill => skill.id);
-      
-      // Find newly mastered skills
-      const newlyMastered = currentMasteredIds.filter(id => !prevMasteredIds.includes(id));
-      
-      if (newlyMastered.length > 0) {
-        setRecentlyMastered(newlyMastered);
-        setAnimation(true);
-        
-        // Reset animation state after animation completes
-        const timer = setTimeout(() => {
-          setAnimation(false);
-        }, 3000);
-        
-        return () => clearTimeout(timer);
-      }
-    } else {
-      setFirstRender(false);
-    }
-    // Update reference
-    prevSkillsRef.current = [...skills];
-  }, [skills, firstRender]);
-
   // Calculate tree health/vitality based on mastery
   const treeVitality = {
     // Trunk color darkens as tree matures
@@ -208,13 +220,30 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills, showGrowth
       // Single category - branch goes mostly upward
       baseAngles.push(-Math.PI/2);
     } else if (totalCategories === 2) {
-      // Two categories - split left and right
-      baseAngles.push(-Math.PI/2 - 0.4);
-      baseAngles.push(-Math.PI/2 + 0.4);
+      // Two categories - split left and right with asymmetry
+      baseAngles.push(-Math.PI/2 - 0.5);
+      baseAngles.push(-Math.PI/2 + 0.3);
     } else {
-      // Distribute branches in a fan pattern
+      // Distribute branches in a natural, asymmetric pattern
+      // Traditional bonsai often has branches at Golden ratio points
+      // We'll create a more natural distribution with intentional gaps
+      
+      // First create a basic distribution
       for (let i = 0; i < totalCategories; i++) {
-        const angle = lerp(-Math.PI/2 - 0.8, -Math.PI/2 + 0.8, i / (totalCategories - 1));
+        // Introduce some natural clustering rather than even distribution
+        const position = i / (totalCategories - 1);
+        // Apply non-linear transformation for more natural spacing
+        let angle;
+        if (position < 0.4) {
+          // Cluster more branches on the left side (traditional bonsai aesthetic)
+          angle = lerp(-Math.PI/2 - 0.9, -Math.PI/2 - 0.2, position / 0.4);
+        } else if (position > 0.6) {
+          // Some branches on the right
+          angle = lerp(-Math.PI/2 + 0.1, -Math.PI/2 + 0.7, (position - 0.6) / 0.4);
+        } else {
+          // Few branches directly upward
+          angle = lerp(-Math.PI/2 - 0.2, -Math.PI/2 + 0.1, (position - 0.4) / 0.2);
+        }
         baseAngles.push(angle);
       }
     }
@@ -229,7 +258,7 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills, showGrowth
       
       // Calculate angle with small random variation
       const baseAngle = baseAngles[i];
-      const angle = baseAngle + randRange(-0.1, 0.1);
+      const angle = baseAngle + randRange(-0.15, 0.15);
       
       // Calculate mastery for this category
       const categorySkills = skillsByCategory[category] || [];
@@ -255,19 +284,23 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills, showGrowth
         y: trunkTop.y + branchDirection.y * branchLength
       };
       
-      // Control points for natural curve - adjust these for different branch shapes
+      // Control points for natural curve - more variation for realistic bonsai shapes
+      // Bonsai branches often have more dramatic curves and character
+      const curveFactor = randRange(0.8, 1.2); // Variation in curve intensity
+      const verticalBias = randRange(-20, -5); // Varied vertical offset for natural curves
+      
       const controlPoint1 = {
-        x: trunkTop.x + branchDirection.x * branchLength * 0.3,
-        y: trunkTop.y + branchDirection.y * branchLength * 0.2 - 10
+        x: trunkTop.x + branchDirection.x * branchLength * 0.3 * curveFactor,
+        y: trunkTop.y + branchDirection.y * branchLength * 0.2 + verticalBias
       };
       
       const controlPoint2 = {
-        x: trunkTop.x + branchDirection.x * branchLength * 0.7, 
-        y: trunkTop.y + branchDirection.y * branchLength * 0.6 - 15
+        x: trunkTop.x + branchDirection.x * branchLength * 0.7 * curveFactor, 
+        y: trunkTop.y + branchDirection.y * branchLength * 0.6 + verticalBias * 0.7
       };
       
-      // Thickness based on mastery and size
-      const thickness = 8 * (0.7 + (categoryMasteryRatio * 0.5));
+      // Thickness based on mastery and size with more taper
+      const thickness = 6 * (0.7 + (categoryMasteryRatio * 0.5));
       
       const mainBranch: Branch = {
         id: `branch-${i}`,
@@ -318,8 +351,36 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills, showGrowth
       // Generate the sub-branch
       const baseAngle = parentBranch.angle;
       
-      // Alternate sides for more natural look
-      const sideAngle = i % 2 === 0 ? randRange(0.3, 0.7) : randRange(-0.7, -0.3);
+      // More natural variation for bonsai-like growth patterns
+      // Traditional bonsai branches often have distinctive angles and arrangements
+      
+      // For first-level branches, create more distinct side branches
+      // Deeper levels have more natural, subtle variations
+      let sideAngle;
+      if (level === 1) {
+        // First level branches have more dramatic angles
+        // Growing mostly upward and outward
+        sideAngle = i % 2 === 0 ? 
+          randRange(0.3, 0.7) : // Right side
+          randRange(-0.7, -0.3); // Left side
+      } else if (level === 2) {
+        // Second level branches follow a more natural pattern
+        // Some continue the direction of parent, some create smaller offshoots
+        const continueParentDirection = Math.random() > 0.4;
+        if (continueParentDirection) {
+          // Continue in similar direction with small variation
+          sideAngle = randRange(-0.2, 0.2);
+        } else {
+          // Create a side branch
+          sideAngle = i % 2 === 0 ? 
+            randRange(0.3, 0.5) : 
+            randRange(-0.5, -0.3);
+        }
+      } else {
+        // Deepest branches are smaller and have more subtle variations
+        // These often support leaves at the tips
+        sideAngle = randRange(-0.3, 0.3);
+      }
       
       // As we go deeper, branches extend more horizontally
       const levelFactor = level * 0.2;
@@ -327,7 +388,9 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills, showGrowth
       
       // Calculate branch length (diminishing with level)
       const scaleFactor = 1 - (level * 0.2);
-      const branchLength = (40 + (branchSkills.length * 5)) * scaleFactor;
+      // Some length variety based on mastery
+      const lengthVariation = 0.8 + (branchMasteryRatio * 0.4);
+      const branchLength = (40 + (branchSkills.length * 5)) * scaleFactor * lengthVariation;
       
       // Branch direction
       const branchDirection = {
@@ -336,7 +399,10 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills, showGrowth
       };
       
       // For sub-branches, start from a point along the parent branch
-      const t = 0.6 + (i / numBranches) * 0.4; // Start point along parent branch
+      // Higher level branches start further toward the parent's tip
+      const baseT = 0.6 + (level * 0.1);
+      const t = baseT + (i / numBranches) * (0.35 - (level * 0.05)); // More spread on first level
+      
       const p0 = parentBranch.start;
       const p1 = parentBranch.control1;
       const p2 = parentBranch.control2;
@@ -360,19 +426,23 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills, showGrowth
       };
       
       // Control points for natural curve
+      // Add more character to the curve based on level
+      const curveMagnitude = 1 - (level * 0.2); // Deeper branches are straighter
+      const curveVariation = randRange(0.7, 1.3); // Add variety
+      
       const control1 = {
-        x: start.x + branchDirection.x * branchLength * 0.3,
-        y: start.y + branchDirection.y * branchLength * 0.2 - 5
+        x: start.x + branchDirection.x * branchLength * 0.3 * curveVariation,
+        y: start.y + branchDirection.y * branchLength * 0.2 - (5 * curveMagnitude)
       };
       
       const control2 = {
-        x: start.x + branchDirection.x * branchLength * 0.7,
-        y: start.y + branchDirection.y * branchLength * 0.6 - 8
+        x: start.x + branchDirection.x * branchLength * 0.7 * curveVariation,
+        y: start.y + branchDirection.y * branchLength * 0.6 - (8 * curveMagnitude)
       };
       
-      // Thickness diminishes with level
-      const thicknessScale = 1 - (level * 0.25);
-      const thickness = parentBranch.thickness * 0.6 * thicknessScale;
+      // Thickness diminishes with level - more dramatic tapering for bonsai look
+      const thicknessScale = 1 - (level * 0.28);
+      const thickness = parentBranch.thickness * 0.55 * thicknessScale;
       
       const branch: Branch = {
         id: `${parentBranch.id}-sub-${i}`,
@@ -409,6 +479,7 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills, showGrowth
   
   // Generate main branches
   const mainBranches = generateBranches();
+  const allDisplayBranches = getAllBranches(mainBranches);
 
   // Function to render all branches recursively
   const renderBranches = (branches: Branch[]) => {
@@ -427,7 +498,7 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills, showGrowth
              ${branch.end.x}, ${branch.end.y}
           `}
           fill="none"
-          stroke={`url(#branchGradient-${index})`}
+          stroke={`url(#${branch.gradientId})`}
           strokeWidth={branch.thickness}
           strokeLinecap="round"
           style={{
@@ -477,10 +548,16 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills, showGrowth
                   }}
                 >
                   <path
-                    d="M0,-2 C3,-10 8,-15 12,-15 C18,-15 20,-8 15,0 C10,8 5,10 0,5 C-5,10 -10,8 -15,0 C-20,-8 -18,-15 -12,-15 C-8,-15 -3,-10 0,-2 Z"
+                    d="M0,-2 
+                      C3,-10 8,-15 12,-15 
+                      C18,-15 20,-8 15,0 
+                      C10,8 5,10 0,6 
+                      C-5,10 -10,8 -15,0 
+                      C-20,-8 -18,-15 -12,-15 
+                      C-8,-15 -3,-10 0,-2 Z"
                     fill={skill.mastered 
-                      ? theme.palette.primary.main 
-                      : `hsl(${120 + (skill.masteryLevel / 5)}, ${50 + skill.masteryLevel / 2}%, ${70 - skill.masteryLevel / 3}%)`
+                      ? `hsl(${leaf.hue}, 70%, 55%)` 
+                      : `hsl(${leaf.hue}, ${50 + skill.masteryLevel / 2}%, ${70 - skill.masteryLevel / 3}%)`
                     }
                     opacity={skill.mastered ? 1 : 0.6 + (skill.masteryLevel / 250)}
                     className={leaf.isRecentlyMastered ? 'leaf-pulse' : ''}
@@ -488,13 +565,18 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills, showGrowth
                   />
                   {/* Leaf vein */}
                   <path
-                    d="M0,-2 L0,5 M-8,-8 Q0,-2 8,-8"
+                    d="M0,-2 L0,5 
+                      M-8,-8 Q0,-2 8,-8
+                      M-5,-3 L-10,0
+                      M5,-3 L10,0
+                      M-3,0 L-6,3
+                      M3,0 L6,3"
                     fill="none"
                     stroke={skill.mastered 
                       ? `rgba(255,255,255,0.5)` 
                       : `rgba(255,255,255,0.3)`
                     }
-                    strokeWidth="0.8"
+                    strokeWidth="0.7"
                     transform={`scale(${leaf.size / 25})`}
                     opacity={0.8}
                   />
@@ -516,8 +598,17 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills, showGrowth
     const totalSkills = skills.length;
     
     // Get a t-value [0-1] along the curve based on the skill index
-    // We want to distribute skills evenly
-    const t = clamp(0.3 + ((index + 1) / (totalSkills + 1)) * 0.7, 0.3, 0.95);
+    // For more natural clustering, we'll create small groups of leaves
+    const clusterSize = Math.min(3, totalSkills); // Max 3 leaves per cluster
+    const clusterIndex = Math.floor(index / clusterSize);
+    const clusterPosition = clusterIndex / Math.ceil(totalSkills / clusterSize);
+    
+    // Create areas of the branch more likely to have leaves
+    const t = clamp(0.3 + clusterPosition * 0.65, 0.3, 0.95);
+    
+    // Add small variation within each cluster
+    const tVariation = (index % clusterSize) * 0.05 * (Math.random() > 0.5 ? 1 : -1);
+    const finalT = clamp(t + tVariation, 0.3, 0.95);
 
     // Calculate point on the cubic bezier curve
     const p0 = branch.start;
@@ -527,20 +618,20 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills, showGrowth
     
     // Calculate position on the cubic bezier curve
     // Formula: P = (1-t)^3 * P0 + 3(1-t)^2 * t * P1 + 3(1-t) * t^2 * P2 + t^3 * P3
-    const t1 = 1 - t;
+    const t1 = 1 - finalT;
     const t1_2 = t1 * t1;
     const t1_3 = t1_2 * t1;
-    const t_2 = t * t;
-    const t_3 = t_2 * t;
+    const t_2 = finalT * finalT;
+    const t_3 = t_2 * finalT;
     
-    const x = t1_3 * p0.x + 3 * t1_2 * t * p1.x + 3 * t1 * t_2 * p2.x + t_3 * p3.x;
-    const y = t1_3 * p0.y + 3 * t1_2 * t * p1.y + 3 * t1 * t_2 * p2.y + t_3 * p3.y;
+    const x = t1_3 * p0.x + 3 * t1_2 * finalT * p1.x + 3 * t1 * t_2 * p2.x + t_3 * p3.x;
+    const y = t1_3 * p0.y + 3 * t1_2 * finalT * p1.y + 3 * t1 * t_2 * p2.y + t_3 * p3.y;
     
     // Calculate the curve tangent to decide the leaf direction
-    const tangentX = -3 * t1_2 * p0.x + 3 * t1_2 * p1.x - 6 * t1 * t * p1.x + 
-                 6 * t1 * t * p2.x - 3 * t_2 * p2.x + 3 * t_2 * p3.x;
-    const tangentY = -3 * t1_2 * p0.y + 3 * t1_2 * p1.y - 6 * t1 * t * p1.y + 
-                 6 * t1 * t * p2.y - 3 * t_2 * p2.y + 3 * t_2 * p3.y;
+    const tangentX = -3 * t1_2 * p0.x + 3 * t1_2 * p1.x - 6 * t1 * finalT * p1.x + 
+                6 * t1 * finalT * p2.x - 3 * t_2 * p2.x + 3 * t_2 * p3.x;
+    const tangentY = -3 * t1_2 * p0.y + 3 * t1_2 * p1.y - 6 * t1 * finalT * p1.y + 
+                6 * t1 * finalT * p2.y - 3 * t_2 * p2.y + 3 * t_2 * p3.y;
     
     // Normalize the tangent
     const tangentLength = Math.sqrt(tangentX * tangentX + tangentY * tangentY);
@@ -551,12 +642,16 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills, showGrowth
     const perpX = -normalizedTangentY;
     const perpY = normalizedTangentX;
     
-    // Spread leaves on both sides of the branch
-    // Alternate sides for a more natural look
-    const side = index % 2 === 0 ? 1 : -1;
+    // For clustering, vary the side distribution - leaves in the same cluster should be on similar sides
+    const clusterSide = (clusterIndex % 2 === 0) ? 1 : -1;
+    // But still allow some variation within the cluster
+    const side = (Math.random() > 0.25) ? clusterSide : -clusterSide;
     
-    // Offset from the curve
-    const offset = ((skill.masteryLevel / 100) * 5) + 5;
+    // Vary the offset from the branch within the cluster
+    const baseOffset = ((skill.masteryLevel / 100) * 5) + 5;
+    // Leaves within a cluster should have small variations in offset
+    const offsetVariation = randRange(0.8, 1.2);
+    const offset = baseOffset * offsetVariation;
     
     // Base position on the curve
     let baseX = x + side * perpX * offset;
@@ -569,17 +664,19 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills, showGrowth
     // Calculate leaf size based on mastery level
     const baseSize = 7;
     const masteryBonus = skill.mastered ? 4 : (skill.masteryLevel / 25);
-    const size = baseSize + masteryBonus;
+    // Add slight variation in leaf size
+    const sizeVariation = randRange(0.9, 1.1);
+    const size = (baseSize + masteryBonus) * sizeVariation;
 
-    // Leaf color hue varies slightly based on mastery
-    const hue = 120 + (skill.masteryLevel / 5);
+    // Leaf color hue varies slightly based on mastery and position
+    const hue = 120 + (skill.masteryLevel / 5) + randRange(-5, 5);
     
     return {
       x: baseX,
       y: baseY,
       size,
-      // Add angle information for leaf orientation
-      angle: Math.atan2(perpY, perpX) + (side * Math.PI / 8) + randRange(-Math.PI / 16, Math.PI / 16),
+      // Add angle information for leaf orientation with more natural variation
+      angle: Math.atan2(perpY, perpX) + (side * Math.PI / 8) + randRange(-Math.PI / 12, Math.PI / 12),
       isRecentlyMastered: recentlyMastered.includes(skill.id) && skill.mastered,
       hue
     };
@@ -841,10 +938,10 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills, showGrowth
                 </radialGradient>
                 
                 {/* Gradients for each branch */}
-                {mainBranches.map((branch, i) => (
+                {allDisplayBranches.map((branch) => (
                   <linearGradient 
-                    key={`branch-gradient-${i}`}
-                    id={`branchGradient-${i}`} 
+                    key={branch.gradientId}
+                    id={branch.gradientId}
                     x1="0%" 
                     y1="0%" 
                     x2="100%" 
@@ -868,19 +965,22 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills, showGrowth
                   {`
                     @keyframes leafGrow {
                       0% { transform: scale(0); opacity: 0; }
-                      60% { transform: scale(1.5); opacity: 1; }
+                      60% { transform: scale(1.3); opacity: 0.9; }
+                      75% { transform: scale(1.1); opacity: 1; }
+                      90% { transform: scale(1.05); opacity: 1; }
                       100% { transform: scale(1); opacity: 1; }
                     }
                     
                     @keyframes branchGrow {
                       0% { stroke-dashoffset: 1000; }
+                      80% { stroke-dashoffset: 50; }
                       100% { stroke-dashoffset: 0; }
                     }
                     
                     @keyframes pulse {
-                      0% { opacity: 0.8; transform: scale(1); }
-                      50% { opacity: 1; transform: scale(1.1); }
-                      100% { opacity: 0.8; transform: scale(1); }
+                      0% { opacity: 0.8; transform: scale(1); filter: drop-shadow(0 0 2px rgba(120, 255, 120, 0.3)); }
+                      50% { opacity: 1; transform: scale(1.1); filter: drop-shadow(0 0 5px rgba(120, 255, 120, 0.5)); }
+                      100% { opacity: 0.8; transform: scale(1); filter: drop-shadow(0 0 2px rgba(120, 255, 120, 0.3)); }
                     }
                     
                     @keyframes float {
@@ -988,7 +1088,9 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills, showGrowth
                   d={`
                     M${150 - treeVitality.trunkWidth * 0.4}, 385
                     C${150 - treeVitality.trunkWidth * 0.5}, ${385 - treeVitality.trunkHeight * 0.3}
-                     ${150 + treeVitality.trunkWidth * 0.2}, ${385 - treeVitality.trunkHeight * 0.7}
+                     ${150 + treeVitality.trunkWidth * 0.2}, ${385 - treeVitality.trunkHeight * 0.6}
+                     ${150 + treeVitality.trunkWidth * 0.1}, ${385 - treeVitality.trunkHeight * 0.7}
+                    S${150 + treeVitality.trunkWidth * 0.05}, ${385 - treeVitality.trunkHeight * 0.85}
                      150, ${385 - treeVitality.trunkHeight}
                   `}
                   fill="none"
@@ -1070,6 +1172,38 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills, showGrowth
               />
               Skills In Progress
             </Typography>
+            <Typography 
+              variant="caption" 
+              display="block"
+              sx={{ fontFamily: 'DM Sans, sans-serif' }}
+            >
+              <Box 
+                component="span" 
+                sx={{ 
+                  display: 'inline-block', 
+                  width: 10, 
+                  height: 10, 
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #88d498 0%, #4fc3a8 100%)',
+                  boxShadow: '0 0 4px rgba(120, 255, 120, 0.5)',
+                  mr: 1
+                }}
+              />
+              New Growth (Questions Answered)
+            </Typography>
+            <Typography 
+              variant="caption" 
+              display="block"
+              sx={{ 
+                mt: 0.5, 
+                fontStyle: 'italic', 
+                fontSize: '0.65rem',
+                color: 'text.secondary',
+                fontFamily: 'DM Sans, sans-serif'
+              }}
+            >
+              Your bonsai grows with each question answered
+            </Typography>
           </Box>
         </Box>
         
@@ -1083,7 +1217,7 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills, showGrowth
             animation: animation ? 'fadeIn 1s ease-in-out' : 'none'
           }}
         >
-          You've mastered {masteredSkills.length} skills so far! Keep growing!
+          You've mastered {masteredSkills.length} skills so far! Keep growing your bonsai!
         </Typography>
       </Paper>
     </animated.div>
