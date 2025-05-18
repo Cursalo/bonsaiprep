@@ -49,6 +49,7 @@ import { uploadFileToSupabase, ocrPdfFromSupabase } from '../services/ocrService
 import { generateQuestionsFromMistakes, GeneratedQuestion } from '../services/aiService';
 import { supabase } from '../supabaseClient';
 import { useSkills } from '../components/SkillsProvider';
+import Lottie from 'lottie-react';
 
 // Define an interface for user answers
 interface StudentAnswers {
@@ -192,8 +193,8 @@ const UploadReport: React.FC = () => {
           setActiveStep(2);
           
           setLoadingMessage('Analyzing report and generating personalized questions...');
-          // Add realistic processing delay before question generation
-          await addProcessingDelay(3500);
+          // Add realistic processing delay before question generation - increased to 15 seconds
+          await addProcessingDelay(15000);
           const questions = await generateQuestionsFromMistakes(text);
           setGeneratedQuestions(questions);
           setActiveStep(3);
@@ -213,8 +214,8 @@ const UploadReport: React.FC = () => {
           console.log('Text extracted:', text.substring(0, 100) + '...');
           
           setLoadingMessage('Analyzing your report and building personalized questions...');
-          // Add realistic processing delay for question generation
-          await addProcessingDelay(4500);
+          // Add realistic processing delay for question generation - increased to 15 seconds
+          await addProcessingDelay(15000);
           const questions = await generateQuestionsFromMistakes(text);
           setGeneratedQuestions(questions);
           setActiveStep(3);
@@ -256,8 +257,8 @@ const UploadReport: React.FC = () => {
       setActiveStep(2);
       
       setLoadingMessage('Analyzing report data and creating personalized questions...');
-      // Add realistic processing delay
-      await addProcessingDelay(3800);
+      // Add realistic processing delay - increased to 15 seconds
+      await addProcessingDelay(15000);
       const questions = await generateQuestionsFromMistakes(pastedText);
       setGeneratedQuestions(questions);
       setActiveStep(3);
@@ -563,7 +564,13 @@ const UploadReport: React.FC = () => {
 
         {isLoading && (
           <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', mt: 6, mb: 4 }}>
-            <CircularProgress size={60} thickness={4} />
+            <Box sx={{ width: '240px', height: '240px', mb: 3 }}>
+              <Lottie 
+                animationData={'/book.lottie'} 
+                loop={true}
+                style={{ width: '100%', height: '100%' }}
+              />
+            </Box>
             <Typography variant="h6" sx={{ mt: 3, fontWeight: 'bold' }}>{loadingMessage || 'Processing your report...'}</Typography>
           </Box>
         )}

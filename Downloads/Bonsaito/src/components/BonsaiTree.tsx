@@ -78,12 +78,12 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
 
   // Group skills by category
   const skillsByCategory = skills.reduce((acc, skill) => {
-    if (!acc[skill.category]) {
-      acc[skill.category] = [];
-    }
-    acc[skill.category].push(skill);
-    return acc;
-  }, {} as Record<string, Skill[]>);
+      if (!acc[skill.category]) {
+        acc[skill.category] = [];
+      }
+      acc[skill.category].push(skill);
+      return acc;
+    }, {} as Record<string, Skill[]>);
 
   // Track skills that were recently mastered
   useEffect(() => {
@@ -354,9 +354,10 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
         const branchElement = svg.querySelector(`#${branch.id}`);
         if (branchElement) {
           branchElement.classList.add('animate-grow');
-          branchElement.style.animationDelay = `${i * 0.2}s`;
+          branchElement.setAttribute('style', `animation-delay: ${i * 0.2}s`);
           branchElement.addEventListener('animationend', () => {
             branchElement.classList.remove('animate-grow');
+            branchElement.removeAttribute('style');
           }, { once: true });
         }
       });
@@ -399,9 +400,9 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
             mb: 3
           }}
         >
-          Your Bonsai Learning Tree
-        </Typography>
-        
+        Your Bonsai Learning Tree
+      </Typography>
+      
         <Box sx={{ 
           textAlign: 'center', 
           mb: 3,
@@ -421,14 +422,14 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
             color="text.secondary"
             sx={{ fontFamily: 'DM Sans, sans-serif' }}
           >
-            Skills Mastered
-          </Typography>
-        </Box>
-        
-        <Box sx={{ 
-          width: '100%', 
+          Skills Mastered
+        </Typography>
+      </Box>
+      
+      <Box sx={{ 
+        width: '100%', 
           height: 450,
-          position: 'relative',
+        position: 'relative',
           borderRadius: 2,
           overflow: 'hidden',
           transition: 'all 0.5s ease',
@@ -589,9 +590,9 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
                   strokeLinecap="round"
                 />
               </g>
-              
-              {/* Branches */}
-              {branches.map((branch, index) => (
+          
+          {/* Branches */}
+          {branches.map((branch, index) => (
                 <g key={branch.id}>
                   <path
                     id={branch.id}
@@ -608,9 +609,9 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
                   />
                   
                   {/* Skills as leaves */}
-                  {branch.skills.map((skill, skillIndex) => {
+              {branch.skills.map((skill, skillIndex) => {
                     const leaf = generateLeafCoordinates(branch, skill, skillIndex);
-                    return (
+                return (
                       <foreignObject
                         key={`leaf-${skill.id}`}
                         id={`leaf-${skill.id}`}
@@ -646,11 +647,11 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
                           </g>
                         </svg>
                       </foreignObject>
-                    );
-                  })}
-                </g>
-              ))}
-              
+                );
+              })}
+            </g>
+          ))}
+          
               {/* Skill name tooltips */}
               {showTooltip && skills.map(skill => {
                 if (skill.id === showTooltip) {
@@ -704,13 +705,13 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
                 }
                 return null;
               })}
-            </svg>
+        </svg>
           </Box>
-          
-          {/* Tree legend */}
-          <Box 
-            sx={{ 
-              position: 'absolute', 
+        
+        {/* Tree legend */}
+        <Box 
+          sx={{ 
+            position: 'absolute', 
               bottom: 15, 
               right: 15,
               background: 'rgba(255,255,255,0.8)', 
@@ -740,16 +741,16 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
               <Box 
                 component="span" 
                 sx={{ 
-                  display: 'inline-block', 
-                  width: 10, 
-                  height: 10, 
-                  borderRadius: '50%', 
-                  backgroundColor: theme.palette.primary.main,
-                  mr: 1
+              display: 'inline-block', 
+              width: 10, 
+              height: 10, 
+              borderRadius: '50%', 
+              backgroundColor: theme.palette.primary.main,
+              mr: 1
                 }}
               />
-              Mastered Skills
-            </Typography>
+            Mastered Skills
+          </Typography>
             <Typography 
               variant="caption" 
               display="block"
@@ -758,19 +759,19 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
               <Box 
                 component="span" 
                 sx={{ 
-                  display: 'inline-block', 
-                  width: 10, 
-                  height: 10, 
-                  borderRadius: '50%', 
+              display: 'inline-block', 
+              width: 10, 
+              height: 10, 
+              borderRadius: '50%', 
                   backgroundColor: treeVitality.leafBaseColor,
-                  opacity: 0.7,
-                  mr: 1
+              opacity: 0.7,
+              mr: 1
                 }}
               />
-              Skills In Progress
-            </Typography>
-          </Box>
+            Skills In Progress
+          </Typography>
         </Box>
+      </Box>
         
         <Typography 
           align="center" 
@@ -784,7 +785,7 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
         >
           You've mastered {masteredSkills.length} skills so far! Keep growing!
         </Typography>
-      </Paper>
+    </Paper>
     </animated.div>
   );
 };
