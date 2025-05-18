@@ -6,12 +6,13 @@ import Lottie from 'lottie-react';
 export const FadeIn: React.FC<{
   children: ReactNode;
   delay?: number;
-}> = ({ children, delay = 0 }) => {
+  duration?: number;
+}> = ({ children, delay = 0, duration = 800 }) => {
   const props = useSpring({
     from: { opacity: 0, transform: 'translateY(20px)' },
     to: { opacity: 1, transform: 'translateY(0)' },
     delay,
-    config: config.molasses,
+    config: { ...config.molasses, duration },
   });
 
   return <animated.div style={props}>{children}</animated.div>;
