@@ -362,11 +362,13 @@ const OnboardingFlow: React.FC = () => {
   };
 
   const handleSubmit = async () => {
+    console.log("Starting onboarding submission process");
     setLoading(true);
     
     try {
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
+      console.log("Current user:", user);
       
       if (!user) {
         toast.error('You must be logged in to complete onboarding');
@@ -374,15 +376,30 @@ const OnboardingFlow: React.FC = () => {
       }
       
       // Check if user already has an onboarding entry
-      const { data: existingData, error: checkError } = await supabase
-        .from('user_onboarding')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
+      console.log("Checking for existing onboarding entry for user:", user.id);
+      let existingData = null;
+      
+      try {
+        const response = await supabase
+          .from('user_onboarding')
+          .select('id')
+          .eq('user_id', user.id)
+          .single();
         
-      if (checkError && checkError.code !== 'PGRST116') {
-        console.error('Error checking for existing onboarding record:', checkError);
-        toast.error('Error saving your information');
+        existingData = response.data;
+        const checkError = response.error;
+          
+        console.log("Existing onboarding data check result:", { existingData, checkError });
+        
+        if (checkError && checkError.code !== 'PGRST116') {
+          console.error('Error checking for existing onboarding record:', checkError);
+          toast.error('Error saving your information');
+          setLoading(false);
+          return;
+        }
+      } catch (checkError) {
+        console.error('Exception checking for existing onboarding record:', checkError);
+        toast.error('Error connecting to the database');
         setLoading(false);
         return;
       }
@@ -479,8 +496,13 @@ const OnboardingFlow: React.FC = () => {
       
       toast.success('Onboarding completed successfully!');
       
-      // Redirect to dashboard
-      navigate('/dashboard');
+      // Redirect to dashboard - add delay to ensure toast is visible and state is updated
+      setTimeout(() => {
+        // Force navigation with window.location for a full page refresh in case of router issues
+        window.location.href = '/dashboard';
+      }, 1000);
+      
+      return; // Early return to prevent further execution
     } catch (error) {
       console.error('Error in onboarding submission:', error);
       toast.error('Error saving your information');

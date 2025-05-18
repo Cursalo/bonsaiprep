@@ -309,23 +309,37 @@ function App() {
         const { data: { user } } = await supabase.auth.getUser();
         
         if (user) {
-          // Check if user has completed onboarding
-          const { data, error } = await supabase
-            .from('user_onboarding')
-            .select('id')
-            .eq('user_id', user.id)
-            .single();
-
-          if (error && error.code !== 'PGRST116') {
-            // PGRST116 is "no rows returned" error code
-            console.error('Error checking onboarding status:', error);
+          console.log("Checking onboarding status for user:", user.id);
+          
+          try {
+            // Check if user has completed onboarding
+            const { data, error } = await supabase
+              .from('user_onboarding')
+              .select('id')
+              .eq('user_id', user.id)
+              .single();
+  
+            if (error && error.code !== 'PGRST116') {
+              // PGRST116 is "no rows returned" error code
+              console.error('Error checking onboarding status:', error);
+            }
+  
+            console.log("Onboarding status check result:", { data, error });
+            
+            // If data exists, user has completed onboarding
+            setIsFirstLogin(!data);
+          } catch (queryError) {
+            console.error('Exception in onboarding status query:', queryError);
+            // Default to not showing onboarding on error
+            setIsFirstLogin(false);
           }
-
-          // If data exists, user has completed onboarding
-          setIsFirstLogin(!data);
+        } else {
+          console.log("No user found, not checking onboarding status");
+          setIsFirstLogin(false);
         }
       } catch (error) {
         console.error('Error in onboarding check:', error);
+        setIsFirstLogin(false);
       } finally {
         setLoading(false);
       }
