@@ -53,6 +53,7 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
   const [correctAnswersCount, setCorrectAnswersCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
+  const [isImageLoaded, setIsImageLoaded] = useState(false);
 
   // Determine which bonsai image to show (1.png to 11.png)
   const getBonsaiImageNumber = () => {
@@ -71,6 +72,7 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
     ? 'https://bonsaiprep-4e8cd0rd4-cursalos-projects.vercel.app'
     : '';
   const bonsaiImagePath = `${baseUrl}/bonsaipng/${bonsaiImageNumber}.png`;
+  const altarImagePath = '/altar2.png';
 
   // Log the image path for debugging
   console.log('Loading bonsai image:', bonsaiImagePath);
@@ -94,18 +96,37 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
     imageApi.start({ transform: 'translateY(0px)' });
   }, [imageApi]);
 
-  // Preload the image before displaying
+  // Preload both bonsai and altar images
   useEffect(() => {
-    const img = new Image();
-    img.src = bonsaiImagePath;
-    img.onload = () => {
-      setImageError(false);
+    const preloadImages = async () => {
+      setIsLoading(true);
+      try {
+        await Promise.all([
+          new Promise((resolve, reject) => {
+            const bonsaiImg = new Image();
+            bonsaiImg.src = bonsaiImagePath;
+            bonsaiImg.onload = resolve;
+            bonsaiImg.onerror = reject;
+          }),
+          new Promise((resolve, reject) => {
+            const altarImg = new Image();
+            altarImg.src = altarImagePath;
+            altarImg.onload = resolve;
+            altarImg.onerror = reject;
+          })
+        ]);
+        setIsImageLoaded(true);
+        setImageError(false);
+      } catch (error) {
+        console.error('Failed to load images:', error);
+        setImageError(true);
+      } finally {
+        setIsLoading(false);
+      }
     };
-    img.onerror = () => {
-      console.error(`Failed to load image: ${bonsaiImagePath}`);
-      setImageError(true);
-    };
-  }, [bonsaiImagePath]);
+
+    preloadImages();
+  }, [bonsaiImagePath, altarImagePath]);
 
   // Fetch the user's question data to determine how many questions were answered correctly
   useEffect(() => {
@@ -151,6 +172,35 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
     setImageError(true);
   };
 
+  if (isLoading) {
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '400px' 
+      }}>
+        <Typography>Loading your bonsai...</Typography>
+      </Box>
+    );
+  }
+
+  if (imageError) {
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: 'column',
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '400px',
+        gap: 2
+      }}>
+        <Typography color="error">Unable to load bonsai image</Typography>
+        <Typography variant="body2">Please try refreshing the page</Typography>
+      </Box>
+    );
+  }
+
   return (
     <animated.div style={containerProps}>
       <Paper 
@@ -163,65 +213,78 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
           position: 'relative',
           height: '100%',
           overflow: 'hidden',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundImage: `url(${altarImagePath})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            opacity: 0.85,
+            zIndex: 0,
+          }
         }}
       >
         <Box sx={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
-          <Typography 
-            variant="h5" 
-            gutterBottom 
-            align="center" 
-            sx={{ 
-              fontWeight: 'bold', 
+        <Typography 
+          variant="h5" 
+          gutterBottom 
+          align="center" 
+          sx={{ 
+            fontWeight: 'bold', 
               color: '#2C1810',
               textShadow: '0 2px 4px rgba(0,0,0,0.1)',
-              mb: 3
-            }}
+            mb: 3
+          }}
           >
             Your Learning Bonsai
           </Typography>
           
-          <Box sx={{ 
+          <Box sx={{
             flexGrow: 1,
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
-            flexDirection: 'column',
             position: 'relative',
+            width: '100%',
+            aspectRatio: '16/9',
+            maxHeight: '600px',
+            '& img': {
+              maxWidth: '100%',
+              maxHeight: '100%',
+              objectFit: 'contain',
+              transition: 'transform 0.3s ease-in-out',
+              '&:hover': {
+                transform: 'scale(1.02)'
+              }
+            }
           }}>
-            <animated.div style={imageProps}>
-              {!imageError ? (
-                <Box 
-                  component="img" 
-                  src={bonsaiImagePath}
-                  alt={`Bonsai tree growth stage ${bonsaiImageNumber}`}
-                  onError={handleImageError}
-                  sx={{ 
-                    maxWidth: '80%',
-                    height: 'auto',
-                    maxHeight: '70%',
-                    filter: 'drop-shadow(0px 5px 15px rgba(0,0,0,0.3))',
-                    objectFit: 'contain',
-                    display: 'block',
-                    margin: '0 auto',
-                  }}
-                />
-              ) : (
-                <Typography color="error">Image failed to load</Typography>
-              )}
-            </animated.div>
-            
-            <Typography 
-              variant="body1" 
-              align="center" 
-              sx={{ 
-                mt: 3, 
-                fontWeight: 'medium',
-                color: '#2C1810',
+            <animated.img
+              src={bonsaiImagePath}
+              alt={`Bonsai tree progress - ${correctAnswersCount} questions correct`}
+              style={{
+                ...imageProps,
+                opacity: isImageLoaded ? 1 : 0
               }}
-            >
-              {correctAnswersCount === 0 
-                ? "Complete practice questions to grow your bonsai!" 
-                : `You've answered ${correctAnswersCount} question${correctAnswersCount === 1 ? '' : 's'} correctly!`}
+              onLoad={() => setIsImageLoaded(true)}
+              onError={handleImageError}
+            />
+          </Box>
+          
+          <Box sx={{ 
+            mt: 3, 
+            textAlign: 'center',
+            color: '#2C1810',
+            textShadow: '0 1px 2px rgba(0,0,0,0.1)'
+          }}>
+            <Typography variant="h6">
+              {correctAnswersCount} Questions Mastered
+            </Typography>
+            <Typography variant="body2" sx={{ mt: 1, opacity: 0.8 }}>
+              Keep practicing to grow your bonsai!
             </Typography>
           </Box>
         </Box>
