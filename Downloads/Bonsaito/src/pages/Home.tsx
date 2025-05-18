@@ -6,7 +6,6 @@ import SchoolIcon from '@mui/icons-material/School';
 import InsightsIcon from '@mui/icons-material/Insights';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import LocalFloristIcon from '@mui/icons-material/LocalFlorist';
-import bonsaiImage from '../../../bonsai1024.png'; // Added import for the new image
 
 // Import our custom components
 import GradientButton from '../components/GradientButton';
