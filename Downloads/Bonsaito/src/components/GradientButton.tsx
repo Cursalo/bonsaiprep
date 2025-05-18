@@ -135,7 +135,7 @@ const GradientButton = forwardRef<HTMLButtonElement, GradientButtonProps>((props
     <StyledButton
       ref={ref}
       disableRipple={!withRipple}
-      component={component}
+      {...(component && { component })}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       sx={{
