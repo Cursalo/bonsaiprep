@@ -13,6 +13,7 @@ interface Skill {
 interface BonsaiTreeProps {
   skills: Skill[];
   totalSkills: number;
+  showGrowthAnimation?: boolean;
 }
 
 // Helper functions
@@ -50,7 +51,7 @@ interface LeafCoordinates {
   hue: number;
 }
 
-const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
+const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills, showGrowthAnimation = false }) => {
   const theme = useTheme();
   const svgRef = useRef<SVGSVGElement>(null);
   const [recentlyMastered, setRecentlyMastered] = useState<string[]>([]);

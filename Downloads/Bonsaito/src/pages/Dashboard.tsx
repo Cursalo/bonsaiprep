@@ -709,7 +709,7 @@ const Dashboard: React.FC = () => {
                       filter: 'blur(3px)',
                     }
                   }}>
-                    <BonsaiTree skills={skills} showGrowthAnimation={showTreeAnimation} />
+                    <BonsaiTree skills={skills} totalSkills={totalSkills} showGrowthAnimation={showTreeAnimation} />
                     
                     {/* Floating badges around the tree */}
                     {skills.slice(0, 3).map((skill, index) => (
