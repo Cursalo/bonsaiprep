@@ -30,6 +30,12 @@ interface SATTestData {
   totalQuestions: number;
 }
 
+// Get Gemini API key from environment variables
+const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY;
+
+// Gemini API endpoint
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
+
 /**
  * Parse SAT report text to extract information about incorrect answers
  */
@@ -103,7 +109,221 @@ const determineTopics = (section: string): string[] => {
 };
 
 /**
- * Generates practice questions based on extracted text (identified mistakes) from a PDF.
+ * Makes an API call to Gemini to generate questions
+ * @param prompt The prompt to send to Gemini
+ * @returns Generated content from Gemini
+ */
+const callGeminiAPI = async (prompt: string): Promise<any> => {
+  if (!GEMINI_API_KEY) {
+    throw new Error("Gemini API key is not configured. Please set REACT_APP_GEMINI_API_KEY in your environment variables.");
+  }
+
+  try {
+    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              {
+                text: prompt
+              }
+            ]
+          }
+        ],
+        generationConfig: {
+          temperature: 0.7,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 4096,
+        },
+        safetySettings: [
+          {
+            category: "HARM_CATEGORY_HARASSMENT",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          },
+          {
+            category: "HARM_CATEGORY_HATE_SPEECH",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          },
+          {
+            category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          },
+          {
+            category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      throw new Error(`Gemini API error: ${response.status} ${response.statusText} - ${errorData}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error calling Gemini API:", error);
+    throw error;
+  }
+};
+
+/**
+ * Creates a prompt for Gemini to generate SAT practice questions
+ */
+const createGeminiPrompt = (satData: SATTestData): string => {
+  const incorrectRWCount = satData.sections['Reading and Writing']?.incorrect || 0;
+  const incorrectMathCount = satData.sections['Math']?.incorrect || 0;
+  
+  let prompt = `As an expert SAT tutor, create ${incorrectRWCount > 0 && incorrectMathCount > 0 ? '10' : '10'} unique SAT practice questions.
+
+STUDENT'S SAT REPORT SUMMARY:
+- Reading and Writing section: ${satData.sections['Reading and Writing'].correct} correct, ${satData.sections['Reading and Writing'].incorrect} incorrect
+- Math section: ${satData.sections['Math'].correct} correct, ${satData.sections['Math'].incorrect} incorrect
+- Total score: ${satData.totalCorrect} out of ${satData.totalQuestions}
+
+`;
+
+  // Add details about incorrect questions
+  if (incorrectRWCount > 0) {
+    prompt += `\nREADING AND WRITING MISTAKES:\n`;
+    satData.sections['Reading and Writing'].incorrectQuestions.forEach(q => {
+      prompt += `- Question ${q.questionNumber}: Student answered "${q.yourAnswer}" but correct answer was "${q.correctAnswer}"\n`;
+    });
+  }
+  
+  if (incorrectMathCount > 0) {
+    prompt += `\nMATH MISTAKES:\n`;
+    satData.sections['Math'].incorrectQuestions.forEach(q => {
+      prompt += `- Question ${q.questionNumber}: Student answered "${q.yourAnswer}" but correct answer was "${q.correctAnswer}"\n`;
+    });
+  }
+
+  // Distribution of questions based on where student needs more practice
+  const rwQuestions = incorrectRWCount > 0 ? Math.ceil((incorrectRWCount / (incorrectRWCount + incorrectMathCount)) * 10) : 0;
+  const mathQuestions = 10 - rwQuestions;
+
+  prompt += `\nBased on the student's performance, please create:
+${rwQuestions > 0 ? `- ${rwQuestions} Reading and Writing questions` : ''}
+${rwQuestions > 0 && mathQuestions > 0 ? '\n' : ''}${mathQuestions > 0 ? `- ${mathQuestions} Math questions` : ''}
+
+For Reading and Writing questions, focus on these topic areas:
+- Information and Ideas (comprehending texts, locating information)
+- Expression of Ideas (development, organization, effective language use)
+- Craft and Structure (word choice, text structure, point of view)
+- Standard English Conventions (grammar, usage, mechanics)
+
+For Math questions, focus on these topic areas:
+- Algebra (linear equations, systems, functions)
+- Advanced Math (quadratics, exponents, polynomials)
+- Problem-Solving and Data Analysis (ratios, percentages, statistics)
+- Geometry and Trigonometry (shapes, angles, triangles)
+
+FORMAT INSTRUCTIONS:
+Return your response as a JSON array containing exactly 10 question objects with these fields:
+- id: A unique string identifier (e.g., "rw-info-1")
+- text: The question text
+- topic: The specific topic area (e.g., "Algebra", "Information and Ideas")
+- difficulty: "Easy", "Medium", or "Hard"
+- options: Array of 4 answer choices for multiple-choice questions
+- answer: The correct answer (letter A-D for multiple choice or exact answer for grid-ins)
+- explanation: Detailed explanation of the correct answer
+
+IMPORTANT REQUIREMENTS:
+1. For Reading questions: Create multiple-choice questions similar to those in SAT Reading.
+2. For Math questions: Create both multiple-choice and student-produced response questions (grid-ins).
+3. All questions should be original and at appropriate SAT difficulty level.
+4. Include high-quality explanations that teach the concept.
+5. Ensure questions reflect real SAT format and content.
+6. ENSURE THE RESPONSE IS VALID JSON that can be parsed with JSON.parse().
+
+Example format for ONE question (you'll provide 10):
+{
+  "id": "math-alg-1",
+  "text": "If f(x) = 3x² - 4x + 2, what is the value of f(2)?",
+  "topic": "Algebra",
+  "difficulty": "Medium",
+  "options": ["6", "8", "10", "12"],
+  "answer": "C",
+  "explanation": "f(2) = 3(2)² - 4(2) + 2 = 3(4) - 8 + 2 = 12 - 8 + 2 = 6 + 2 = 10"
+}`;
+
+  return prompt;
+};
+
+/**
+ * Extracts and formats questions from Gemini's response
+ */
+const extractQuestionsFromGeminiResponse = (responseData: any): GeneratedQuestion[] => {
+  try {
+    // Extract the text content from Gemini's response
+    const content = responseData.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!content) {
+      throw new Error("Unexpected Gemini API response format: no content found");
+    }
+
+    // Find JSON array in the response (model might include other text before or after)
+    let jsonContent = content;
+    
+    // If the response contains markdown code blocks, extract just the JSON part
+    const jsonMatch = content.match(/```(?:json)?\s*(\[[\s\S]*?\])\s*```/);
+    if (jsonMatch && jsonMatch[1]) {
+      jsonContent = jsonMatch[1];
+    }
+    
+    // Sometimes the model may wrap JSON in an object instead of returning an array directly
+    // Check if we have a JSON object with a questions array
+    const objectMatch = jsonContent.match(/\{\s*"questions"\s*:\s*(\[[\s\S]*?\])\s*\}/);
+    if (objectMatch && objectMatch[1]) {
+      jsonContent = objectMatch[1];
+    }
+    
+    // Clean up any non-JSON content that might exist
+    jsonContent = jsonContent.trim();
+    if (!jsonContent.startsWith('[')) {
+      const startPos = jsonContent.indexOf('[');
+      if (startPos >= 0) {
+        jsonContent = jsonContent.substring(startPos);
+      }
+    }
+    if (!jsonContent.endsWith(']')) {
+      const endPos = jsonContent.lastIndexOf(']');
+      if (endPos >= 0) {
+        jsonContent = jsonContent.substring(0, endPos + 1);
+      }
+    }
+    
+    // Parse the JSON content
+    const questions = JSON.parse(jsonContent);
+    
+    // Validate that we have an array of questions with required properties
+    if (!Array.isArray(questions)) {
+      throw new Error("Parsed content is not an array");
+    }
+    
+    // Ensure each question has required fields
+    return questions.map((q, index) => ({
+      id: q.id || `question-${Date.now()}-${index}`,
+      text: q.text || 'Question text unavailable',
+      topic: q.topic || 'General',
+      difficulty: q.difficulty,
+      options: q.options,
+      answer: q.answer,
+      explanation: q.explanation
+    }));
+  } catch (error: any) {
+    console.error("Error parsing Gemini response:", error, "Raw response:", responseData);
+    throw new Error(`Failed to parse questions from AI response: ${error.message}`);
+  }
+};
+
+/**
+ * Generates practice questions based on extracted text from an SAT report.
  * 
  * @param extractedMistakesText The text extracted from the SAT report.
  * @returns A promise that resolves to an array of GeneratedQuestion objects.
@@ -113,63 +333,88 @@ export const generateQuestionsFromMistakes = async (
 ): Promise<GeneratedQuestion[]> => {
   console.log("Attempting to generate questions for text:", extractedMistakesText.substring(0, 300) + "...");
 
-  // For production, this would be replaced with an actual AI API call
-  await new Promise(resolve => setTimeout(resolve, 2000));
-
   if (!extractedMistakesText || extractedMistakesText.trim() === "") {
     console.warn("No text provided for question generation.");
     return [];
   }
 
   try {
-    // Parse the SAT report
+    // 1. Parse the SAT report to understand mistakes
     const satData = parseSATReport(extractedMistakesText);
     console.log("Parsed SAT data:", satData);
-
-    // Generate questions based on mistakes
-    const questions: GeneratedQuestion[] = [];
     
-    // Get sections where mistakes were made
-    const sectionsWithMistakes = Object.entries(satData.sections)
-      .filter(([_, data]) => data.incorrect > 0)
-      .sort((a, b) => b[1].incorrect - a[1].incorrect); // Sort by number of incorrect answers
-    
-    // If we have sections with mistakes, generate questions for those
-    if (sectionsWithMistakes.length > 0) {
-      // Determine how many questions per section
-      const totalSections = sectionsWithMistakes.length;
-      const questionsPerSection = Math.ceil(10 / totalSections);
-      
-      // Generate questions for each section
-      for (const [section, data] of sectionsWithMistakes) {
-        const topics = determineTopics(section);
+    // 2. Generate questions based on the report
+    try {
+      // 2a. First try to use the Gemini API if the key is available
+      if (GEMINI_API_KEY) {
+        console.log("Generating questions using Gemini API");
+        const prompt = createGeminiPrompt(satData);
+        const geminiResponse = await callGeminiAPI(prompt);
+        const generatedQuestions = extractQuestionsFromGeminiResponse(geminiResponse);
         
-        for (let i = 0; i < Math.min(questionsPerSection, data.incorrect, 10); i++) {
-          const topic = topics[Math.floor(Math.random() * topics.length)];
+        // Ensure we have exactly 10 questions
+        if (generatedQuestions.length < 10) {
+          const remainingQuestions = generateFallbackQuestions(extractedMistakesText, 10 - generatedQuestions.length);
+          return [...generatedQuestions, ...remainingQuestions];
+        } else if (generatedQuestions.length > 10) {
+          return generatedQuestions.slice(0, 10);
+        }
+        
+        return generatedQuestions;
+      } else {
+        console.warn("No Gemini API key found. Using fallback question generation.");
+        throw new Error("Gemini API key not configured");
+      }
+    } catch (apiError) {
+      console.error("Error using Gemini API:", apiError);
+      
+      // 2b. If API call fails, fall back to the template-based approach
+      console.log("Falling back to template-based question generation");
+      
+      const questions: GeneratedQuestion[] = [];
+      
+      // Get sections where mistakes were made
+      const sectionsWithMistakes = Object.entries(satData.sections)
+        .filter(([_, data]) => data.incorrect > 0)
+        .sort((a, b) => b[1].incorrect - a[1].incorrect);
+      
+      // If we have sections with mistakes, generate questions for those
+      if (sectionsWithMistakes.length > 0) {
+        // Determine how many questions per section
+        const totalSections = sectionsWithMistakes.length;
+        const questionsPerSection = Math.ceil(10 / totalSections);
+        
+        // Generate questions for each section
+        for (const [section, data] of sectionsWithMistakes) {
+          const topics = determineTopics(section);
           
-          questions.push(generateQuestionForTopic(section, topic, i));
+          for (let i = 0; i < Math.min(questionsPerSection, data.incorrect, 10); i++) {
+            const topic = topics[Math.floor(Math.random() * topics.length)];
+            
+            questions.push(generateQuestionForTopic(section, topic, i));
+            
+            if (questions.length >= 10) break;
+          }
           
           if (questions.length >= 10) break;
         }
-        
-        if (questions.length >= 10) break;
       }
-    }
-    
-    // If we still don't have 10 questions, add more generic ones
-    while (questions.length < 10) {
-      const section = Object.keys(satData.sections)[Math.floor(Math.random() * Object.keys(satData.sections).length)];
-      const topics = determineTopics(section);
-      const topic = topics[Math.floor(Math.random() * topics.length)];
       
-      questions.push(generateQuestionForTopic(section, topic, questions.length));
+      // If we still don't have 10 questions, add more generic ones
+      while (questions.length < 10) {
+        const section = Object.keys(satData.sections)[Math.floor(Math.random() * Object.keys(satData.sections).length)];
+        const topics = determineTopics(section);
+        const topic = topics[Math.floor(Math.random() * topics.length)];
+        
+        questions.push(generateQuestionForTopic(section, topic, questions.length));
+      }
+      
+      console.log("Generated questions:", questions);
+      return questions;
     }
-    
-    console.log("Generated questions:", questions);
-    return questions;
   } catch (error) {
     console.error("Error parsing SAT report:", error);
-    return generateFallbackQuestions(extractedMistakesText);
+    return generateFallbackQuestions(extractedMistakesText, 10);
   }
 };
 
@@ -305,16 +550,18 @@ const generateQuestionForTopic = (section: string, topic: string, index: number)
 };
 
 /**
- * Generates fallback questions if there's an error parsing the report
+ * Generates fallback questions if there's an error parsing the report or calling the API
+ * @param text The original text input
+ * @param count Number of questions to generate (default: 10)
  */
-const generateFallbackQuestions = (text: string): GeneratedQuestion[] => {
+const generateFallbackQuestions = (text: string, count: number = 10): GeneratedQuestion[] => {
   const questions: GeneratedQuestion[] = [];
   const topics = [
     "Reading Comprehension", "Grammar and Language", "Algebra", "Geometry", 
     "Data Analysis", "Vocabulary in Context", "Advanced Math"
   ];
   
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < count; i++) {
     const topic = topics[i % topics.length];
     
     if (topic === "Reading Comprehension") {

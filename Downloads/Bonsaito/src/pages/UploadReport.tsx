@@ -53,6 +53,7 @@ const UploadReport: React.FC = () => {
   const [inputMethod, setInputMethod] = useState<string>('file'); // 'file' or 'text'
   const [pastedText, setPastedText] = useState<string>('');
   const [activeStep, setActiveStep] = useState<number>(0);
+  const [apiKeyMissing, setApiKeyMissing] = useState<boolean>(!process.env.REACT_APP_GEMINI_API_KEY);
   
   // Group questions by topic for better organization
   const questionsByTopic = React.useMemo(() => {
@@ -230,6 +231,15 @@ const UploadReport: React.FC = () => {
         <Typography variant="subtitle1" align="center" color="text.secondary" paragraph>
           Upload your report or paste text to get personalized lessons and practice questions
         </Typography>
+
+        {apiKeyMissing && (
+          <Alert severity="warning" sx={{ mb: 3 }}>
+            <Typography variant="subtitle2" fontWeight="bold">API Key Missing</Typography>
+            <Typography variant="body2">
+              The Gemini API key is not configured. The app will function with template-based questions, but for personalized AI-generated questions, please set up the <code>REACT_APP_GEMINI_API_KEY</code> in your environment variables. See README.md for instructions.
+            </Typography>
+          </Alert>
+        )}
 
         <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 4, display: { xs: 'none', sm: 'flex' } }}>
           <Step>
