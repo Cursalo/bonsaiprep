@@ -46,7 +46,8 @@ interface SATTestData {
 
 // Use environment variable for API key but rename it to be more generic
 const ANALYSIS_API_KEY = process.env.REACT_APP_GEMINI_API_KEY;
-const ANALYSIS_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
+// Update the API URL to use v1 instead of v1beta and the correct model path
+const ANALYSIS_API_URL = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent";
 
 // Function to simulate processing delay
 const addProcessingDelay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -303,50 +304,58 @@ Example format for ONE question (you'll provide 10):
  * Calls the external API to generate content
  */
 const callContentAPI = async (prompt: string): Promise<string> => {
-  if (!ANALYSIS_API_KEY) {
-    throw new Error("API key not configured");
+  if (!ANALYSIS_API_KEY || ANALYSIS_API_KEY === 'YOUR_GEMINI_API_KEY_HERE') {
+    console.warn("API key not configured or using placeholder value. Falling back to template-based generation.");
+    throw new Error("API key not configured properly");
   }
 
-  const apiUrl = `${ANALYSIS_API_URL}?key=${ANALYSIS_API_KEY}`;
-
-  const payload = {
-    contents: [{
-      parts: [{
-        text: prompt
-      }]
-    }],
-    generationConfig: {
-      temperature: 0.7,
-      maxOutputTokens: 8192,
-    }
-  };
-
-  const response = await fetch(apiUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`API response error: ${response.status} ${errorText}`);
-  }
-
-  const data = await response.json();
-  console.log("API response received:", data);
-
-  // Extract the generated text from the response
-  let generatedText = "";
   try {
-    generatedText = data.candidates[0].content.parts[0].text;
-  } catch (e) {
-    console.error("Error extracting text from API response:", e);
-    throw new Error("Unexpected API response format");
-  }
+    const apiUrl = `${ANALYSIS_API_URL}?key=${ANALYSIS_API_KEY}`;
 
-  return generatedText;
+    const payload = {
+      contents: [{
+        parts: [{
+          text: prompt
+        }]
+      }],
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 8192,
+      }
+    };
+
+    console.log("Sending request to Gemini API...");
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`API error (${response.status}):`, errorText);
+      throw new Error(`API response error: ${response.status} ${errorText}`);
+    }
+
+    const data = await response.json();
+    console.log("API response received");
+
+    // Extract the generated text from the response
+    let generatedText = "";
+    try {
+      generatedText = data.candidates[0].content.parts[0].text;
+    } catch (e) {
+      console.error("Error extracting text from API response:", e, "Full response:", data);
+      throw new Error("Unexpected API response format");
+    }
+
+    return generatedText;
+  } catch (error) {
+    console.error("Error calling Gemini API:", error);
+    throw error;
+  }
 };
 
 /**
@@ -436,27 +445,36 @@ export const generateQuestionsFromMistakes = async (
     // 2. Generate questions based on the report
     try {
       // 2a. First try to use the advanced API if the key is available
-      if (ANALYSIS_API_KEY) {
+      if (ANALYSIS_API_KEY && ANALYSIS_API_KEY !== 'YOUR_GEMINI_API_KEY_HERE') {
         console.log("Generating tailored questions using advanced analysis");
         const prompt = createAnalysisPrompt(satData);
         
         // Add additional delay to simulate API processing time
         await addProcessingDelay(2000);
         
-        const analysisResponse = await callContentAPI(prompt);
-        const generatedQuestions = extractQuestionsFromResponse(analysisResponse);
-        
-        // Ensure we have exactly 10 questions
-        if (generatedQuestions.length < 10) {
-          const remainingQuestions = generateFallbackQuestions(extractedMistakesText, 10 - generatedQuestions.length);
-          return [...generatedQuestions, ...remainingQuestions];
-        } else if (generatedQuestions.length > 10) {
-          return generatedQuestions.slice(0, 10);
+        try {
+          const analysisResponse = await callContentAPI(prompt);
+          const generatedQuestions = extractQuestionsFromResponse(analysisResponse);
+          
+          console.log(`Generated ${generatedQuestions.length} questions via API`);
+          
+          // Ensure we have exactly 10 questions
+          if (generatedQuestions.length < 10) {
+            console.log(`Adding ${10 - generatedQuestions.length} fallback questions to reach 10 total`);
+            const remainingQuestions = generateFallbackQuestions(extractedMistakesText, 10 - generatedQuestions.length);
+            return [...generatedQuestions, ...remainingQuestions];
+          } else if (generatedQuestions.length > 10) {
+            console.log(`Trimming to 10 questions from ${generatedQuestions.length} generated`);
+            return generatedQuestions.slice(0, 10);
+          }
+          
+          return generatedQuestions;
+        } catch (error: any) {
+          console.error("API call failed:", error);
+          throw new Error(`API call failed: ${error.message || 'Unknown error'}`);
         }
-        
-        return generatedQuestions;
       } else {
-        console.warn("No advanced analysis API key found. Using standard question generation.");
+        console.warn("No valid API key found. Using standard question generation.");
         throw new Error("Analysis API key not configured");
       }
     } catch (apiError) {
@@ -468,51 +486,47 @@ export const generateQuestionsFromMistakes = async (
       // Add a delay to simulate advanced processing
       await addProcessingDelay(2500);
       
-      const questions: GeneratedQuestion[] = [];
-      
-      // Get sections where mistakes were made
-      const sectionsWithMistakes = Object.entries(satData.sections)
-        .filter(([_, data]) => data.incorrect > 0)
-        .sort((a, b) => b[1].incorrect - a[1].incorrect);
-      
-      // If we have sections with mistakes, generate questions for those
-      if (sectionsWithMistakes.length > 0) {
-        // Determine how many questions per section
-        const totalSections = sectionsWithMistakes.length;
-        const questionsPerSection = Math.ceil(10 / totalSections);
-        
-        // Generate questions for each section
-        for (const [section, data] of sectionsWithMistakes) {
-          const topics = determineTopics(section);
-          
-          for (let i = 0; i < Math.min(questionsPerSection, data.incorrect, 10); i++) {
-            const topic = topics[Math.floor(Math.random() * topics.length)];
-            
-            questions.push(generateQuestionForTopic(section, topic, i));
-            
-            if (questions.length >= 10) break;
-          }
-          
-          if (questions.length >= 10) break;
-        }
-      }
-      
-      // If we still don't have 10 questions, add more generic ones
-      while (questions.length < 10) {
-        const section = Object.keys(satData.sections)[Math.floor(Math.random() * Object.keys(satData.sections).length)];
-        const topics = determineTopics(section);
-        const topic = topics[Math.floor(Math.random() * topics.length)];
-        
-        questions.push(generateQuestionForTopic(section, topic, questions.length));
-      }
-      
-      console.log("Generated questions:", questions);
-      return questions;
+      // Generate fallback questions directly
+      const fallbackQuestions = generateFallbackQuestions(extractedMistakesText, 10);
+      console.log(`Generated ${fallbackQuestions.length} fallback questions`);
+      return fallbackQuestions;
     }
   } catch (error) {
-    console.error("Error parsing SAT report:", error);
-    return generateFallbackQuestions(extractedMistakesText, 10);
+    console.error("Fatal error in question generation:", error);
+    // As a last resort, return some very basic questions if everything else fails
+    return generateBasicQuestions();
   }
+};
+
+/**
+ * Generates very basic questions as a last resort
+ */
+const generateBasicQuestions = (): GeneratedQuestion[] => {
+  console.log("Generating basic fallback questions");
+  
+  const questions: GeneratedQuestion[] = [];
+  const topics = [
+    'Reading Comprehension', 
+    'Grammar', 
+    'Algebra', 
+    'Geometry',
+    'Data Analysis'
+  ];
+  
+  for (let i = 0; i < 10; i++) {
+    const topic = topics[i % topics.length];
+    questions.push({
+      id: `basic-question-${Date.now()}-${i}`,
+      text: `Sample ${topic} question ${i+1}. This is a placeholder question created because the report analysis couldn't generate specific questions.`,
+      topic,
+      difficulty: 'Medium',
+      options: ['Option A', 'Option B', 'Option C', 'Option D'],
+      answer: 'Option A',
+      explanation: 'This is a placeholder explanation. The actual AI-generated questions would include detailed explanations.'
+    });
+  }
+  
+  return questions;
 };
 
 /**

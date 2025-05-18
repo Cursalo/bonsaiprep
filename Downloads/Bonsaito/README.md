@@ -74,4 +74,19 @@ Make sure to add all the environment variables mentioned in the Environment Setu
 
 ## License
 
-[MIT License](LICENSE) 
+[MIT License](LICENSE)
+
+## API Configuration
+
+### Gemini API Setup
+
+The application uses Google's Gemini API to generate personalized SAT practice questions. To enable this feature:
+
+1. Get a Gemini API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
+2. Create a `.env.local` file in the project root with the following content:
+   ```
+   REACT_APP_GEMINI_API_KEY=your_api_key_here
+   ```
+3. Replace `your_api_key_here` with your actual API key
+
+Note: If the API key is not configured, the application will fall back to using template-based question generation. 
