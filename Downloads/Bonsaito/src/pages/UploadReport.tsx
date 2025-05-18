@@ -328,10 +328,13 @@ const UploadReport: React.FC = () => {
           // Find current skill to determine new progress level
           const skill = skills.find(s => s.id === skillId);
           if (skill) {
-            // Increase skill mastery level by 10-20% for each correct answer
-            const progressIncrease = Math.floor(Math.random() * 11) + 10; // 10-20
+            // Increase skill mastery level by 15-25% for each correct answer
+            const progressIncrease = Math.floor(Math.random() * 11) + 15; // 15-25
             const newProgress = Math.min(100, skill.masteryLevel + progressIncrease);
+            
+            // Ensure we call updateSkillProgress with the correct parameters
             updateSkillProgress(skillId, newProgress);
+            console.log(`Skill ${skillId} updated: ${skill.masteryLevel} -> ${newProgress}`);
             
             // Show growth badge and increment counter
             setShowTreeGrowthBadge(true);

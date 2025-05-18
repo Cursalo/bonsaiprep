@@ -3,6 +3,9 @@ import ReactDOM from 'react-dom/client';
 import './index.css'; // You might want to create this for global styles
 import App from './App';
 import reportWebVitals from './reportWebVitals';
+import '@fontsource/dm-sans/400.css';
+import '@fontsource/dm-sans/500.css';
+import '@fontsource/dm-sans/700.css';
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
