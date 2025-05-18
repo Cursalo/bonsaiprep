@@ -182,144 +182,141 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
 
   return (
     <animated.div style={containerAnimation}>
-      <Paper 
-        elevation={0} 
+      <Box 
         sx={{ 
-          p: 3, 
-          mb: 4, 
+          backgroundImage: 'url(/altar2.png)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
           borderRadius: '20px',
-          backgroundColor: 'transparent',
-          position: 'relative',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundImage: 'url(/altar2.png)',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            opacity: 0.85,
-            borderRadius: '20px',
-            zIndex: 0,
-          }
+          p: 2
         }}
       >
-        <Box sx={{ position: 'relative', zIndex: 1 }}>
-          <Typography 
-            variant="h5" 
-            gutterBottom 
-            align="center" 
+        <Box sx={{ position: 'relative' }}>
+          <div className="MuiBox-root css-14lrhfz"></div>
+          <Paper 
+            elevation={0} 
             sx={{ 
-              fontWeight: 'bold', 
-              color: '#2C1810',
-              textShadow: '0 2px 4px rgba(0,0,0,0.1)',
-              mb: 3
+              p: 3, 
+              mb: 4, 
+              borderRadius: '20px',
+              backgroundColor: 'transparent',
+              position: 'relative',
             }}
           >
-            Your Learning Bonsai
-          </Typography>
-          <Box sx={{ 
-            width: '100%', 
-            height: svgHeight, 
-            position: 'relative', 
-            mt: 2,
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center'
-          }}>
-            <svg 
-              width="100%" 
-              height="100%" 
-              viewBox={`0 0 ${svgWidth} ${svgHeight}`} 
-              style={{ overflow: 'visible' }}
-              preserveAspectRatio="xMidYMid meet"
+            <Typography 
+              variant="h5" 
+              gutterBottom 
+              align="center" 
+              sx={{ 
+                fontWeight: 'bold', 
+                color: '#2C1810',
+                textShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                mb: 3
+              }}
             >
-              {/* Ambient Glow Effect */}
-              <defs>
-                <radialGradient id="treeGlow" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
-                  <stop offset="0%" stopColor="#FFF8E1" stopOpacity="0.3" />
-                  <stop offset="100%" stopColor="#FFF8E1" stopOpacity="0" />
-                </radialGradient>
-              </defs>
-              
-              <circle 
-                cx={svgWidth / 2} 
-                cy={svgHeight / 2} 
-                r={Math.min(svgWidth, svgHeight) / 2.5} 
-                fill="url(#treeGlow)" 
-              />
-
-              {/* Pot */}
-              <animated.g style={potAnim}>
-                <path d={treeElements.potPath} fill={POT_COLOR} />
-                {treeElements.potFeet.map((footPath, i) => (
-                  <path key={`pot-foot-${i}`} d={footPath} fill={POT_COLOR} />
-                ))}
-              </animated.g>
-
-              {/* Trunk with enhanced shadow */}
-              <animated.g style={trunkAnim}>
-                <path
-                  d={treeElements.trunkPath}
-                  fill={TRUNK_COLOR}
-                  filter="url(#trunkShadow)"
+              Your Learning Bonsai
+            </Typography>
+            <Box sx={{ 
+              width: '100%', 
+              height: svgHeight, 
+              position: 'relative', 
+              mt: 2,
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center'
+            }}>
+              <svg 
+                width="100%" 
+                height="100%" 
+                viewBox={`0 0 ${svgWidth} ${svgHeight}`} 
+                style={{ overflow: 'visible' }}
+                preserveAspectRatio="xMidYMid meet"
+              >
+                {/* Ambient Glow Effect */}
+                <defs>
+                  <radialGradient id="treeGlow" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+                    <stop offset="0%" stopColor="#FFF8E1" stopOpacity="0.3" />
+                    <stop offset="100%" stopColor="#FFF8E1" stopOpacity="0" />
+                  </radialGradient>
+                </defs>
+                
+                <circle 
+                  cx={svgWidth / 2} 
+                  cy={svgHeight / 2} 
+                  r={Math.min(svgWidth, svgHeight) / 2.5} 
+                  fill="url(#treeGlow)" 
                 />
-              </animated.g>
 
-              {/* Foliage */}
-              {treeElements.foliagePads.map((pad, index) => (
-                <animated.g
-                  key={pad.id}
-                  style={foliageAnims[index]}
-                  transform={`rotate(${pad.rotation} ${pad.cx} ${pad.cy})`}
-                >
-                  {pad.layers.map((layer, layerIndex) => (
-                    <ellipse
-                      key={`${pad.id}-layer-${layerIndex}`}
-                      cx={pad.cx}
-                      cy={pad.cy}
-                      rx={pad.rx * layer.scale}
-                      ry={pad.ry * layer.scale}
-                      fill={layer.color}
-                      opacity={layer.opacity}
-                      filter="url(#foliageShadow)"
-                    />
+                {/* Pot */}
+                <animated.g style={potAnim}>
+                  <path d={treeElements.potPath} fill={POT_COLOR} />
+                  {treeElements.potFeet.map((footPath, i) => (
+                    <path key={`pot-foot-${i}`} d={footPath} fill={POT_COLOR} />
                   ))}
                 </animated.g>
-              ))}
 
-              {/* Enhanced Shadows */}
-              <defs>
-                <filter id="trunkShadow" x="-20%" y="-20%" width="140%" height="140%">
-                  <feGaussianBlur in="SourceAlpha" stdDeviation="2" />
-                  <feOffset dx="2" dy="2" result="offsetblur" />
-                  <feComponentTransfer>
-                    <feFuncA type="linear" slope="0.3" />
-                  </feComponentTransfer>
-                  <feMerge>
-                    <feMergeNode />
-                    <feMergeNode in="SourceGraphic" />
-                  </feMerge>
-                </filter>
+                {/* Trunk with enhanced shadow */}
+                <animated.g style={trunkAnim}>
+                  <path
+                    d={treeElements.trunkPath}
+                    fill={TRUNK_COLOR}
+                    filter="url(#trunkShadow)"
+                  />
+                </animated.g>
 
-                <filter id="foliageShadow" x="-20%" y="-20%" width="140%" height="140%">
-                  <feGaussianBlur in="SourceAlpha" stdDeviation="1.5" />
-                  <feOffset dx="1" dy="1" result="offsetblur" />
-                  <feComponentTransfer>
-                    <feFuncA type="linear" slope="0.2" />
-                  </feComponentTransfer>
-                  <feMerge>
-                    <feMergeNode />
-                    <feMergeNode in="SourceGraphic" />
-                  </feMerge>
-                </filter>
-              </defs>
-            </svg>
-          </Box>
+                {/* Foliage */}
+                {treeElements.foliagePads.map((pad, index) => (
+                  <animated.g
+                    key={pad.id}
+                    style={foliageAnims[index]}
+                    transform={`rotate(${pad.rotation} ${pad.cx} ${pad.cy})`}
+                  >
+                    {pad.layers.map((layer, layerIndex) => (
+                      <ellipse
+                        key={`${pad.id}-layer-${layerIndex}`}
+                        cx={pad.cx}
+                        cy={pad.cy}
+                        rx={pad.rx * layer.scale}
+                        ry={pad.ry * layer.scale}
+                        fill={layer.color}
+                        opacity={layer.opacity}
+                        filter="url(#foliageShadow)"
+                      />
+                    ))}
+                  </animated.g>
+                ))}
+
+                {/* Enhanced Shadows */}
+                <defs>
+                  <filter id="trunkShadow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur in="SourceAlpha" stdDeviation="2" />
+                    <feOffset dx="2" dy="2" result="offsetblur" />
+                    <feComponentTransfer>
+                      <feFuncA type="linear" slope="0.3" />
+                    </feComponentTransfer>
+                    <feMerge>
+                      <feMergeNode />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
+
+                  <filter id="foliageShadow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur in="SourceAlpha" stdDeviation="1.5" />
+                    <feOffset dx="1" dy="1" result="offsetblur" />
+                    <feComponentTransfer>
+                      <feFuncA type="linear" slope="0.2" />
+                    </feComponentTransfer>
+                    <feMerge>
+                      <feMergeNode />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
+                </defs>
+              </svg>
+            </Box>
+          </Paper>
         </Box>
-      </Paper>
+      </Box>
     </animated.div>
   );
 };
