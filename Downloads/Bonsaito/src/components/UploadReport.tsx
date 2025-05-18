@@ -3,6 +3,7 @@ import { supabase } from '../supabaseClient';
 import { useDropzone } from 'react-dropzone';
 import { BarLoader } from 'react-spinners';
 import { toast } from 'react-toastify';
+import { generateQuestionsFromMistakes } from '../services/geminiPdfService';
 
 interface User {
   id: string;
@@ -18,6 +19,7 @@ const UploadReport: React.FC<UploadReportProps> = ({ user }) => {
   const [file, setFile] = useState<File | null>(null);
   const [inputMethod, setInputMethod] = useState('file'); // 'file' or 'text'
   const [pastedText, setPastedText] = useState('');
+  const [generatingQuestions, setGeneratingQuestions] = useState(false);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     accept: {
@@ -31,6 +33,51 @@ const UploadReport: React.FC<UploadReportProps> = ({ user }) => {
       }
     }
   });
+
+  const generatePracticeQuestions = async (input: string | File, fileUrl?: string) => {
+    try {
+      setGeneratingQuestions(true);
+      toast.info('Generating personalized practice questions...', { autoClose: false, toastId: 'generating-questions' });
+      
+      // Call the Gemini API to generate questions
+      const questions = await generateQuestionsFromMistakes(input);
+      
+      if (!questions || questions.length === 0) {
+        throw new Error('Failed to generate practice questions');
+      }
+      
+      toast.dismiss('generating-questions');
+      toast.success(`Successfully generated ${questions.length} practice questions!`);
+      
+      // Store the questions in the database
+      if (user) {
+        const { error: insertError } = await supabase.from('practice_questions').insert(
+          questions.map(q => ({
+            user_id: user.id,
+            question_data: q,
+            source: 'upload',
+            completed: false
+          }))
+        );
+        
+        if (insertError) {
+          console.error('Error storing practice questions:', insertError);
+          toast.error('Error saving questions to your account');
+        } else {
+          toast.success('Questions are ready in your dashboard!');
+        }
+      }
+      
+      return questions;
+    } catch (error: any) {
+      console.error('Error generating practice questions:', error);
+      toast.dismiss('generating-questions');
+      toast.error('Error generating practice questions: ' + (error.message || 'Unknown error'));
+      return [];
+    } finally {
+      setGeneratingQuestions(false);
+    }
+  };
 
   const handleUpload = async () => {
     if (!user) {
@@ -51,33 +98,68 @@ const UploadReport: React.FC<UploadReportProps> = ({ user }) => {
     setUploading(true);
     
     try {
+      let uploadedFileUrl = '';
+      let textToProcess = pastedText;
+      
       if (inputMethod === 'file' && file) {
         // Handle file upload
+        const filePath = `${user.id}/${Date.now()}_${file.name}`;
         const { data, error } = await supabase.storage
           .from('score-reports')
-          .upload(`${user.id}/${Date.now()}_${file.name}`, file);
+          .upload(filePath, file);
 
         if (error) {
           throw new Error(error.message);
         }
         
-        // Process the uploaded file with OCR Edge Function
-        // Your existing file processing code...
-        
-      } else if (inputMethod === 'text' && pastedText) {
-        // Handle pasted text
-        // Create a .txt file from the pasted text
-        const blob = new Blob([pastedText], { type: 'text/plain' });
-        const textFile = new File([blob], `pasted_text_${Date.now()}.txt`, { type: 'text/plain' });
-        
-        // Upload as a file
-        const { data, error } = await supabase.storage
+        // Get the public URL
+        const { data: { publicUrl } } = supabase.storage
           .from('score-reports')
-          .upload(`${user.id}/${Date.now()}_pasted_text.txt`, textFile);
+          .getPublicUrl(filePath);
           
-        if (error) {
-          throw new Error(error.message);
+        uploadedFileUrl = publicUrl;
+        
+        // If it's a PDF, extract text using the OCR function
+        if (file.type === 'application/pdf') {
+          toast.info('Extracting text from PDF...', { autoClose: false, toastId: 'extracting-text' });
+          
+          try {
+            const { data: extractedData, error: extractionError } = await supabase.functions.invoke('ocr-pdf', {
+              body: { filePath }
+            });
+            
+            if (extractionError) throw extractionError;
+            
+            if (extractedData?.text) {
+              textToProcess = extractedData.text;
+              toast.dismiss('extracting-text');
+              toast.success('Successfully extracted text from PDF');
+            } else {
+              throw new Error('No text extracted from PDF');
+            }
+          } catch (extractionError: any) {
+            toast.dismiss('extracting-text');
+            toast.warning('Could not extract text from PDF. Using file directly with AI processing.');
+            
+            // If PDF processing fails, we'll use the file directly with the Gemini API
+            await generatePracticeQuestions(file);
+            
+            toast.success('Report uploaded successfully!');
+            setFile(null);
+            setPastedText('');
+            setUploading(false);
+            return; // Exit early as we've processed the file already
+          }
+        } else if (file.type === 'text/plain') {
+          // Read text file content
+          const text = await file.text();
+          textToProcess = text;
         }
+      }
+      
+      // Generate practice questions from the text
+      if (textToProcess) {
+        await generatePracticeQuestions(textToProcess, uploadedFileUrl);
       }
 
       toast.success('Report uploaded successfully!');
@@ -169,13 +251,18 @@ const UploadReport: React.FC<UploadReportProps> = ({ user }) => {
             
             <button 
               onClick={handleUpload}
-              disabled={(!file && inputMethod === 'file') || (!pastedText && inputMethod === 'text') || uploading}
+              disabled={(!file && inputMethod === 'file') || (!pastedText && inputMethod === 'text') || uploading || generatingQuestions}
               className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
             >
               {uploading ? (
                 <>
                   <BarLoader color="#ffffff" height={4} width={100} className="mr-2"/>
                   Processing...
+                </>
+              ) : generatingQuestions ? (
+                <>
+                  <BarLoader color="#ffffff" height={4} width={100} className="mr-2"/>
+                  Generating questions...
                 </>
               ) : (
                 'Process Report'

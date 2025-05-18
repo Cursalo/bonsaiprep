@@ -46,11 +46,68 @@ interface SATTestData {
 
 // Use environment variable for API key but rename it to be more generic
 const ANALYSIS_API_KEY = process.env.REACT_APP_GEMINI_API_KEY;
-// Update the API URL to use v1 instead of v1beta and the correct model path
-const ANALYSIS_API_URL = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent";
+// Update the API URL to use a model that supports file input like gemini-1.5-pro-latest
+const ANALYSIS_API_URL = process.env.REACT_APP_GEMINI_API_URL || "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent";
 
 // Function to simulate processing delay
 const addProcessingDelay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+/**
+ * Converts a File object to a base64 string and formats it for the Gemini API.
+ */
+const fileToGenerativePart = async (file: File) => {
+  const base64EncodedData = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve((reader.result as string).split(',')[1]); // Get only base64 part
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+  return {
+    inlineData: {
+      mimeType: file.type,
+      data: base64EncodedData
+    }
+  };
+};
+
+/**
+ * Creates a prompt for the analysis engine to generate SAT practice questions from a PDF file.
+ */
+const createAnalysisPromptForFile = (): string => {
+  return `You are an expert SAT tutor. Please analyze the content of the provided SAT score report PDF.
+The SAT has two main sections: Reading and Writing, and Math.
+The Reading and Writing section covers these topics: Information and Ideas, Expression of Ideas, Craft and Structure, Standard English Conventions.
+The Math section covers these topics: Algebra, Advanced Math, Problem-Solving and Data Analysis, Geometry and Trigonometry.
+
+Based on your analysis of the student\'s performance in the PDF:
+1. Identify the student\'s weak areas (topics where they likely struggled or got questions incorrect, or topics marked as \'Hard\' difficulty).
+2. Generate 10 unique SAT practice questions tailored to these identified weak areas. Aim for a mix of topics based on the weaknesses.
+3. For each question, provide:
+    - The question text itself.
+    - The specific SAT topic it relates to (from the lists above).
+    - A difficulty level (Easy, Medium, Hard).
+    - Four plausible multiple-choice options (labeled A, B, C, D).
+    - The correct answer (clearly indicating the letter and the text of the option).
+    - A concise explanation for why that answer is correct.
+
+Return the output ONLY as a minified JSON array of objects. Each object in the array should represent a single question and strictly follow this structure:
+[
+  {
+    "id": "unique_id_1", // Generate a unique ID for each question
+    "text": "Question text...",
+    "topic": "Specific SAT Topic",
+    "difficulty": "Medium",
+    "options": ["Option A text", "Option B text", "Option C text", "Option D text"],
+    "answer": "A) Option A text",
+    "explanation": "Explanation why A is correct..."
+  }
+  // ... (9 more questions)
+]
+
+Do not include any other text, greetings, or apologies in your response. Just the JSON.
+The ID for each question should be unique.
+`;
+};
 
 /**
  * Parse SAT report text to extract information about incorrect answers
@@ -155,7 +212,7 @@ const parseSATReport = (reportText: string): SATTestData => {
   }
   
   // If we couldn't parse the summary data directly, calculate from question data
-  if (data.totalQuestions === 0) {
+  if (data.totalQuestions === 0 && (data.sections['Reading and Writing'].total > 0 || data.sections['Math'].total > 0) ) {
     data.totalCorrect = Object.values(data.sections).reduce((sum, section) => sum + section.correct, 0);
     data.totalIncorrect = Object.values(data.sections).reduce((sum, section) => sum + section.incorrect, 0);
     data.totalQuestions = data.totalCorrect + data.totalIncorrect;
@@ -304,57 +361,61 @@ Example format for ONE question (you'll provide 10):
  * Calls the external API to generate content
  */
 const callContentAPI = async (prompt: string): Promise<string> => {
-  if (!ANALYSIS_API_KEY || ANALYSIS_API_KEY === 'YOUR_GEMINI_API_KEY_HERE') {
-    console.warn("API key not configured or using placeholder value. Falling back to template-based generation.");
-    throw new Error("API key not configured properly");
+  if (!ANALYSIS_API_KEY) {
+    console.error("API key is not configured.");
+    throw new Error("API key not configured. Please set REACT_APP_GEMINI_API_KEY.");
   }
 
   try {
-    const apiUrl = `${ANALYSIS_API_URL}?key=${ANALYSIS_API_KEY}`;
-
-    const payload = {
-      contents: [{
-        parts: [{
-          text: prompt
-        }]
-      }],
-      generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 8192,
-      }
-    };
-
-    console.log("Sending request to Gemini API...");
-    const response = await fetch(apiUrl, {
+    const response = await fetch(`${ANALYSIS_API_URL}?key=${ANALYSIS_API_KEY}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          response_mime_type: "application/json",
+          temperature: 0.6, 
+          maxOutputTokens: 8192,
+        },
+        // safetySettings: [ // Optional: Adjust safety settings
+        //   { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+        //   { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+        //   { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+        //   { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
+        // ]
+      }),
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`API error (${response.status}):`, errorText);
-      throw new Error(`API response error: ${response.status} ${errorText}`);
+      const errorBody = await response.text();
+      console.error("Content API request failed:", response.status, errorBody);
+      throw new Error(`Content API request failed with status ${response.status}: ${errorBody}`);
     }
 
     const data = await response.json();
-    console.log("API response received");
-
-    // Extract the generated text from the response
-    let generatedText = "";
-    try {
-      generatedText = data.candidates[0].content.parts[0].text;
-    } catch (e) {
-      console.error("Error extracting text from API response:", e, "Full response:", data);
-      throw new Error("Unexpected API response format");
+    
+    if (data.promptFeedback && data.promptFeedback.blockReason) {
+      console.error("Prompt was blocked:", data.promptFeedback.blockReason, data.promptFeedback.safetyRatings);
+      throw new Error(`Content generation blocked: ${data.promptFeedback.blockReason}. Check safety ratings.`);
     }
-
-    return generatedText;
+    if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts || !data.candidates[0].content.parts[0].text) {
+      console.error("Unexpected API response structure:", data);
+      // Attempt to find text in a potentially different location for some models/errors
+      if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0].executablePart && data.candidates[0].content.parts[0].executablePart.toolResponse) {
+        // This case might occur if the API tries to use a tool and fails.
+        // The actual error message or response might be nested.
+        const toolResponse = data.candidates[0].content.parts[0].executablePart.toolResponse;
+        console.warn("API response suggests a tool usage issue or different structure:", toolResponse);
+        // Try to extract something meaningful if possible, or rely on the fallback
+      }
+      throw new Error("Unexpected response structure from Content API.");
+    }
+    return data.candidates[0].content.parts[0].text;
   } catch (error) {
-    console.error("Error calling Gemini API:", error);
-    throw error;
+    console.error("Error calling Content API:", error);
+    throw error; 
   }
 };
 
@@ -362,59 +423,43 @@ const callContentAPI = async (prompt: string): Promise<string> => {
  * Extracts structured question data from the API response
  */
 const extractQuestionsFromResponse = (response: string): GeneratedQuestion[] => {
+  if (!response || response.trim() === "") {
+    console.warn("Empty response string received for question extraction.");
+    return [];
+  }
+
+  let cleanedResponse = response;
+  if (cleanedResponse.startsWith("```json")) {
+    cleanedResponse = cleanedResponse.substring(7);
+  } else if (cleanedResponse.startsWith("```")) {
+    cleanedResponse = cleanedResponse.substring(3);
+  }
+  if (cleanedResponse.endsWith("```")) {
+    cleanedResponse = cleanedResponse.substring(0, cleanedResponse.length - 3);
+  }
+  cleanedResponse = cleanedResponse.trim();
+
   try {
-    // Find JSON array in the response (model might include other text before or after)
-    let jsonContent = response;
-    
-    // If the response contains markdown code blocks, extract just the JSON part
-    const jsonMatch = response.match(/```(?:json)?\s*(\[[\s\S]*?\])\s*```/);
-    if (jsonMatch && jsonMatch[1]) {
-      jsonContent = jsonMatch[1];
-    }
-    
-    // Sometimes the model may wrap JSON in an object instead of returning an array directly
-    // Check if we have a JSON object with a questions array
-    const objectMatch = jsonContent.match(/\{\s*"questions"\s*:\s*(\[[\s\S]*?\])\s*\}/);
-    if (objectMatch && objectMatch[1]) {
-      jsonContent = objectMatch[1];
-    }
-    
-    // Clean up any non-JSON content that might exist
-    jsonContent = jsonContent.trim();
-    if (!jsonContent.startsWith('[')) {
-      const startPos = jsonContent.indexOf('[');
-      if (startPos >= 0) {
-        jsonContent = jsonContent.substring(startPos);
-      }
-    }
-    if (!jsonContent.endsWith(']')) {
-      const endPos = jsonContent.lastIndexOf(']');
-      if (endPos >= 0) {
-        jsonContent = jsonContent.substring(0, endPos + 1);
-      }
-    }
-    
-    // Parse the JSON content
-    const questions = JSON.parse(jsonContent);
-    
-    // Validate that we have an array of questions with required properties
+    const questions: GeneratedQuestion[] = JSON.parse(cleanedResponse);
     if (!Array.isArray(questions)) {
-      throw new Error("Parsed content is not an array");
+      console.error("Parsed response is not an array:", questions);
+      return []; // Return empty if not an array
     }
-    
-    // Ensure each question has required fields
-    return questions.map((q, index) => ({
-      id: q.id || `question-${Date.now()}-${index}`,
-      text: q.text || 'Question text unavailable',
-      topic: q.topic || 'General',
-      difficulty: q.difficulty,
-      options: q.options,
-      answer: q.answer,
-      explanation: q.explanation
-    }));
-  } catch (error: any) {
-    console.error("Error parsing API response:", error, "Raw response:", response);
-    throw new Error(`Failed to parse questions from API response: ${error.message}`);
+    return questions.map((q, index) => ({ // Add basic validation and default ID
+      ...q,
+      id: q.id || `gen_q_${Date.now()}_${index}`,
+      // Ensure essential fields are at least present as empty strings if missing
+      text: q.text || "Question text missing",
+      topic: q.topic || "Topic missing",
+      options: Array.isArray(q.options) && q.options.length > 0 ? q.options : ["Option A", "Option B", "Option C", "Option D"],
+      answer: q.answer || "Answer missing",
+      explanation: q.explanation || "Explanation missing",
+      difficulty: q.difficulty || "Medium"
+    })).filter(q => q.text !== "Question text missing" && q.topic !== "Topic missing"); // Filter out truly empty questions
+  } catch (error) {
+    console.error("Error parsing JSON response from Content API:", error);
+    console.error("Problematic response string (first 500 chars):", cleanedResponse.substring(0, 500));
+    return []; // Return empty on parsing error
   }
 };
 
@@ -427,74 +472,45 @@ const extractQuestionsFromResponse = (response: string): GeneratedQuestion[] => 
 export const generateQuestionsFromMistakes = async (
   extractedMistakesText: string
 ): Promise<GeneratedQuestion[]> => {
-  console.log("Attempting to generate questions for text:", extractedMistakesText.substring(0, 300) + "...");
+  console.log("Attempting to generate questions for text:", extractedMistakesText.substring(0, 100) + "...");
+  
+  const randomDelay = Math.random() * 1500 + 2500; // 2.5s to 4s
+  await addProcessingDelay(randomDelay);
+
+  if (!ANALYSIS_API_KEY) {
+    console.warn("API key not configured. Generating fallback questions.");
+    return generateFallbackQuestions(extractedMistakesText);
+  }
 
   if (!extractedMistakesText || extractedMistakesText.trim() === "") {
-    console.warn("No text provided for question generation.");
-    return [];
+    console.warn("No text provided for question generation. Generating fallback questions.");
+    return generateFallbackQuestions("No report data provided.");
   }
 
   try {
-    // 1. Parse the SAT report to understand mistakes
+    console.log("Parsing text report and generating prompt...");
     const satData = parseSATReport(extractedMistakesText);
-    console.log("Parsed SAT data:", satData);
+    const prompt = createAnalysisPrompt(satData);
     
-    // Add a processing delay to simulate complex analysis
-    await addProcessingDelay(3000);
+    // console.log("Generated Prompt:", prompt); // For debugging
+    const analysisResponseJson = await callContentAPI(prompt);
+    // console.log("Raw API JSON Response:", analysisResponseJson); // For debugging
+
+    console.log("Received API response, extracting questions...");
+    const questions = extractQuestionsFromResponse(analysisResponseJson);
     
-    // 2. Generate questions based on the report
-    try {
-      // 2a. First try to use the advanced API if the key is available
-      if (ANALYSIS_API_KEY && ANALYSIS_API_KEY !== 'YOUR_GEMINI_API_KEY_HERE') {
-        console.log("Generating tailored questions using advanced analysis");
-        const prompt = createAnalysisPrompt(satData);
-        
-        // Add additional delay to simulate API processing time
-        await addProcessingDelay(2000);
-        
-        try {
-          const analysisResponse = await callContentAPI(prompt);
-          const generatedQuestions = extractQuestionsFromResponse(analysisResponse);
-          
-          console.log(`Generated ${generatedQuestions.length} questions via API`);
-          
-          // Ensure we have exactly 10 questions
-          if (generatedQuestions.length < 10) {
-            console.log(`Adding ${10 - generatedQuestions.length} fallback questions to reach 10 total`);
-            const remainingQuestions = generateFallbackQuestions(extractedMistakesText, 10 - generatedQuestions.length);
-            return [...generatedQuestions, ...remainingQuestions];
-          } else if (generatedQuestions.length > 10) {
-            console.log(`Trimming to 10 questions from ${generatedQuestions.length} generated`);
-            return generatedQuestions.slice(0, 10);
-          }
-          
-          return generatedQuestions;
-        } catch (error: any) {
-          console.error("API call failed:", error);
-          throw new Error(`API call failed: ${error.message || 'Unknown error'}`);
-        }
-      } else {
-        console.warn("No valid API key found. Using standard question generation.");
-        throw new Error("Analysis API key not configured");
-      }
-    } catch (apiError) {
-      console.error("Error using analysis API:", apiError);
-      
-      // 2b. If API call fails, fall back to the template-based approach
-      console.log("Falling back to template-based question generation");
-      
-      // Add a delay to simulate advanced processing
-      await addProcessingDelay(2500);
-      
-      // Generate fallback questions directly
-      const fallbackQuestions = generateFallbackQuestions(extractedMistakesText, 10);
-      console.log(`Generated ${fallbackQuestions.length} fallback questions`);
-      return fallbackQuestions;
+    if (questions.length === 0) {
+        console.warn("No questions could be extracted from API response. Generating fallback questions.");
+        return generateFallbackQuestions(extractedMistakesText, 10, "Failed to parse questions from analysis response.");
     }
+    
+    console.log(`Successfully generated ${questions.length} questions via API.`);
+    return questions;
+
   } catch (error) {
-    console.error("Fatal error in question generation:", error);
-    // As a last resort, return some very basic questions if everything else fails
-    return generateBasicQuestions();
+    console.error("Error in question generation pipeline:", error);
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+    return generateFallbackQuestions(extractedMistakesText, 10, errorMessage);
   }
 };
 
@@ -533,500 +549,132 @@ const generateBasicQuestions = (): GeneratedQuestion[] => {
  * Generates a question for a specific topic
  */
 const generateQuestionForTopic = (section: string, topic: string, index: number): GeneratedQuestion => {
-  // Create varied questions for each topic based on the index
-  if (section === 'Reading and Writing') {
-    if (topic === 'Information and Ideas') {
-      // Information and Ideas question variants
-      const questions = [
-        {
-          id: `rw-info-${Date.now()}-${index}`,
-          text: "Which statement best summarizes the main idea of the passage?",
-          topic: "Information and Ideas",
-          difficulty: "Medium",
-          options: [
-            "The economic impact of renewable energy on global markets",
-            "The scientific advancements that enable modern solar technology",
-            "The historical development of energy technology across cultures",
-            "The environmental benefits of transitioning to renewable energy sources"
-          ],
-          answer: "D",
-          explanation: "The passage primarily discusses the environmental benefits of renewable energy rather than focusing on economic, scientific, or historical aspects."
-        },
-        {
-          id: `rw-info-${Date.now()}-${index}`,
-          text: "Which detail from the passage best supports the author's claim about climate impacts?",
-          topic: "Information and Ideas",
-          difficulty: "Hard",
-          options: [
-            "The statistical analysis of temperature changes over fifty years",
-            "The quotation from the environmental scientist in paragraph 3",
-            "The comparison between different energy production methods",
-            "The reference to the international climate agreement"
-          ],
-          answer: "B",
-          explanation: "The quotation from the environmental scientist provides specific evidence that directly supports the author's central claim about climate impacts."
-        },
-        {
-          id: `rw-info-${Date.now()}-${index}`,
-          text: "Based on the passage, what can be inferred about the relationship between technology and sustainability?",
-          topic: "Information and Ideas",
-          difficulty: "Medium",
-          options: [
-            "Technological advancement always leads to environmental degradation",
-            "Sustainability goals can be achieved without technological innovation",
-            "Technology can be harnessed to address environmental challenges",
-            "Environmental concerns are secondary to technological progress"
-          ],
-          answer: "C",
-          explanation: "The passage implies that properly directed technological innovation can help address environmental challenges rather than exacerbate them."
-        },
-        {
-          id: `rw-info-${Date.now()}-${index}`,
-          text: "What conclusion about renewable energy is best supported by the data presented in the passage?",
-          topic: "Information and Ideas",
-          difficulty: "Medium",
-          options: [
-            "It is more cost-effective than fossil fuels in all contexts",
-            "Its adoption is growing faster in developing countries than in industrialized nations",
-            "It has the potential to significantly reduce carbon emissions",
-            "It will completely replace traditional energy sources within a decade"
-          ],
-          answer: "C",
-          explanation: "The data in the passage directly supports the conclusion that renewable energy can significantly reduce carbon emissions, without making unsupported claims about cost-effectiveness, adoption rates, or timeline predictions."
-        }
-      ];
-      return questions[index % questions.length];
-    } else if (topic === 'Expression of Ideas') {
-      // Expression of Ideas question variants
-      const questions = [
-        {
-          id: `rw-expr-${Date.now()}-${index}`,
-          text: "Which sentence would most effectively establish the main idea of the paragraph?",
-          topic: "Expression of Ideas",
-          difficulty: "Medium",
-          options: [
-            "The author's opinion represents only one perspective on the issue.",
-            "Research indicates that several factors contribute to this phenomenon.",
-            "Traditional approaches to solving this problem have proven ineffective.",
-            "Personal biases often influence how people interpret complex data."
-          ],
-          answer: "C",
-          explanation: "This option establishes context and signals that the paragraph will explore new approaches, creating a clear focus."
-        },
-        {
-          id: `rw-expr-${Date.now()}-${index}`,
-          text: "Which revision most effectively combines these two sentences?\n'The museum opened a new exhibit. The exhibit features artifacts from ancient Egypt.'",
-          topic: "Expression of Ideas",
-          difficulty: "Easy",
-          options: [
-            "The museum opened a new exhibit and features artifacts from ancient Egypt.",
-            "The museum opened a new exhibit, it features artifacts from ancient Egypt.",
-            "The museum opened a new exhibit that features artifacts from ancient Egypt.",
-            "The museum, opening a new exhibit, features artifacts from ancient Egypt."
-          ],
-          answer: "C",
-          explanation: "This revision most effectively combines the sentences using a relative clause that clearly shows the relationship between the exhibit and the artifacts."
-        },
-        {
-          id: `rw-expr-${Date.now()}-${index}`,
-          text: "Which transition would best connect the ideas in these two paragraphs?",
-          topic: "Expression of Ideas",
-          difficulty: "Medium",
-          options: [
-            "Furthermore",
-            "Nevertheless",
-            "For example",
-            "In conclusion"
-          ],
-          answer: "B",
-          explanation: "Since the second paragraph presents a contrasting perspective to the first, 'Nevertheless' is the most appropriate transition to indicate this shift."
-        },
-        {
-          id: `rw-expr-${Date.now()}-${index}`,
-          text: "Where should this sentence be placed to best support the paragraph's main argument?\n'Recent studies have confirmed this trend across multiple demographics.'",
-          topic: "Expression of Ideas",
-          difficulty: "Medium",
-          options: [
-            "Before the topic sentence to foreshadow the argument",
-            "After the first supporting point as additional evidence",
-            "After the counterargument to strengthen the rebuttal",
-            "At the end of the paragraph as a concluding thought"
-          ],
-          answer: "B",
-          explanation: "Placing this sentence after the first supporting point provides additional evidence that strengthens the initial claim, creating a more compelling argument."
-        }
-      ];
-      return questions[index % questions.length];
-    } else if (topic === 'Craft and Structure') {
-      // Craft and Structure question variants
-      const questions = [
-        {
-          id: `rw-craft-${Date.now()}-${index}`,
-          text: "What purpose does the author's reference to historical events serve in the passage?",
-          topic: "Craft and Structure",
-          difficulty: "Hard",
-          options: [
-            "To establish credibility through detailed knowledge",
-            "To provide context for a contemporary issue",
-            "To challenge conventional interpretations of history",
-            "To appeal to readers' sense of nostalgia"
-          ],
-          answer: "B",
-          explanation: "The historical references function primarily to provide context that helps readers understand the current situation being discussed."
-        },
-        {
-          id: `rw-craft-${Date.now()}-${index}`,
-          text: "How does the author's use of technical language in paragraph 3 affect the passage?",
-          topic: "Craft and Structure",
-          difficulty: "Medium",
-          options: [
-            "It creates distance between the reader and the subject matter",
-            "It emphasizes the complexity and importance of the scientific concepts",
-            "It undermines the credibility of competing theories",
-            "It shifts the tone from objective to persuasive"
-          ],
-          answer: "B",
-          explanation: "The technical language emphasizes the complexity and scientific significance of the concepts being discussed, adding depth to the author's explanation."
-        },
-        {
-          id: `rw-craft-${Date.now()}-${index}`,
-          text: "In the context of the passage, the word 'paradigm' most nearly means:",
-          topic: "Craft and Structure",
-          difficulty: "Medium",
-          options: [
-            "A contradiction or paradox",
-            "An established model or pattern",
-            "A temporary solution",
-            "An unexpected discovery"
-          ],
-          answer: "B",
-          explanation: "In this context, 'paradigm' refers to an established model or pattern of thinking that shapes how a field approaches problems."
-        },
-        {
-          id: `rw-craft-${Date.now()}-${index}`,
-          text: "How does the structure of the passage develop the author's argument?",
-          topic: "Craft and Structure",
-          difficulty: "Hard",
-          options: [
-            "By presenting a chronological narrative of events",
-            "By comparing and contrasting different perspectives",
-            "By stating a problem and then proposing solutions",
-            "By making a claim and supporting it with increasingly specific evidence"
-          ],
-          answer: "D",
-          explanation: "The passage begins with a general claim and then develops it by providing increasingly specific evidence, creating a logical progression that strengthens the argument."
-        }
-      ];
-      return questions[index % questions.length];
-    } else {
-      // Standard English Conventions question variants
-      const questions = [
-        {
-          id: `rw-conv-${Date.now()}-${index}`,
-          text: "Which revision corrects the grammatical error in the sentence?\n'Neither the students nor the teacher were able to attend the conference.'",
-          topic: "Standard English Conventions",
-          difficulty: "Medium",
-          options: [
-            "Neither the students nor the teacher was able to attend the conference.",
-            "Neither the students nor the teacher being able to attend the conference.",
-            "Neither the students nor the teacher have been able to attend the conference.",
-            "No correction is needed."
-          ],
-          answer: "A",
-          explanation: "When 'neither/nor' is used, the verb should agree with the noun closer to it (in this case 'teacher'), which requires the singular 'was' rather than 'were'."
-        },
-        {
-          id: `rw-conv-${Date.now()}-${index}`,
-          text: "Which revision corrects the punctuation error in this sentence?\n'The committee reviewed the proposal however they requested additional information.'",
-          topic: "Standard English Conventions",
-          difficulty: "Medium",
-          options: [
-            "The committee reviewed the proposal, however they requested additional information.",
-            "The committee reviewed the proposal; however, they requested additional information.",
-            "The committee reviewed the proposal, however, they requested additional information.",
-            "The committee reviewed the proposal however, they requested additional information."
-          ],
-          answer: "B",
-          explanation: "When 'however' joins two independent clauses, it should be preceded by a semicolon and followed by a comma to properly separate the clauses."
-        },
-        {
-          id: `rw-conv-${Date.now()}-${index}`,
-          text: "Which choice correctly uses the apostrophe?",
-          topic: "Standard English Conventions",
-          difficulty: "Easy",
-          options: [
-            "The dog wagged it's tail excitedly.",
-            "The companies' new policy affected all employees.",
-            "The children's toys were scattered across the floor's.",
-            "The building's' entrance was being renovated."
-          ],
-          answer: "B",
-          explanation: "This option correctly uses the apostrophe after 'companies' to show possession by multiple companies (plural possessive)."
-        },
-        {
-          id: `rw-conv-${Date.now()}-${index}`,
-          text: "Which sentence uses parallel structure correctly?",
-          topic: "Standard English Conventions",
-          difficulty: "Medium",
-          options: [
-            "She enjoys swimming, hiking, and to ride bicycles.",
-            "The candidate promised to lower taxes, creating jobs, and improving education.",
-            "The professor asked students to read the chapter, take notes, and submit a summary.",
-            "We can either finish the project today or waiting until tomorrow."
-          ],
-          answer: "C",
-          explanation: "This sentence correctly maintains parallel structure by using the same verb form (infinitive) for all three actions: 'to read,' 'take,' and 'submit.'"
-        }
-      ];
-      return questions[index % questions.length];
-    }
-  } else {
-    if (topic === 'Algebra') {
-      // Algebra question variants
-      const questions = [
-        {
-          id: `math-alg-${Date.now()}-${index}`,
-          text: "If f(x) = 3x² - 4x + 2, what is the value of f(2)?",
-          topic: "Algebra",
-          difficulty: "Medium",
-          options: [
-            "6",
-            "8",
-            "10",
-            "12"
-          ],
-          answer: "C",
-          explanation: "f(2) = 3(2)² - 4(2) + 2 = 3(4) - 8 + 2 = 12 - 8 + 2 = 6 + 2 = 10"
-        },
-        {
-          id: `math-alg-${Date.now()}-${index}`,
-          text: "Solve for x: 2x - 5 = 3x + 7",
-          topic: "Algebra",
-          difficulty: "Easy",
-          options: [
-            "x = -12",
-            "x = -1",
-            "x = 2",
-            "x = 12"
-          ],
-          answer: "A",
-          explanation: "2x - 5 = 3x + 7\n2x - 3x = 7 + 5\n-x = 12\nx = -12"
-        },
-        {
-          id: `math-alg-${Date.now()}-${index}`,
-          text: "Which of the following is equivalent to (x + 3)(x - 2)?",
-          topic: "Algebra",
-          difficulty: "Medium",
-          options: [
-            "x² + x - 6",
-            "x² + x + 6",
-            "x² + 5x - 6",
-            "x² - 5x - 6"
-          ],
-          answer: "A",
-          explanation: "(x + 3)(x - 2) = x² - 2x + 3x - 6 = x² + x - 6"
-        },
-        {
-          id: `math-alg-${Date.now()}-${index}`,
-          text: "If 3(2x - 4) = 18, what is the value of x?",
-          topic: "Algebra",
-          difficulty: "Easy",
-          options: [
-            "1",
-            "3", 
-            "4",
-            "5"
-          ],
-          answer: "D",
-          explanation: "3(2x - 4) = 18\n6x - 12 = 18\n6x = 30\nx = 5"
-        }
-      ];
-      return questions[index % questions.length];
-    } else if (topic === 'Advanced Math') {
-      // Advanced Math question variants
-      const questions = [
-        {
-          id: `math-adv-${Date.now()}-${index}`,
-          text: "Which of the following is equivalent to (2x + 5)(x - 3) - (x + 1)(x - 4)?",
-          topic: "Advanced Math",
-          difficulty: "Hard",
-          options: [
-            "x² - 3x - 17",
-            "x² - 5x - 19",
-            "x² + 3x - 17",
-            "x² + 5x - 19"
-          ],
-          answer: "B",
-          explanation: "(2x + 5)(x - 3) - (x + 1)(x - 4)\n= 2x² - 6x + 5x - 15 - (x² - 4x + x - 4)\n= 2x² - x - 15 - x² + 3x + 4\n= x² - x - 15 + 3x + 4\n= x² + 2x - 11"
-        },
-        {
-          id: `math-adv-${Date.now()}-${index}`,
-          text: "If log₃(x) = 4, what is the value of x?",
-          topic: "Advanced Math",
-          difficulty: "Medium",
-          options: [
-            "12",
-            "64",
-            "81",
-            "243"
-          ],
-          answer: "C",
-          explanation: "If log₃(x) = 4, then 3⁴ = x. So x = 3⁴ = 81."
-        },
-        {
-          id: `math-adv-${Date.now()}-${index}`,
-          text: "Which of the following is equivalent to sin²(θ) + cos²(θ)?",
-          topic: "Advanced Math",
-          difficulty: "Medium",
-          options: [
-            "0",
-            "1",
-            "tan²(θ)",
-            "2sin(θ)cos(θ)"
-          ],
-          answer: "B",
-          explanation: "By the Pythagorean identity, sin²(θ) + cos²(θ) = 1 for all values of θ."
-        },
-        {
-          id: `math-adv-${Date.now()}-${index}`,
-          text: "What is the solution to the equation e^(2x) = 10?",
-          topic: "Advanced Math",
-          difficulty: "Hard",
-          options: [
-            "x = ln(5)",
-            "x = ln(10)/2",
-            "x = 2ln(10)",
-            "x = ln(√10)"
-          ],
-          answer: "B",
-          explanation: "e^(2x) = 10\n2x = ln(10)\nx = ln(10)/2"
-        }
-      ];
-      return questions[index % questions.length];
-    } else if (topic === 'Problem-Solving and Data Analysis') {
-      // Problem-Solving question variants
-      const questions = [
-        {
-          id: `math-data-${Date.now()}-${index}`,
-          text: "The table shows the number of students in different grade levels at a school. If a student is selected at random, what is the probability that the student is in 10th grade?\n\nGrade: 9th, 10th, 11th, 12th\nNumber: 150, 130, 120, 100",
-          topic: "Problem-Solving and Data Analysis",
-          difficulty: "Medium",
-          options: [
-            "0.26",
-            "0.30",
-            "0.35",
-            "0.40"
-          ],
-          answer: "A",
-          explanation: "Total number of students = 150 + 130 + 120 + 100 = 500\nProbability = Number in 10th grade / Total = 130/500 = 0.26"
-        },
-        {
-          id: `math-data-${Date.now()}-${index}`,
-          text: "A coffee shop sells medium coffees for $3.50 and large coffees for $4.25. If the shop sold a total of 150 coffees and collected $573.75, how many large coffees were sold?",
-          topic: "Problem-Solving and Data Analysis",
-          difficulty: "Medium",
-          options: [
-            "55",
-            "75",
-            "85",
-            "95"
-          ],
-          answer: "B",
-          explanation: "Let x = number of large coffees and 150 - x = number of medium coffees.\n4.25x + 3.50(150 - x) = 573.75\n4.25x + 525 - 3.50x = 573.75\n0.75x = 48.75\nx = 65"
-        },
-        {
-          id: `math-data-${Date.now()}-${index}`,
-          text: "The scatterplot shows the relationship between study time and test scores for 20 students. Based on the line of best fit, what is the predicted test score for a student who studies for 3 hours?",
-          topic: "Problem-Solving and Data Analysis",
-          difficulty: "Medium",
-          options: [
-            "72",
-            "78",
-            "84",
-            "90"
-          ],
-          answer: "C",
-          explanation: "Using the equation of the line of best fit, y = 6x + 66, where x is hours studied and y is the test score: y = 6(3) + 66 = 18 + 66 = 84."
-        },
-        {
-          id: `math-data-${Date.now()}-${index}`,
-          text: "If the mean of a data set is 15 and the standard deviation is 3, approximately what percentage of the data falls within one standard deviation of the mean, assuming the data is normally distributed?",
-          topic: "Problem-Solving and Data Analysis",
-          difficulty: "Hard",
-          options: [
-            "50%",
-            "68%",
-            "95%",
-            "99.7%"
-          ],
-          answer: "B",
-          explanation: "According to the empirical rule for normal distributions, approximately 68% of the data falls within one standard deviation of the mean (between 12 and 18 in this case)."
-        }
-      ];
-      return questions[index % questions.length];
-    } else {
-      // Geometry question variants
-      const questions = [
-        {
-          id: `math-geo-${Date.now()}-${index}`,
-          text: "In triangle ABC, if side AB = 6, side BC = 8, and angle B = 90°, what is the length of side AC?",
-          topic: "Geometry and Trigonometry",
-          difficulty: "Medium",
-          options: [
-            "8",
-            "10",
-            "12",
-            "14"
-          ],
-          answer: "B",
-          explanation: "Since angle B = 90°, triangle ABC is a right triangle. Using the Pythagorean theorem: AC² = AB² + BC² = 6² + 8² = 36 + 64 = 100\nTherefore, AC = √100 = 10"
-        },
-        {
-          id: `math-geo-${Date.now()}-${index}`,
-          text: "What is the area of a circle with radius 6 cm?",
-          topic: "Geometry and Trigonometry",
-          difficulty: "Medium",
-          options: [
-            "12π cm²",
-            "36π cm²",
-            "72π cm²",
-            "144π cm²"
-          ],
-          answer: "B",
-          explanation: "The area of a circle is A = πr². With r = 6 cm, the area is A = π(6)² = 36π cm²."
-        },
-        {
-          id: `math-geo-${Date.now()}-${index}`,
-          text: "If sin(θ) = 3/5, what is the value of cos(θ)?",
-          topic: "Geometry and Trigonometry",
-          difficulty: "Medium",
-          options: [
-            "3/5",
-            "4/5",
-            "5/3",
-            "5/4"
-          ],
-          answer: "B",
-          explanation: "Using the Pythagorean identity sin²(θ) + cos²(θ) = 1:\ncos²(θ) = 1 - sin²(θ) = 1 - (3/5)² = 1 - 9/25 = 16/25\ncos(θ) = √(16/25) = 4/5 (positive, assuming θ is in the first quadrant)"
-        },
-        {
-          id: `math-geo-${Date.now()}-${index}`,
-          text: "A rectangular prism has dimensions 3 cm × 4 cm × 5 cm. What is its volume?",
-          topic: "Geometry and Trigonometry",
-          difficulty: "Easy",
-          options: [
-            "12 cm³",
-            "47 cm³",
-            "60 cm³",
-            "120 cm³"
-          ],
-          answer: "C",
-          explanation: "The volume of a rectangular prism is V = l × w × h. With l = 3 cm, w = 4 cm, and h = 5 cm, the volume is V = 3 × 4 × 5 = 60 cm³."
-        }
-      ];
-      return questions[index % questions.length];
-    }
+  const uniqueId = `fallback_${topic.replace(/\s+/g, '').toLowerCase()}_${index}_${Date.now()}`;
+  let questionText = `This is a sample question for ${topic}.`;
+  let options = ["Option A", "Option B", "Option C", "Option D"];
+  let answer = "A) Option A";
+  let explanation = `This is a placeholder explanation for ${topic}. In a real scenario, this would detail why Option A is correct.`;
+  let difficulty = "Medium";
+
+  // Customize based on topic
+  if (topic === "Algebra") {
+    const a = Math.floor(Math.random() * 10) + 1;
+    const b = Math.floor(Math.random() * 10) - 5; 
+    const c_val = Math.floor(Math.random() * 10) - 5;
+    const x_val = Math.floor(Math.random() * 5) + 1;
+    const result = a * (x_val*x_val) + b * x_val + c_val;
+    questionText = `If f(x) = ${a}x² ${b === 0 ? '' : (b > 0 ? `+ ${b}x ` : `- ${Math.abs(b)}x `)}${c_val === 0 ? '' : (c_val > 0 ? `+ ${c_val}` : `- ${Math.abs(c_val)}`)}, what is the value of f(${x_val})?`;
+    const wrongOptionsAdv = [
+        result + (Math.random() > 0.5 ? 1:-1) * (Math.floor(Math.random()*3)+1),
+        result + (Math.random() > 0.5 ? 1:-1) * (Math.floor(Math.random()*5)+1),
+        a * x_val + b + c_val 
+    ];
+    let tempOptionsAdv = [result, ...wrongOptionsAdv.filter((v, i, self) => self.indexOf(v) === i && v !== result)];
+    while(tempOptionsAdv.length < 4) { tempOptionsAdv.push(result + (Math.random() > 0.5 ? 1:-1) * (Math.floor(Math.random()*10)+6)); tempOptionsAdv = tempOptionsAdv.filter((v, i, self) => self.indexOf(v) === i); }
+
+    options = tempOptionsAdv.slice(0,4).sort((n1,n2) => n1 - n2).map((opt, i) => `${String.fromCharCode(65 + i)}) ${opt}`);
+    const correctOptAdv = options.find(opt => parseInt(opt.substring(3)) === result);
+    answer = correctOptAdv!;
+    explanation = `Substitute x = ${x_val} into the function: f(${x_val}) = ${a}(${x_val})² + ${b}(${x_val}) + ${c_val} = ${a*x_val*x_val} + ${b*x_val} + ${c_val} = ${result}.`;
+    difficulty = (a > 5 || Math.abs(x_val) > 10) ? "Hard" : "Medium";
+  } else if (topic === "Standard English Conventions") {
+    const sentences = [
+      { q: "Its time for ___ dinner.", o: ["their", "there", "they're"], correct: "their", expl: "'Their' is a possessive pronoun. 'There' indicates a place. 'They're' is a contraction for 'they are'." },
+      { q: "The cat chased ___ tail.", o: ["it's", "it", "its'"], correct: "its", expl: "'Its' is the possessive form of 'it'. 'It's' is a contraction for 'it is'." },
+      { q: "___ going to the park later?", o: ["Whose", "Who", "Whom"], correct: "Who's", expl: "'Who's' is a contraction for 'who is' or 'who has'. 'Whose' is possessive." }
+    ];
+    const selected = sentences[index % sentences.length];
+    questionText = `Choose the correct word to complete the sentence: "${selected.q}"`;
+    const tempOptions = [selected.correct, ...selected.o];
+    options = tempOptions.sort(() => Math.random() - 0.5).map((opt, i) => `${String.fromCharCode(65 + i)}) ${opt}`);
+    const correctOpt = options.find(opt => opt.includes(selected.correct));
+    answer = correctOpt!;
+    explanation = selected.expl;
+    difficulty = "Easy";
+  } else if (topic === "Information and Ideas") {
+    questionText = "Based on a provided passage (not shown here), what is the main idea?";
+    options = ["A) Specific detail 1", "B) The overarching theme", "C) A supporting argument", "D) An irrelevant point"].map((opt, i) => `${String.fromCharCode(65+i)}) ${opt.substring(3)}`);
+    answer = "B) The overarching theme";
+    explanation = "The main idea captures the central point or message of the passage, not just a detail or supporting argument.";
+    difficulty = "Medium";
+  } else if (topic === "Craft and Structure") {
+     questionText = "A hypothetical author uses a specific metaphor in a passage (not shown). What is the most likely purpose of this metaphor?";
+     options = ["A) To confuse the reader", "B) To provide literal information", "C) To create a vivid image or comparison", "D) To summarize the plot"].map((opt, i) => `${String.fromCharCode(65+i)}) ${opt.substring(3)}`);
+     answer = "C) To create a vivid image or comparison";
+     explanation = "Metaphors are figures of speech used to make comparisons and add depth or imagery, not typically for literal information or confusion.";
+     difficulty = "Hard";
+  } else if (topic === "Expression of Ideas") {
+    questionText = "Which of the following sentences most effectively combines two short, choppy sentences (not provided) into one fluent sentence?";
+    options = ["A) A poorly combined sentence with redundancy.", "B) A run-on sentence.", "C) A concise and grammatically correct combination.", "D) A sentence that loses original meaning."].map((opt, i) => `${String.fromCharCode(65+i)}) ${opt.substring(3)}`);
+    answer = "C) A concise and grammatically correct combination.";
+    explanation = "Effective sentence combination improves flow, maintains clarity, and is grammatically sound, avoiding issues like redundancy or run-ons.";
+    difficulty = "Medium";
+  } else if (topic === "Advanced Math") {
+    const a = Math.floor(Math.random() * 5) + 1;
+    const b = Math.floor(Math.random() * 10) - 5; 
+    const c_val = Math.floor(Math.random() * 10) - 5;
+    const x_val = Math.floor(Math.random() * 5) + 1;
+    const result = a * (x_val*x_val) + b * x_val + c_val;
+    questionText = `If f(x) = ${a}x² ${b === 0 ? '' : (b > 0 ? `+ ${b}x ` : `- ${Math.abs(b)}x `)}${c_val === 0 ? '' : (c_val > 0 ? `+ ${c_val}` : `- ${Math.abs(c_val)}`)}, what is the value of f(${x_val})?`;
+    const wrongOptionsAdv = [
+        result + (Math.random() > 0.5 ? 1:-1) * (Math.floor(Math.random()*3)+1),
+        result + (Math.random() > 0.5 ? 1:-1) * (Math.floor(Math.random()*5)+1),
+        a * x_val + b + c_val 
+    ];
+    let tempOptionsAdv = [result, ...wrongOptionsAdv.filter((v, i, self) => self.indexOf(v) === i && v !== result)];
+    while(tempOptionsAdv.length < 4) { tempOptionsAdv.push(result + (Math.random() > 0.5 ? 1:-1) * (Math.floor(Math.random()*10)+6)); tempOptionsAdv = tempOptionsAdv.filter((v, i, self) => self.indexOf(v) === i); }
+
+    options = tempOptionsAdv.slice(0,4).sort((n1,n2) => n1 - n2).map((opt, i) => `${String.fromCharCode(65 + i)}) ${opt}`);
+    const correctOptAdv = options.find(opt => parseInt(opt.substring(3)) === result);
+    answer = correctOptAdv!;
+    explanation = `Substitute x = ${x_val} into the function: f(${x_val}) = ${a}(${x_val})² + ${b}(${x_val}) + ${c_val} = ${a*x_val*x_val} + ${b*x_val} + ${c_val} = ${result}.`;
+    difficulty = "Hard";
+  } else if (topic === "Problem-Solving and Data Analysis") {
+    const dataSet = Array.from({length: 5}, () => Math.floor(Math.random() * 20) + 1);
+    const mean = dataSet.reduce((sum, val) => sum + val, 0) / dataSet.length;
+    questionText = `What is the mean of the following data set: ${dataSet.join(', ')}?`;
+    const wrongOptionsPSA = [
+        parseFloat((mean + (Math.random() > 0.5 ? 1:-1) * (Math.floor(Math.random()*2)+0.5)).toFixed(1)),
+        (Math as any).median(dataSet.slice().sort((a,b)=>a-b)), 
+        Math.max(...dataSet) 
+    ];
+    let tempOptionsPSA = [parseFloat(mean.toFixed(1)), ...wrongOptionsPSA.filter((v,i,self) => self.indexOf(v) === i && v !== parseFloat(mean.toFixed(1)))];
+    while(tempOptionsPSA.length < 4) { tempOptionsPSA.push(parseFloat((mean + (Math.random() > 0.5 ? 1:-1) * (Math.floor(Math.random()*3)+1.5)).toFixed(1))); tempOptionsPSA = tempOptionsPSA.filter((v,i,self) => self.indexOf(v) === i); }
+    
+    options = tempOptionsPSA.slice(0,4).sort((n1,n2) => n1 - n2).map((opt, i) => `${String.fromCharCode(65 + i)}) ${opt}`);
+    const correctOptPSA = options.find(opt => parseFloat(opt.substring(3)) === parseFloat(mean.toFixed(1)));
+    answer = correctOptPSA!;
+    explanation = `To find the mean, sum all the numbers and divide by the count. Sum = ${dataSet.reduce((s,v)=>s+v,0)}. Count = ${dataSet.length}. Mean = ${dataSet.reduce((s,v)=>s+v,0)}/${dataSet.length} = ${mean.toFixed(1)}.`;
+    difficulty = "Medium";
+  } else if (topic === "Geometry and Trigonometry") {
+    const sideA = Math.floor(Math.random() * 10) + 3;
+    const sideB = Math.floor(Math.random() * 10) + 3;
+    const area = sideA * sideB;
+    questionText = `A rectangle has a length of ${sideA} units and a width of ${sideB} units. What is its area?`;
+    const wrongOptionsGeo = [
+        2 * (sideA + sideB), 
+        area + (Math.random() > 0.5 ? 1:-1) * (Math.floor(Math.random()*5)+1),
+        area - (Math.random() > 0.5 ? 1:-1) * (Math.floor(Math.random()*5)+1),
+    ];
+    let tempOptionsGeo = [area, ...wrongOptionsGeo.filter((v,i,self) => self.indexOf(v) === i && v !== area && v > 0)];
+    while(tempOptionsGeo.length < 4) { tempOptionsGeo.push(area + (Math.random() > 0.5 ? 1:-1) * (Math.floor(Math.random()*10)+6)); tempOptionsGeo = tempOptionsGeo.filter((v,i,self) => self.indexOf(v) === i && v > 0); }
+
+    options = tempOptionsGeo.slice(0,4).sort((n1,n2) => n1 - n2).map((opt, i) => `${String.fromCharCode(65 + i)}) ${opt} square units`);
+    const correctOptGeo = options.find(opt => parseInt(opt.substring(3)) === area);
+    answer = correctOptGeo!;
+    explanation = `The area of a rectangle is calculated by multiplying its length by its width. Area = Length × Width = ${sideA} × ${sideB} = ${area} square units.`;
+    difficulty = "Easy";
   }
+
+  return {
+    id: uniqueId,
+    text: questionText,
+    topic: topic,
+    difficulty: difficulty,
+    options: options,
+    answer: answer,
+    explanation: explanation
+  };
 };
 
 /**
@@ -1034,85 +682,54 @@ const generateQuestionForTopic = (section: string, topic: string, index: number)
  * @param text The original text input
  * @param count Number of questions to generate (default: 10)
  */
-const generateFallbackQuestions = (text: string, count: number = 10): GeneratedQuestion[] => {
+const generateFallbackQuestions = (contextText: string = "", count: number = 10, errorContext?: string): GeneratedQuestion[] => {
   const questions: GeneratedQuestion[] = [];
-  const topics = [
-    "Reading Comprehension", "Grammar and Language", "Algebra", "Geometry", 
-    "Data Analysis", "Vocabulary in Context", "Advanced Math"
+  const availableTopics: { section: string, topic: string }[] = [
+    { section: "Reading and Writing", topic: "Information and Ideas" },
+    { section: "Reading and Writing", topic: "Craft and Structure" },
+    { section: "Reading and Writing", topic: "Expression of Ideas" },
+    { section: "Reading and Writing", topic: "Standard English Conventions" },
+    { section: "Math", topic: "Algebra" },
+    { section: "Math", topic: "Advanced Math" },
+    { section: "Math", topic: "Problem-Solving and Data Analysis" },
+    { section: "Math", topic: "Geometry and Trigonometry" },
   ];
+
+  const inferredTopics: { section: string, topic: string }[] = [];
+  if (contextText) {
+    availableTopics.forEach(t => {
+      if (contextText.toLowerCase().includes(t.topic.toLowerCase())) {
+        inferredTopics.push(t);
+      }
+    });
+  }
+
+  const topicsToUse = inferredTopics.length > 3 ? inferredTopics : availableTopics; // Use inferred if we get a few, else all
   
-  for (let i = 0; i < count; i++) {
-    const topic = topics[i % topics.length];
-    
-    if (topic === "Reading Comprehension") {
+  if (errorContext && questions.length < count) {
       questions.push({
-        id: `fallback-rc-${Date.now()}-${i}`,
-        text: "What is the main purpose of the author in this passage?",
-        topic: "Reading Comprehension",
-        difficulty: "Medium",
-        options: [
-          "To persuade readers to take action on climate change",
-          "To inform readers about recent scientific discoveries",
-          "To compare different perspectives on a controversial issue",
-          "To analyze the historical context of a current event"
-        ],
-        answer: "B",
-        explanation: "The passage primarily presents information about scientific discoveries without attempting to persuade, compare perspectives, or analyze history."
+          id: `error_context_q_${Date.now()}`,
+          topic: "System Feedback",
+          text: `A processing issue occurred. The system reported: "${errorContext.substring(0,150)}${errorContext.length > 150 ? '...' : ''}". While we address this, would you like to try a general knowledge question? (This is a placeholder due to the error.)`,
+          options: ["A) Yes, proceed with general questions", "B) No, I'll try uploading again later", "C) Report this issue", "D) Show me my score report summary"],
+          answer: "A) Yes, proceed with general questions",
+          explanation: "This indicates an issue with the automated question generation. Choosing 'A' allows you to continue with some practice.",
+          difficulty: "N/A"
       });
-    } else if (topic === "Grammar and Language") {
-      questions.push({
-        id: `fallback-gram-${Date.now()}-${i}`,
-        text: "Which revision most effectively combines the underlined sentences?\n'The museum acquired a new painting. It was created by a famous artist.'",
-        topic: "Grammar and Language",
-        difficulty: "Medium",
-        options: [
-          "The museum acquired a new painting, and it was created by a famous artist.",
-          "The museum acquired a new painting that was created by a famous artist.",
-          "The museum acquired a new painting; it was created by a famous artist.",
-          "The museum acquired a new painting, which, it was created by a famous artist."
-        ],
-        answer: "B",
-        explanation: "This option uses a relative clause to combine the sentences in the most concise and effective way."
-      });
-    } else if (topic === "Algebra") {
-      questions.push({
-        id: `fallback-alg-${Date.now()}-${i}`,
-        text: "If 3x + 2y = 15 and 2x - y = 5, what is the value of x?",
-        topic: "Algebra",
-        difficulty: "Medium",
-        options: ["3", "4", "5", "6"],
-        answer: "B",
-        explanation: "From 2x - y = 5, we get y = 2x - 5. Substituting into 3x + 2y = 15:\n3x + 2(2x - 5) = 15\n3x + 4x - 10 = 15\n7x = 25\nx = 25/7 = 4"
-      });
-    } else if (topic === "Geometry") {
-      questions.push({
-        id: `fallback-geo-${Date.now()}-${i}`,
-        text: "If a circle has a radius of 6, what is its area?",
-        topic: "Geometry",
-        difficulty: "Medium",
-        options: ["36π", "12π", "18π", "24π"],
-        answer: "A",
-        explanation: "The area of a circle is given by the formula A = πr². With r = 6, A = π(6)² = 36π."
-      });
-    } else {
-      questions.push({
-        id: `fallback-gen-${Date.now()}-${i}`,
-        text: "Which of the following best interprets the data in the given chart?",
-        topic: "Data Analysis",
-        difficulty: "Medium",
-        options: [
-          "The trend shows steady growth over the five-year period",
-          "There was a sharp decline followed by a gradual recovery",
-          "The highest values occurred in the middle of the time period",
-          "The data shows cyclical patterns with regular intervals"
-        ],
-        answer: "C",
-        explanation: "The data in the chart shows peak values in the middle years of the time period, with lower values at the beginning and end."
-      });
-    }
+  }
+
+  for (let i = 0; questions.length < count; i++) {
+    const topicDetail = topicsToUse[i % topicsToUse.length];
+    questions.push(generateQuestionForTopic(topicDetail.section, topicDetail.topic, i));
   }
   
-  return questions;
+  // Shuffle to provide variety
+  for (let i = questions.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [questions[i], questions[j]] = [questions[j], questions[i]];
+  }
+
+  return questions.slice(0, count); // Ensure we don't exceed the count
 };
 
 // Example of how you might call this (for testing purposes):

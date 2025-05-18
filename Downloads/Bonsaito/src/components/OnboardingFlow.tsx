@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Box, 
@@ -29,6 +29,9 @@ import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import { useSpring, animated } from 'react-spring';
 import { supabase } from '../supabaseClient';
 import PdfUploader from './PdfUploader';
+import SubscriptionPlans from './SubscriptionPlans';
+import { generateQuestionsFromMistakes } from '../services/geminiPdfService';
+import { toast } from 'react-toastify';
 
 // Country data with flags (simplified version for this example)
 const countries = [
@@ -88,6 +91,9 @@ interface OnboardingData {
   scoreReport: string;
   hasSatScoreReport: boolean;
   scoreReportUrl?: string;
+  subscriptionPlan?: 'free' | 'pro';
+  generatedQuestions?: any[];
+  scoreReportFile?: File;
 }
 
 // Gradients for each step
@@ -100,6 +106,7 @@ const gradients = [
   'linear-gradient(135deg, #96fbc4 0%, #f9f586 100%)', // Step 6
   'linear-gradient(135deg, #cfd9df 0%, #e2ebf0 100%)', // Step 7
   'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', // Step 8
+  'linear-gradient(135deg, #6a11cb 0%, #2575fc 100%)', // Step 9 (Subscription)
 ];
 
 const OnboardingFlow: React.FC = () => {
@@ -108,6 +115,7 @@ const OnboardingFlow: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [cities, setCities] = useState<string[]>([]);
   const [direction, setDirection] = useState<'forward' | 'backward'>('forward');
+  const [processingReport, setProcessingReport] = useState(false);
   
   // Form data
   const [data, setData] = useState<OnboardingData>({
@@ -120,7 +128,9 @@ const OnboardingFlow: React.FC = () => {
     targetSatScore: 1200,
     motivation: '',
     scoreReport: '',
-    hasSatScoreReport: false
+    hasSatScoreReport: false,
+    generatedQuestions: [],
+    scoreReportFile: undefined
   });
 
   // Validation states
@@ -216,16 +226,34 @@ const OnboardingFlow: React.FC = () => {
       
       case 7: // Review
         return true; // Just a review, so always valid
+        
+      case 8: // Subscription Plan
+        return !!data.subscriptionPlan; // Valid if a plan is selected
       
       default:
         return true;
     }
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!validateStep()) return;
     
     setDirection('forward');
+    
+    // Special handling for the score report step to generate questions
+    if (activeStep === 6 && data.scoreReport && !data.generatedQuestions?.length) {
+      try {
+        setProcessingReport(true);
+        // Generate questions from the score report
+        const questions = await generateQuestionsFromMistakes(data.scoreReport);
+        setData({ ...data, generatedQuestions: questions });
+        setProcessingReport(false);
+      } catch (error) {
+        console.error("Error generating questions:", error);
+        setProcessingReport(false);
+      }
+    }
+    
     setActiveStep((prevStep) => prevStep + 1);
   };
 
@@ -240,45 +268,128 @@ const OnboardingFlow: React.FC = () => {
   };
 
   const handleSubmit = async () => {
+    setLoading(true);
+    
     try {
-      setLoading(true);
-      
-      // Get the current user
+      // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
-        throw new Error('No authenticated user found');
+        toast.error('You must be logged in to complete onboarding');
+        return;
       }
       
-      // Store data in Supabase
-      const { error } = await supabase.from('user_onboarding').insert([
-        {
-          user_id: user.id,
-          first_name: data.firstName,
-          last_name: data.lastName,
-          age: parseInt(data.age),
-          country: data.country,
-          city: data.city,
-          sat_score: data.satScore ? parseInt(data.satScore) : null,
-          target_sat_score: data.targetSatScore,
-          motivation: data.motivation,
-          score_report: data.scoreReport,
+      // Check if user already has an onboarding entry
+      const { data: existingData, error: checkError } = await supabase
+        .from('user_onboarding')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+        
+      if (checkError && checkError.code !== 'PGRST116') {
+        console.error('Error checking for existing onboarding record:', checkError);
+        toast.error('Error saving your information');
+        setLoading(false);
+        return;
+      }
+      
+      // Store file if it exists
+      let fileUrl = data.scoreReportUrl;
+      
+      if (data.scoreReportFile && !data.scoreReportUrl) {
+        const filePath = `${user.id}/${Date.now()}_${data.scoreReportFile.name}`;
+        const { error: storageError } = await supabase.storage
+          .from('score-reports')
+          .upload(filePath, data.scoreReportFile);
+          
+        if (storageError) {
+          console.error('Error uploading file:', storageError);
+          toast.error('Error uploading your score report');
+        } else {
+          const { data: { publicUrl } } = supabase.storage
+            .from('score-reports')
+            .getPublicUrl(filePath);
+            
+          fileUrl = publicUrl;
         }
-      ]);
+      }
       
-      if (error) throw error;
+      // Store onboarding data to Supabase
+      const onboardingData = {
+        user_id: user.id,
+        first_name: data.firstName,
+        last_name: data.lastName,
+        age: parseInt(data.age),
+        country: data.country || '',
+        city: data.city || '',
+        sat_score: data.satScore ? parseInt(data.satScore) : null,
+        target_sat_score: data.targetSatScore,
+        motivation: data.motivation,
+        score_report_text: data.scoreReport,
+        score_report_url: fileUrl,
+        has_score_report: data.hasSatScoreReport,
+        subscription_plan: data.subscriptionPlan || 'free'
+      };
       
-      // Clear localStorage after successful submission
-      localStorage.removeItem('onboardingData');
-      localStorage.removeItem('onboardingStep');
+      // Insert or update user onboarding data
+      let dbError;
+      if (existingData) {
+        const { error } = await supabase
+          .from('user_onboarding')
+          .update(onboardingData)
+          .eq('id', existingData.id);
+        dbError = error;
+      } else {
+        const { error } = await supabase
+          .from('user_onboarding')
+          .insert([onboardingData]);
+        dbError = error;
+      }
       
-      // Navigate to dashboard
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 1500);
+      if (dbError) {
+        console.error('Error saving onboarding data:', dbError);
+        toast.error('Error saving your information');
+        setLoading(false);
+        return;
+      }
       
+      // Generate practice questions if there's a score report
+      if (data.scoreReport) {
+        try {
+          // Generate practice questions from the score report text
+          const questions = await generateQuestionsFromMistakes(data.scoreReport);
+          
+          if (questions && questions.length > 0) {
+            // Store questions in practice_questions table
+            const { error: questionsError } = await supabase
+              .from('practice_questions')
+              .insert(
+                questions.map(q => ({
+                  user_id: user.id,
+                  question_data: q,
+                  source: 'onboarding',
+                  completed: false
+                }))
+              );
+              
+            if (questionsError) {
+              console.error('Error storing practice questions:', questionsError);
+            } else {
+              console.log(`Successfully created ${questions.length} practice questions for the user`);
+            }
+          }
+        } catch (aiError) {
+          console.error('Error generating practice questions:', aiError);
+        }
+      }
+      
+      toast.success('Onboarding completed successfully!');
+      
+      // Redirect to dashboard
+      navigate('/dashboard');
     } catch (error) {
-      console.error('Error saving onboarding data:', error);
+      console.error('Error in onboarding submission:', error);
+      toast.error('Error saving your information');
     } finally {
       setLoading(false);
     }
@@ -605,6 +716,14 @@ const OnboardingFlow: React.FC = () => {
                 }}
               />
             </Grid>
+            {processingReport && (
+              <Grid item xs={12} sx={{ textAlign: 'center', mt: 2 }}>
+                <CircularProgress size={30} />
+                <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
+                  Processing your report to generate personalized practice questions...
+                </Typography>
+              </Grid>
+            )}
           </Grid>
         );
       
@@ -616,7 +735,7 @@ const OnboardingFlow: React.FC = () => {
                 Review Your Information
               </Typography>
               <Typography variant="body1" align="center" color="textSecondary" paragraph>
-                Please verify that everything is correct before submitting.
+                Please verify that everything is correct before proceeding.
               </Typography>
             </Grid>
             <Grid item xs={12}>
@@ -668,6 +787,27 @@ const OnboardingFlow: React.FC = () => {
           </Grid>
         );
       
+      case 8: // Subscription
+        return (
+          <Grid container spacing={3}>
+            <Grid item xs={12}>
+              <Typography variant="h4" align="center" gutterBottom>
+                Choose Your Plan
+              </Typography>
+              <Typography variant="body1" align="center" color="textSecondary" paragraph>
+                Select the subscription plan that works best for you.
+              </Typography>
+            </Grid>
+            <Grid item xs={12}>
+              <SubscriptionPlans 
+                onSelectPlan={(planType) => {
+                  setData({ ...data, subscriptionPlan: planType });
+                }} 
+              />
+            </Grid>
+          </Grid>
+        );
+      
       default:
         return null;
     }
@@ -682,7 +822,8 @@ const OnboardingFlow: React.FC = () => {
     'Target Score',
     'Motivation',
     'Score Report',
-    'Review'
+    'Review',
+    'Subscription'
   ];
 
   // Background style for current step
@@ -713,12 +854,12 @@ const OnboardingFlow: React.FC = () => {
           alignItems: 'center', 
           justifyContent: 'center',
           minHeight: '100vh',
-          background: gradients[7]
+          background: gradients[8]
         }}
       >
         <CircularProgress size={60} />
         <Typography variant="h6" sx={{ mt: 3 }}>
-          Saving your information...
+          Saving your information and preparing your custom experience...
         </Typography>
       </Box>
     );
@@ -780,7 +921,7 @@ const OnboardingFlow: React.FC = () => {
                 onClick={handleSubmit}
                 endIcon={<CheckCircleOutlineIcon />}
               >
-                Submit
+                Complete & Go to Dashboard
               </Button>
             ) : (
               <Button 
@@ -788,6 +929,7 @@ const OnboardingFlow: React.FC = () => {
                 color="primary" 
                 onClick={handleNext}
                 endIcon={<ArrowForwardIcon />}
+                disabled={activeStep === 6 && processingReport}
               >
                 Next
               </Button>
