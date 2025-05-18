@@ -65,8 +65,12 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
   };
 
   const bonsaiImageNumber = getBonsaiImageNumber();
-  // Use absolute path to ensure correct loading
-  const bonsaiImagePath = `/bonsaipng/${bonsaiImageNumber}.png`;
+  
+  // Construct the image path using the base URL
+  const baseUrl = process.env.NODE_ENV === 'production' 
+    ? 'https://bonsaiprep-4e8cd0rd4-cursalos-projects.vercel.app'
+    : '';
+  const bonsaiImagePath = `${baseUrl}/bonsaipng/${bonsaiImageNumber}.png`;
 
   // Log the image path for debugging
   console.log('Loading bonsai image:', bonsaiImagePath);
@@ -77,7 +81,6 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
     config: { duration: 500 }
   }));
 
-  // Fix animation API usage
   useEffect(() => {
     containerApi.start({ opacity: 1 });
   }, [containerApi]);
@@ -90,6 +93,19 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
   useEffect(() => {
     imageApi.start({ transform: 'translateY(0px)' });
   }, [imageApi]);
+
+  // Preload the image before displaying
+  useEffect(() => {
+    const img = new Image();
+    img.src = bonsaiImagePath;
+    img.onload = () => {
+      setImageError(false);
+    };
+    img.onerror = () => {
+      console.error(`Failed to load image: ${bonsaiImagePath}`);
+      setImageError(true);
+    };
+  }, [bonsaiImagePath]);
 
   // Fetch the user's question data to determine how many questions were answered correctly
   useEffect(() => {
