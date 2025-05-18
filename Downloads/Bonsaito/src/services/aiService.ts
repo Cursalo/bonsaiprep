@@ -11,6 +11,17 @@ export interface GeneratedQuestion {
   explanation?: string; // Optional: Explanation for the answer
 }
 
+// Interface for topic difficulty information
+interface TopicInfo {
+  percentage: number;
+  difficulty: string;
+}
+
+// Interface for section information
+interface SectionTopicsInfo {
+  [topic: string]: TopicInfo;
+}
+
 // Interface for parsed SAT test data
 interface SATTestData {
   sections: {
@@ -28,6 +39,9 @@ interface SATTestData {
   totalCorrect: number;
   totalIncorrect: number;
   totalQuestions: number;
+  sectionInfo?: {
+    [section: string]: SectionTopicsInfo;
+  };
 }
 
 // Get Gemini API key from environment variables
@@ -63,10 +77,60 @@ const parseSATReport = (reportText: string): SATTestData => {
     totalQuestions: 0
   };
   
-  // Extract test data
+  // First look for the summary data if available
+  const totalQuestionsMatch = reportText.match(/(\d+)\s*Total Questions/);
+  const correctAnswersMatch = reportText.match(/(\d+)\s*Correct Answers/);
+  const incorrectAnswersMatch = reportText.match(/(\d+)\s*Incorrect Answers/);
+  
+  if (totalQuestionsMatch) {
+    data.totalQuestions = parseInt(totalQuestionsMatch[1]);
+  }
+  
+  if (correctAnswersMatch) {
+    data.totalCorrect = parseInt(correctAnswersMatch[1]);
+  }
+  
+  if (incorrectAnswersMatch) {
+    data.totalIncorrect = parseInt(incorrectAnswersMatch[1]);
+  }
+  
+  // Try to extract information about each section's difficulty level
+  const sectionInfoRegex = /(Information and Ideas|Expression of Ideas|Craft and Structure|Standard English Conventions|Algebra|Advanced Math|Problem-Solving and Data Analysis|Geometry and Trigonometry)\s*\((\d+)%[^)]*\)(?:[^)]*Diﬃculty level: (Easy|Medium|Hard))?/g;
+  let sectionMatch;
+  
+  while ((sectionMatch = sectionInfoRegex.exec(reportText)) !== null) {
+    const topic = sectionMatch[1];
+    const percentage = parseInt(sectionMatch[2]);
+    const difficulty = sectionMatch[3] || "Medium";
+    
+    // Map topics to main sections
+    let mainSection = '';
+    if (['Information and Ideas', 'Expression of Ideas', 'Craft and Structure', 'Standard English Conventions'].includes(topic)) {
+      mainSection = 'Reading and Writing';
+    } else {
+      mainSection = 'Math';
+    }
+    
+    // Store this information for potential use in question generation
+    if (!data.sectionInfo) {
+      data.sectionInfo = {};
+    }
+    
+    if (!data.sectionInfo[mainSection]) {
+      data.sectionInfo[mainSection] = {};
+    }
+    
+    data.sectionInfo[mainSection][topic] = {
+      percentage,
+      difficulty
+    };
+  }
+  
+  // Extract test data row by row from the questions table
+  const questionRegex = /^\s*(\d+)\s+(Reading and Writing|Math)\s+([A-D0-9/\., ]+)\s+([A-D0-9/\., ]+);?\s*(Correct|Incorrect)/;
+  
   for (const line of lines) {
-    // Match pattern: questionNumber, section, correctAnswer, yourAnswer, status
-    const questionMatch = line.match(/^\s*(\d+)\s+(Reading and Writing|Math)\s+([A-D0-9/\.]+)\s+([A-D0-9/\.]+);\s*(Correct|Incorrect)/);
+    const questionMatch = line.match(questionRegex);
     
     if (questionMatch) {
       const [_, questionNumber, section, correctAnswer, yourAnswer, status] = questionMatch;
@@ -80,18 +144,20 @@ const parseSATReport = (reportText: string): SATTestData => {
           data.sections[section].incorrect += 1;
           data.sections[section].incorrectQuestions.push({
             questionNumber,
-            correctAnswer,
-            yourAnswer
+            correctAnswer: correctAnswer.trim(),
+            yourAnswer: yourAnswer.trim()
           });
         }
       }
     }
   }
   
-  // Calculate totals
-  data.totalCorrect = Object.values(data.sections).reduce((sum, section) => sum + section.correct, 0);
-  data.totalIncorrect = Object.values(data.sections).reduce((sum, section) => sum + section.incorrect, 0);
-  data.totalQuestions = data.totalCorrect + data.totalIncorrect;
+  // If we couldn't parse the summary data directly, calculate from question data
+  if (data.totalQuestions === 0) {
+    data.totalCorrect = Object.values(data.sections).reduce((sum, section) => sum + section.correct, 0);
+    data.totalIncorrect = Object.values(data.sections).reduce((sum, section) => sum + section.incorrect, 0);
+    data.totalQuestions = data.totalCorrect + data.totalIncorrect;
+  }
   
   return data;
 };
@@ -180,14 +246,25 @@ const createGeminiPrompt = (satData: SATTestData): string => {
   const incorrectRWCount = satData.sections['Reading and Writing']?.incorrect || 0;
   const incorrectMathCount = satData.sections['Math']?.incorrect || 0;
   
-  let prompt = `As an expert SAT tutor, create ${incorrectRWCount > 0 && incorrectMathCount > 0 ? '10' : '10'} unique SAT practice questions.
+  let prompt = `As an expert SAT tutor, create 10 unique SAT practice questions tailored to this student's specific performance on a recent SAT practice test.
 
 STUDENT'S SAT REPORT SUMMARY:
 - Reading and Writing section: ${satData.sections['Reading and Writing'].correct} correct, ${satData.sections['Reading and Writing'].incorrect} incorrect
 - Math section: ${satData.sections['Math'].correct} correct, ${satData.sections['Math'].incorrect} incorrect
 - Total score: ${satData.totalCorrect} out of ${satData.totalQuestions}
-
 `;
+
+  // Add details about section difficulty levels if available
+  if (satData.sectionInfo) {
+    prompt += `\nSECTION DIFFICULTY INFORMATION:\n`;
+    
+    for (const [section, topics] of Object.entries(satData.sectionInfo)) {
+      prompt += `${section}:\n`;
+      for (const [topic, info] of Object.entries(topics)) {
+        prompt += `- ${topic}: ${info.difficulty} difficulty (${info.percentage}% of section)\n`;
+      }
+    }
+  }
 
   // Add details about incorrect questions
   if (incorrectRWCount > 0) {
@@ -204,21 +281,50 @@ STUDENT'S SAT REPORT SUMMARY:
     });
   }
 
+  // Analyze weak areas
+  let readingWeakTopics: string[] = [];
+  let mathWeakTopics: string[] = [];
+  
+  if (satData.sectionInfo) {
+    // For Reading and Writing, find topics with Hard difficulty
+    if (satData.sectionInfo['Reading and Writing']) {
+      readingWeakTopics = Object.entries(satData.sectionInfo['Reading and Writing'])
+        .filter(([_, info]) => info.difficulty === 'Hard' || incorrectRWCount > 5)
+        .map(([topic, _]) => topic);
+    }
+    
+    // For Math, find topics with Hard difficulty
+    if (satData.sectionInfo['Math']) {
+      mathWeakTopics = Object.entries(satData.sectionInfo['Math'])
+        .filter(([_, info]) => info.difficulty === 'Hard' || incorrectMathCount > 5)
+        .map(([topic, _]) => topic);
+    }
+  }
+  
+  // If we couldn't determine weak topics from section info, use default distribution
+  if (readingWeakTopics.length === 0) {
+    readingWeakTopics = ['Information and Ideas', 'Expression of Ideas', 'Craft and Structure', 'Standard English Conventions'];
+  }
+  
+  if (mathWeakTopics.length === 0) {
+    mathWeakTopics = ['Algebra', 'Advanced Math', 'Problem-Solving and Data Analysis', 'Geometry and Trigonometry'];
+  }
+
   // Distribution of questions based on where student needs more practice
   const rwQuestions = incorrectRWCount > 0 ? Math.ceil((incorrectRWCount / (incorrectRWCount + incorrectMathCount)) * 10) : 0;
   const mathQuestions = 10 - rwQuestions;
 
   prompt += `\nBased on the student's performance, please create:
-${rwQuestions > 0 ? `- ${rwQuestions} Reading and Writing questions` : ''}
-${rwQuestions > 0 && mathQuestions > 0 ? '\n' : ''}${mathQuestions > 0 ? `- ${mathQuestions} Math questions` : ''}
+${rwQuestions > 0 ? `- ${rwQuestions} Reading and Writing questions focusing on: ${readingWeakTopics.join(', ')}` : ''}
+${rwQuestions > 0 && mathQuestions > 0 ? '\n' : ''}${mathQuestions > 0 ? `- ${mathQuestions} Math questions focusing on: ${mathWeakTopics.join(', ')}` : ''}
 
-For Reading and Writing questions, focus on these topic areas:
+For Reading and Writing questions, cover these difficult topic areas:
 - Information and Ideas (comprehending texts, locating information)
 - Expression of Ideas (development, organization, effective language use)
 - Craft and Structure (word choice, text structure, point of view)
 - Standard English Conventions (grammar, usage, mechanics)
 
-For Math questions, focus on these topic areas:
+For Math questions, cover these topic areas:
 - Algebra (linear equations, systems, functions)
 - Advanced Math (quadratics, exponents, polynomials)
 - Problem-Solving and Data Analysis (ratios, percentages, statistics)
@@ -235,12 +341,13 @@ Return your response as a JSON array containing exactly 10 question objects with
 - explanation: Detailed explanation of the correct answer
 
 IMPORTANT REQUIREMENTS:
-1. For Reading questions: Create multiple-choice questions similar to those in SAT Reading.
-2. For Math questions: Create both multiple-choice and student-produced response questions (grid-ins).
-3. All questions should be original and at appropriate SAT difficulty level.
-4. Include high-quality explanations that teach the concept.
-5. Ensure questions reflect real SAT format and content.
-6. ENSURE THE RESPONSE IS VALID JSON that can be parsed with JSON.parse().
+1. Focus on the student's weak areas identified in the SAT report.
+2. For Reading questions: Create multiple-choice questions similar to those in SAT Reading.
+3. For Math questions: Create both multiple-choice and student-produced response questions (grid-ins).
+4. All questions should be original and at appropriate SAT difficulty level.
+5. Include high-quality explanations that teach the concept.
+6. Ensure questions reflect real SAT format and content.
+7. ENSURE THE RESPONSE IS VALID JSON that can be parsed with JSON.parse().
 
 Example format for ONE question (you'll provide 10):
 {
