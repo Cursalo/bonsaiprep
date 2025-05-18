@@ -6,6 +6,34 @@ import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { supabase } from '../supabaseClient';
 
+// Text styles for better contrast in dark theme
+const textStyles = {
+  heading: {
+    color: 'rgba(255, 255, 255, 0.87)', // High-emphasis text at 87% opacity
+    textShadow: '0 1px 2px rgba(0,0,0,0.2)'
+  },
+  subheading: {
+    color: 'rgba(255, 255, 255, 0.87)', // High-emphasis text at 87% opacity
+    opacity: 0.9
+  },
+  body: {
+    color: 'rgba(255, 255, 255, 0.7)' // Medium-emphasis text at 70% opacity
+  },
+  label: {
+    color: 'rgba(255, 255, 255, 0.87)',  // High-emphasis text at 87% opacity
+    fontWeight: 500
+  },
+  secondary: {
+    color: 'rgba(255, 255, 255, 0.6)' // Secondary text at 60% opacity
+  },
+  disabled: {
+    color: 'rgba(255, 255, 255, 0.38)' // Disabled text at 38% opacity
+  },
+  accent: {
+    color: 'rgba(136, 212, 152, 0.9)' // Desaturated accent color
+  }
+};
+
 interface PdfUploaderProps {
   onUploadComplete: (url: string) => void;
   onTextExtracted?: (text: string) => void;
@@ -131,7 +159,14 @@ const PdfUploader: React.FC<PdfUploaderProps> = ({
     <Box sx={{ width: '100%' }}>
       {uploadSuccess ? (
         <Box sx={{ textAlign: 'center', py: 2 }}>
-          <Alert severity="success" sx={{ mb: 2 }}>
+          <Alert 
+            severity="success" 
+            sx={{ 
+              mb: 2, 
+              backgroundColor: 'rgba(46, 125, 50, 0.2)', 
+              color: 'rgba(255, 255, 255, 0.87)'
+            }}
+          >
             PDF uploaded successfully!
           </Alert>
           <Box 
@@ -142,8 +177,8 @@ const PdfUploader: React.FC<PdfUploaderProps> = ({
               mb: 2 
             }}
           >
-            <PictureAsPdfIcon color="primary" sx={{ mr: 1 }} />
-            <Typography variant="body1" noWrap>
+            <PictureAsPdfIcon sx={{ mr: 1, color: 'rgba(136, 212, 152, 0.9)' }} />
+            <Typography variant="body1" noWrap sx={textStyles.body}>
               {file?.name}
             </Typography>
           </Box>
@@ -151,7 +186,14 @@ const PdfUploader: React.FC<PdfUploaderProps> = ({
             startIcon={<DeleteIcon />} 
             onClick={handleRemove}
             variant="outlined"
-            color="error"
+            sx={{
+              color: 'rgba(255, 255, 255, 0.87)',
+              borderColor: 'rgba(211, 47, 47, 0.7)',
+              '&:hover': {
+                borderColor: 'rgba(211, 47, 47, 0.9)',
+                backgroundColor: 'rgba(211, 47, 47, 0.08)'
+              }
+            }}
             size="small"
           >
             Remove File
@@ -164,24 +206,24 @@ const PdfUploader: React.FC<PdfUploaderProps> = ({
             sx={{
               p: 3,
               border: '2px dashed',
-              borderColor: isDragActive ? 'primary.main' : 'divider',
+              borderColor: isDragActive ? 'rgba(136, 212, 152, 0.9)' : 'rgba(255, 255, 255, 0.23)',
               borderRadius: 2,
-              backgroundColor: isDragActive ? 'rgba(76, 175, 80, 0.04)' : 'background.paper',
+              backgroundColor: isDragActive ? 'rgba(26, 147, 111, 0.08)' : 'rgba(33, 33, 33, 0.95)',
               textAlign: 'center',
               cursor: 'pointer',
               transition: 'all 0.3s ease',
               '&:hover': {
-                borderColor: 'primary.main',
-                backgroundColor: 'rgba(76, 175, 80, 0.04)'
+                borderColor: 'rgba(136, 212, 152, 0.9)',
+                backgroundColor: 'rgba(26, 147, 111, 0.08)'
               }
             }}
           >
             <input {...getInputProps()} />
             <CloudUploadIcon 
-              color="primary" 
               sx={{ 
                 fontSize: 48, 
                 mb: 2,
+                color: 'rgba(136, 212, 152, 0.9)',
                 animation: isDragActive ? 'pulse 1.5s infinite' : 'none',
                 '@keyframes pulse': {
                   '0%': { transform: 'scale(1)' },
@@ -190,42 +232,73 @@ const PdfUploader: React.FC<PdfUploaderProps> = ({
                 }
               }} 
             />
-            <Typography variant="h6" gutterBottom>
+            <Typography variant="h6" gutterBottom sx={textStyles.heading}>
               {isDragActive
                 ? "Drop the PDF here"
                 : "Drag & drop your SAT Score Report"}
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" sx={textStyles.secondary}>
               or click to select a file
             </Typography>
-            <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+            <Typography variant="caption" display="block" sx={{ mt: 1, ...textStyles.secondary }}>
               PDF only, max 10MB
             </Typography>
           </Paper>
           
           {file && (
-            <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Box sx={{ 
+              mt: 2, 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'space-between',
+              p: 2,
+              backgroundColor: 'rgba(33, 33, 33, 0.8)',
+              borderRadius: 1
+            }}>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <PictureAsPdfIcon color="primary" sx={{ mr: 1 }} />
-                <Typography variant="body2" noWrap sx={{ maxWidth: 200 }}>
+                <PictureAsPdfIcon sx={{ mr: 1, color: 'rgba(136, 212, 152, 0.9)' }} />
+                <Typography variant="body2" noWrap sx={{ maxWidth: 200, ...textStyles.body }}>
                   {file.name}
                 </Typography>
               </Box>
               <Box>
                 <Button
                   variant="contained"
-                  color="primary"
                   onClick={handleUpload}
                   disabled={uploading || !file}
-                  sx={{ mr: 1 }}
+                  sx={{ 
+                    mr: 1,
+                    background: 'linear-gradient(90deg, #1a936f 0%, #114b5f 100%)',
+                    color: 'rgba(255, 255, 255, 0.95)',
+                    fontWeight: 500,
+                    '&:hover': {
+                      background: 'linear-gradient(90deg, #114b5f 0%, #1a936f 100%)',
+                      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)'
+                    },
+                    '&.Mui-disabled': {
+                      background: 'rgba(136, 212, 152, 0.2)',
+                      color: 'rgba(255, 255, 255, 0.38)'
+                    }
+                  }}
                 >
-                  {uploading ? <CircularProgress size={24} /> : 'Upload'}
+                  {uploading ? <CircularProgress size={24} sx={{ color: 'rgba(255, 255, 255, 0.87)' }} /> : 'Upload'}
                 </Button>
                 <Button
                   variant="outlined"
-                  color="error"
                   onClick={handleRemove}
                   disabled={uploading}
+                  sx={{
+                    color: 'rgba(255, 255, 255, 0.87)',
+                    borderColor: 'rgba(211, 47, 47, 0.7)',
+                    '&:hover': {
+                      borderColor: 'rgba(211, 47, 47, 0.9)',
+                      backgroundColor: 'rgba(211, 47, 47, 0.08)'
+                    },
+                    '&.Mui-disabled': {
+                      borderColor: 'rgba(255, 255, 255, 0.12)',
+                      color: 'rgba(255, 255, 255, 0.38)'
+                    }
+                  }}
                 >
                   Remove
                 </Button>
@@ -234,15 +307,22 @@ const PdfUploader: React.FC<PdfUploaderProps> = ({
           )}
           
           {uploadError && (
-            <Alert severity="error" sx={{ mt: 2 }}>
+            <Alert 
+              severity="error" 
+              sx={{ 
+                mt: 2, 
+                backgroundColor: 'rgba(211, 47, 47, 0.15)', 
+                color: 'rgba(255, 255, 255, 0.87)'
+              }}
+            >
               {uploadError}
             </Alert>
           )}
           
           {extractingText && (
             <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
-              <CircularProgress size={20} sx={{ mr: 1 }} />
-              <Typography variant="body2">
+              <CircularProgress size={20} sx={{ mr: 1, color: 'rgba(136, 212, 152, 0.9)' }} />
+              <Typography variant="body2" sx={textStyles.body}>
                 Extracting text from PDF...
               </Typography>
             </Box>
