@@ -1,4 +1,4 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo } from 'react';
 import { Box, Typography, Paper, useTheme } from '@mui/material';
 import { useSpring, animated, config, useSprings } from 'react-spring';
 
@@ -25,54 +25,34 @@ interface Point {
   y: number;
 }
 
-interface Branch {
-  id: string;
-  start: Point;
-  end: Point;
-  control1: Point;
-  control2: Point;
-  thickness: number;
-  angle: number;
-  level: number;
-  skillsInCategory: Skill[];
-  masteryRatio: number;
-  subBranches: Branch[]; // Kept for potential future expansion, but not used in this style
-  foliagePads: FoliagePad[];
-}
-
-interface FoliagePad {
+// Simplified structure - focusing on trunk and foliage pads
+interface FoliagePadElement {
   id: string;
   cx: number;
   cy: number;
   rx: number;
   ry: number;
   rotation: number;
-  color: string;
-  elements: FoliageElement[]; // Multiple ellipses for a fuller look
+  // Elements for gradient/layering
+  layers: {
+    color: string;
+    opacity: number;
+    scale: number; // To create inner layers
+  }[];
 }
 
-interface FoliageElement {
-  id: string;
-  cx: number;
-  cy: number;
-  rx: number;
-  ry: number;
-  color: string;
-  opacity: number;
-}
-
-// Color palette matching the image
-const TRUNK_COLOR = '#6A4A3C'; // A richer, slightly desaturated brown
-const BRANCH_COLOR = '#7B584A';
-const LEAF_MASTERED_COLOR = '#2A603B'; // Darker, more saturated green
-const LEAF_IN_PROGRESS_COLOR = '#4CAF50'; // Brighter, but still natural green
-const LEAF_LOW_PROGRESS_COLOR = '#7DB080'; // Paler green for low mastery
-const POT_COLOR_BODY = '#8A7967'; // Muted brownish-gray
-const POT_COLOR_RIM = '#9C8B7A';
-const POT_FEET_COLOR = '#796A5B';
+// New Color Palette based on the target image
+const TRUNK_COLOR = '#604E43'; 
+const FOLIAGE_HIGHLIGHT_COLOR = '#A1D490';
+const FOLIAGE_SHADE_COLOR = '#7CAC6C'; 
+const POT_COLOR = '#8D7B6F';
 
 const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
-  const theme = useTheme();
+  const theme = useTheme(); // Keep for potential future use or if other elements need it
+
+  // Define SVG dimensions at the component level
+  const svgWidth = 300;
+  const svgHeight = 350; // Adjusted height for the new design
 
   const masteredSkillsCount = useMemo(() => {
     return skills.filter(skill => skill.mastered).length;
@@ -92,222 +72,161 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
 
   const treeElements = useMemo(() => {
     const categories = Object.keys(skillsByCategory);
-    let numCategories = categories.length;
-    if (numCategories === 0) return { trunkPath: '', branches: [], pot: { body: '', rim: '', feet: [] } };
+    let numFoliagePads = clamp(categories.length, 1, 3); // 1 to 3 main pads
+    if (skills.length === 0) numFoliagePads = 1; // Default to one pad if no skills
 
-    // Limit to max 3-4 main foliage areas for the target image style
-    const MAX_MAIN_FOLIAGE_AREAS = 3;
-    const visibleCategories = categories.slice(0, MAX_MAIN_FOLIAGE_AREAS);
-    numCategories = visibleCategories.length;
+    // Pot - Lower, wider, shallower
+    const potHeight = 35;
+    const potWidth = 120;
+    const potY = svgHeight - potHeight - 5; // 5 for feet clearance
+    const potFeetHeight = 5;
+    const potFeetWidth = 15;
+    const potPath = `M${svgWidth/2 - potWidth/2},${potY} h${potWidth} v${potHeight} h-${potWidth} Z`;
+    const potFeet = [
+      `M${svgWidth/2 - potWidth/2 + 10},${potY + potHeight} h${potFeetWidth} v${potFeetHeight} h-${potFeetWidth} Z`,
+      `M${svgWidth/2 + potWidth/2 - 10 - potFeetWidth},${potY + potHeight} h${potFeetWidth} v${potFeetHeight} h-${potFeetWidth} Z`,
+    ];
 
-    const svgWidth = 300;
-    const svgHeight = 400;
-    const potBaseY = svgHeight - 30; // Leave space for feet
-    const potBodyHeight = 40;
-    const potRimHeight = 10;
-    const potWidth = 130;
-    const potFeetHeight = 8;
-    const potFeetWidth = 20;
+    // Trunk - Single graceful curve, leaning
+    const trunkBaseWidth = clamp(18 + overallMasteryRatio * 12, 15, 30);
+    const trunkTopWidth = trunkBaseWidth * 0.5;
+    const trunkHeight = clamp(90 + overallMasteryRatio * 40, 70, 130);
+    
+    const trunkStartX = svgWidth / 2;
+    const trunkStartY = potY;
+    const trunkEndX = trunkStartX + randRange(15, 30) * (Math.random() > 0.5 ? 1 : -1); // Lean
+    const trunkEndY = trunkStartY - trunkHeight;
 
-    const pot = {
-      body: `M${svgWidth/2 - potWidth/2},${potBaseY} L${svgWidth/2 - potWidth/2 + 15},${potBaseY - potBodyHeight} L${svgWidth/2 + potWidth/2 - 15},${potBaseY - potBodyHeight} L${svgWidth/2 + potWidth/2},${potBaseY} Z`,
-      rim: `M${svgWidth/2 - potWidth/2 + 10},${potBaseY - potBodyHeight} Q${svgWidth/2},${potBaseY - potBodyHeight - potRimHeight} ${svgWidth/2 + potWidth/2 - 10},${potBaseY - potBodyHeight} H${svgWidth/2 - potWidth/2 + 10} Z`,
-      feet: [
-        `M${svgWidth/2 - potWidth/2 + 15},${potBaseY} h${potFeetWidth} v${potFeetHeight} h-${potFeetWidth} Z`,
-        `M${svgWidth/2 + potWidth/2 - 15 - potFeetWidth},${potBaseY} h${potFeetWidth} v${potFeetHeight} h-${potFeetWidth} Z`,
-      ]
-    };
+    // Control points for a C-like curve
+    const cp1X = trunkStartX + (trunkEndX - trunkStartX) * 0.1 + randRange(-20, 20);
+    const cp1Y = trunkStartY - trunkHeight * 0.3;
+    const cp2X = trunkStartX + (trunkEndX - trunkStartX) * 0.9 + randRange(-15, 15);
+    const cp2Y = trunkStartY - trunkHeight * 0.8;
 
-    const trunkStartPoint: Point = { x: svgWidth / 2, y: potBaseY - potBodyHeight - potRimHeight / 2 };    
-    const trunkBaseActualHeight = clamp(120 + overallMasteryRatio * 60, 100, 180);
-    const trunkTopPoint: Point = { x: trunkStartPoint.x + randRange(-10, 10), y: trunkStartPoint.y - trunkBaseActualHeight }; // Slight lean at top
-    const trunkWidthAtBase = clamp(25 + overallMasteryRatio * 20, 20, 45);
-    const trunkWidthAtTop = clamp(trunkWidthAtBase * 0.5, 10, trunkWidthAtBase * 0.7);
+    // Path for tapering trunk
+    const trunkPath = `
+      M ${trunkStartX - trunkBaseWidth / 2}, ${trunkStartY}
+      C ${cp1X - trunkBaseWidth * 0.4}, ${cp1Y},
+        ${cp2X - trunkTopWidth * 0.6}, ${cp2Y},
+        ${trunkEndX - trunkTopWidth / 2}, ${trunkEndY}
+      L ${trunkEndX + trunkTopWidth / 2}, ${trunkEndY}
+      C ${cp2X + trunkTopWidth * 0.6}, ${cp2Y},
+        ${cp1X + trunkBaseWidth * 0.4}, ${cp1Y},
+        ${trunkStartX + trunkBaseWidth / 2}, ${trunkStartY}
+      Z
+    `;
 
-    // S-curve trunk design
-    const controlPoint1X = trunkStartPoint.x + randRange(20, 40) * (Math.random() > 0.5 ? 1 : -1);
-    const controlPoint1Y = trunkStartPoint.y - trunkBaseActualHeight * 0.3;
-    const controlPoint2X = trunkTopPoint.x + randRange(15, 30) * (Math.random() > 0.5 ? 1 : -1);
-    const controlPoint2Y = trunkStartPoint.y - trunkBaseActualHeight * 0.7;
+    const foliagePads: FoliagePadElement[] = [];
+    const padBaseSize = clamp(40 + overallMasteryRatio * 20, 35, 60);
 
-    const trunkPath = `M ${trunkStartPoint.x - trunkWidthAtBase/2}, ${trunkStartPoint.y}
-      C ${controlPoint1X - trunkWidthAtBase*0.4}, ${controlPoint1Y},
-        ${controlPoint2X - trunkWidthAtTop*0.6}, ${controlPoint2Y},
-        ${trunkTopPoint.x - trunkWidthAtTop/2}, ${trunkTopPoint.y}
-      L ${trunkTopPoint.x + trunkWidthAtTop/2}, ${trunkTopPoint.y}
-      C ${controlPoint2X + trunkWidthAtTop*0.6}, ${controlPoint2Y},
-        ${controlPoint1X + trunkWidthAtBase*0.4}, ${controlPoint1Y},
-        ${trunkStartPoint.x + trunkWidthAtBase/2}, ${trunkStartPoint.y} Z`;
+    // Define points along the trunk curve where foliage pads can be placed
+    // Simple approach: divide trunk height into sections
+    const numPadAttachmentPoints = numFoliagePads;
+    const attachmentPoints: Point[] = [];
+    for (let i = 0; i < numPadAttachmentPoints; i++) {
+        const t = (i + 1) / (numPadAttachmentPoints + 1); // Distribute along 0.25 to 0.75 of trunk height approx.
+        // Calculate point on Bezier curve (simplified for this example)
+        // A proper calculation would use the Bezier formula based on t
+        const pX = lerp(lerp(cp1X, cp2X, t), lerp(trunkStartX, trunkEndX, t), t) + randRange(-10,10) ;
+        const pY = lerp(lerp(cp1Y, cp2Y, t), lerp(trunkStartY, trunkEndY, t), t) + randRange(-15,5);
+        attachmentPoints.push({x: pX, y: pY });
+    }
+    if (numFoliagePads === 1) { // Center single pad more towards the top
+        attachmentPoints[0] = {x: trunkEndX + randRange(-5,5), y: trunkEndY + randRange(-5,10)};
+    }
 
-    const generatedBranches: Branch[] = [];
-    const branchAngles = numCategories === 1 ? [-Math.PI/2] :
-                         numCategories === 2 ? [-Math.PI/2 - 0.8, -Math.PI/2 + 0.8] :
-                         [-Math.PI/2 - 1.0, -Math.PI/2, -Math.PI/2 + 1.0]; // For 3 branches
 
-    visibleCategories.forEach((category, index) => {
-      const categorySkills = skillsByCategory[category];
-      const masteredInCategory = categorySkills.filter(s => s.mastered).length;
-      const categoryMasteryRatio = categorySkills.length > 0 ? masteredInCategory / categorySkills.length : 0;
+    for (let i = 0; i < numFoliagePads; i++) {
+      const basePoint = attachmentPoints[i % attachmentPoints.length]; // Cycle through attachment points if more pads than points
+      const padRx = padBaseSize * randRange(0.9, 1.2);
+      const padRy = padBaseSize * randRange(0.7, 1.0);
+      const rotation = randRange(-15, 15);
 
-      const angle = branchAngles[index] + randRange(-0.15, 0.15);
-      const len = clamp(50 + categorySkills.length * 5 + categoryMasteryRatio * 20, 40, 90);
-      const thick = clamp(trunkWidthAtTop * 0.6 + categoryMasteryRatio * 5, 5, trunkWidthAtTop * 0.9);
-      
-      // Branch start slightly up the trunk for visual separation
-      const branchStartRelY = trunkBaseActualHeight * (0.1 + index * 0.15); // Stagger start points
-      const bStart: Point = {
-          x: lerp(trunkStartPoint.x, trunkTopPoint.x, branchStartRelY / trunkBaseActualHeight) + randRange(-5,5) ,
-          y: trunkStartPoint.y - branchStartRelY + randRange(-5,5) ,
-      };
-      const bEnd: Point = { x: bStart.x + Math.cos(angle) * len, y: bStart.y + Math.sin(angle) * len };
-      const bCp1: Point = { x: bStart.x + Math.cos(angle + 0.5) * len * 0.4, y: bStart.y + Math.sin(angle + 0.5) * len * 0.4 };
-      const bCp2: Point = { x: bEnd.x - Math.cos(angle - 0.3) * len * 0.3, y: bEnd.y - Math.sin(angle - 0.3) * len * 0.3 };
+      // Layered effect for foliage pad
+      const layers = [
+        { color: FOLIAGE_SHADE_COLOR, opacity: 0.8, scale: 1.0 },        // Base, slightly darker
+        { color: FOLIAGE_HIGHLIGHT_COLOR, opacity: 0.85, scale: 0.85 }, // Middle highlight
+        { color: FOLIAGE_HIGHLIGHT_COLOR, opacity: 0.6, scale: 0.65 }   // Smaller, brighter highlight
+      ];
 
-      const foliagePads: FoliagePad[] = [];
-      const numPadClusters = 1; // One main pad per branch
-      for (let i = 0; i < numPadClusters; i++) {
-        const padBasePoint = bEnd; // Center pad around branch end
-        const basePadRx = clamp(25 + categorySkills.length * 2.5 + categoryMasteryRatio * 15, 20, 45);
-        const basePadRy = clamp(20 + categorySkills.length * 2 + categoryMasteryRatio * 10, 15, 35);
-        const padElements: FoliageElement[] = [];
-
-        const numEllipsesInPad = 5 + Math.floor(categoryMasteryRatio * 5); // More ellipses for higher mastery = denser
-        for (let j = 0; j < numEllipsesInPad; j++) {
-          const rx = basePadRx * randRange(0.5, 1.0);
-          const ry = basePadRy * randRange(0.5, 1.0);
-          const cx = padBasePoint.x + randRange(-basePadRx * 0.4, basePadRx * 0.4);
-          const cy = padBasePoint.y + randRange(-basePadRy * 0.4, basePadRy * 0.4);
-          
-          let color = LEAF_LOW_PROGRESS_COLOR;
-          if (categoryMasteryRatio > 0.66) color = LEAF_MASTERED_COLOR;
-          else if (categoryMasteryRatio > 0.33) color = LEAF_IN_PROGRESS_COLOR;
-
-          padElements.push({
-            id: `fe-${category}-${index}-${i}-${j}`,
-            cx, cy, rx, ry,
-            color,
-            opacity: randRange(0.6, 0.95)
-          });
-        }
-        foliagePads.push({
-          id: `pad-${category}-${index}-${i}`,
-          cx: padBasePoint.x, cy: padBasePoint.y, // These are indicative, actual shape from elements
-          rx: basePadRx, ry: basePadRy,          // These are indicative
-          rotation: randRange(-10, 10),
-          color: 'transparent', // Pad container is transparent, elements have color
-          elements: padElements
-        });
-      }
-
-      generatedBranches.push({
-        id: `branch-${category}-${index}`, start: bStart, end: bEnd, control1: bCp1, control2: bCp2,
-        thickness: thick, angle, level: 0, skillsInCategory: categorySkills,
-        masteryRatio: categoryMasteryRatio, subBranches: [], foliagePads
+      foliagePads.push({
+        id: `foliage-${i}`,
+        cx: basePoint.x,
+        cy: basePoint.y,
+        rx: padRx,
+        ry: padRy,
+        rotation,
+        layers
       });
-    });
-    return { trunkPath, branches: generatedBranches, pot };
-  }, [skillsByCategory, overallMasteryRatio, theme.palette.grey]);
+    }
 
-  // Create all animations at the top level
-  const containerAnimation = useSpring({ opacity: 1, from: { opacity: 0 }, config: config.molasses });
-  const potAnimation = useSpring({ 
-    opacity: 1, 
-    transform: 'scale(1)', 
-    from: { opacity: 0, transform: 'scale(0.8)' }, 
-    config: config.gentle, 
-    delay: 200 
-  });
+    return { potPath, potFeet, trunkPath, foliagePads };
+
+  }, [skillsByCategory, overallMasteryRatio, skills.length, svgWidth, svgHeight]);
+
+  // Animations
+  const containerAnimation = useSpring({ opacity: 1, from: { opacity: 0 }, config: {...config.gentle, duration: 500} });
+  const potAnim = useSpring({ opacity: 1, transform: 'translateY(0px)', from: { opacity: 0, transform: 'translateY(20px)' }, delay: 100, config: config.gentle });
+  const trunkAnim = useSpring({ opacity: 1, transform: 'scaleY(1)', from: { opacity: 0, transform: 'scaleY(0.5)' }, delay: 250, config: config.gentle, transformOrigin: 'bottom' });
   
-  const trunkAnimation = useSpring({ 
-    opacity: 1, 
-    transform: 'scale(1)', 
-    from: { opacity: 0, transform: 'scale(0.8)' }, 
-    config: config.gentle, 
-    delay: 400 
-  });
-  
-  // Use useSprings for branch animations
-  const branchAnimations = useSprings(
-    treeElements.branches.length, // Number of springs
-    treeElements.branches.map((branch, index) => ({ // Array of spring props
-      opacity: 1, 
-      transform: 'scale(1)', 
-      from: { opacity: 0, transform: 'scale(0.8)' }, 
-      config: config.gentle, 
-      delay: 600 + index * 200
+  const foliageAnims = useSprings(
+    treeElements.foliagePads.length,
+    treeElements.foliagePads.map((pad, i) => ({
+      opacity: 1,
+      transform: 'scale(1)',
+      from: { opacity: 0, transform: 'scale(0.5)' },
+      delay: 400 + i * 150,
+      config: config.wobbly,
     }))
   );
 
   return (
     <animated.div style={containerAnimation}>
-      <Paper elevation={0} sx={{ p: 3, mb: 4, borderRadius: '20px', backgroundColor: '#f7f7f7' }}>
-        <Typography variant="h5" gutterBottom align="center" sx={{ fontWeight: 'bold', color: '#555' }}>
-          Your Growth Tree
+      <Paper elevation={0} sx={{ p: 3, mb: 4, borderRadius: '20px', backgroundColor: '#f0f2f5' /* Slightly lighter bg */ }}>
+        <Typography variant="h5" gutterBottom align="center" sx={{ fontWeight: 'bold', color: '#444' }}>
+          Your Learning Bonsai
         </Typography>
-        <Box sx={{ width: '100%', height: 350, position: 'relative', mt: 2 }}>
-          <svg width="100%" height="100%" viewBox="0 0 300 400" style={{ overflow: 'visible' }}>
-            <defs>
-              <linearGradient id="trunkStrokeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor={TRUNK_COLOR} />
-                <stop offset="50%" stopColor={TRUNK_COLOR} />
-                <stop offset="100%" stopColor={TRUNK_COLOR} />
-              </linearGradient>
-               <filter id="subtleShadow" x="-50%" y="-50%" width="200%" height="200%">
-                <feDropShadow dx="1" dy="2" stdDeviation="1" floodColor="#000" floodOpacity="0.2"/>
-              </filter>
-            </defs>
-
+        <Box sx={{ width: '100%', height: 300 /* Adjusted height */, position: 'relative', mt: 2 }}>
+          <svg width="100%" height="100%" viewBox={`0 0 ${svgWidth} ${svgHeight}`} style={{ overflow: 'visible' }}>
             {/* Pot */}
-            <animated.g style={potAnimation}>
-              <path d={treeElements.pot.body} fill={POT_COLOR_BODY} filter="url(#subtleShadow)"/>
-              <path d={treeElements.pot.rim} fill={POT_COLOR_RIM} />
-              {treeElements.pot.feet.map((footPath, i) => (
-                <path key={`pot-foot-${i}`} d={footPath} fill={POT_FEET_COLOR} />
+            <animated.g style={potAnim}>
+              <path d={treeElements.potPath} fill={POT_COLOR} />
+              {treeElements.potFeet.map((footPath, i) => (
+                <path key={`pot-foot-${i}`} d={footPath} fill={POT_COLOR} />
               ))}
             </animated.g>
 
             {/* Trunk */}
             <animated.path
               d={treeElements.trunkPath}
-              fill="url(#trunkStrokeGradient)" // Using the solid color gradient for fill
-              stroke={TRUNK_COLOR} // Stroke for definition
-              strokeWidth="1.5"
-              style={trunkAnimation}
-              filter="url(#subtleShadow)"
+              fill={TRUNK_COLOR}
+              style={trunkAnim}
             />
             
-            {treeElements.branches.map((branch, branchIndex) => (
-              <animated.g key={branch.id} style={branchAnimations[branchIndex]}>
-                <path 
-                  d={`M ${branch.start.x} ${branch.start.y} C ${branch.control1.x} ${branch.control1.y}, ${branch.control2.x} ${branch.control2.y}, ${branch.end.x} ${branch.end.y}`}
-                  stroke={BRANCH_COLOR}
-                  strokeWidth={branch.thickness}
-                  fill="none"
-                  strokeLinecap="round"
-                  filter="url(#subtleShadow)"
-                />
-                {branch.foliagePads.map(pad => (
-                  <g key={pad.id} transform={`rotate(${pad.rotation} ${pad.cx} ${pad.cy})`}>
-                    {pad.elements.map(el => (
-                      <ellipse
-                        key={el.id}
-                        cx={el.cx}
-                        cy={el.cy}
-                        rx={el.rx}
-                        ry={el.ry}
-                        fill={el.color}
-                        opacity={el.opacity}
-                        filter="url(#subtleShadow)"
-                      />
-                    ))}
-                  </g>
+            {/* Foliage Pads */}
+            {treeElements.foliagePads.map((pad, index) => (
+              <animated.g 
+                key={pad.id} 
+                style={foliageAnims[index]} 
+                transform={`translate(${pad.cx} ${pad.cy}) rotate(${pad.rotation})`}
+              >
+                {pad.layers.map((layer, layerIndex) => (
+                  <ellipse
+                    key={`${pad.id}-layer-${layerIndex}`}
+                    cx={0} // Relative to the g transform
+                    cy={0} // Relative to the g transform
+                    rx={pad.rx * layer.scale}
+                    ry={pad.ry * layer.scale}
+                    fill={layer.color}
+                    opacity={layer.opacity}
+                  />
                 ))}
               </animated.g>
             ))}
           </svg>
         </Box>
-        <Typography variant="body1" align="center" sx={{ mt: 3, color: '#666' }}>
-          You've mastered {masteredSkillsCount} skills so far! Keep growing!
+        <Typography variant="body1" align="center" sx={{ mt: 3, color: '#555' }}>
+          {masteredSkillsCount} of {totalSkills} Skills Mastered. Keep growing!
         </Typography>
       </Paper>
     </animated.div>
