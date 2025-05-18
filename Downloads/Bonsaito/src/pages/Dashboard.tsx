@@ -749,7 +749,7 @@ const Dashboard: React.FC = () => {
                               '100%': { opacity: 0.5, transform: 'scale(1)' }
                             }
                           }} />
-                          <BonsaiTree skills={skills} totalSkills={totalSkills} showGrowthAnimation={false} />
+                          <BonsaiTree skills={skills} totalSkills={totalSkills} />
                         </Box>
                         
                         <Box sx={{ 
@@ -973,7 +973,7 @@ const Dashboard: React.FC = () => {
                         filter: 'blur(3px)',
                       }
                     }}>
-                      <BonsaiTree skills={skills} totalSkills={totalSkills} showGrowthAnimation={showTreeAnimation} />
+                      <BonsaiTree skills={skills} totalSkills={totalSkills} />
                     </Box>
                     
                     <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center', gap: 2 }}>
