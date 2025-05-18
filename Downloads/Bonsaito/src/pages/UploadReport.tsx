@@ -458,11 +458,31 @@ const UploadReport: React.FC = () => {
                           )}
                           
                           {question.explanation && (
-                            <Box sx={{ mt: 2, p: 2, bgcolor: 'info.light', borderRadius: 1 }}>
-                              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: 'info.dark' }}>
+                            <Box sx={{ 
+                              mt: 2, 
+                              p: 2, 
+                              bgcolor: 'rgba(247, 247, 247, 0.9)', 
+                              borderRadius: 1.5,
+                              border: '1px solid',
+                              borderColor: 'grey.200',
+                              boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                              position: 'relative',
+                              '&::before': {
+                                content: '""',
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                width: '4px',
+                                height: '100%',
+                                backgroundColor: 'primary.main',
+                                borderTopLeftRadius: 4,
+                                borderBottomLeftRadius: 4
+                              }
+                            }}>
+                              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: 'text.primary', mb: 0.5 }}>
                                 Explanation:
                               </Typography>
-                              <Typography variant="body2" sx={{ color: 'info.dark', whiteSpace: 'pre-wrap' }}>
+                              <Typography variant="body2" sx={{ color: 'text.secondary', whiteSpace: 'pre-wrap' }}>
                                 {question.explanation}
                               </Typography>
                             </Box>
