@@ -29,9 +29,10 @@ interface QuizResponse {
 
 interface SkillQuizProps {
   onComplete: (results: { skillId: string; score: number }[]) => void;
+  onClose: () => void;
 }
 
-const SkillQuiz: React.FC<SkillQuizProps> = ({ onComplete }) => {
+const SkillQuiz: React.FC<SkillQuizProps> = ({ onComplete, onClose }) => {
   const { skills, updateSkillProgress } = useSkills();
   const [quizQuestions, setQuizQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);

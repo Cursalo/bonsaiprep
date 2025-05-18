@@ -144,6 +144,7 @@ export const ProgressAnimation: React.FC<{
 export const StaggeredList: React.FC<{
   children: ReactNode[];
   staggerDelay?: number;
+  index?: number;
 }> = ({ children, staggerDelay = 100 }) => {
   return (
     <>
