@@ -46,8 +46,8 @@ interface SATTestData {
 
 // Use environment variable for API key but rename it to be more generic
 const ANALYSIS_API_KEY = process.env.REACT_APP_GEMINI_API_KEY;
-// Update the API URL to use gemini-2.0-flash model to match geminiPdfService
-const ANALYSIS_API_URL = process.env.REACT_APP_GEMINI_API_URL || "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+// Update the API URL to use gemini-1.5-flash-latest model to match geminiPdfService
+const ANALYSIS_API_URL = process.env.REACT_APP_GEMINI_API_URL || "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent";
 
 // Function to simulate processing delay
 const addProcessingDelay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));

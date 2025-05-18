@@ -198,8 +198,8 @@ const UploadReport: React.FC = () => {
           setGeneratedQuestions(questions);
           setActiveStep(3);
         } else {
-          // For PDF files, now process directly with Gemini 2.0 Flash
-          setLoadingMessage('Processing PDF with Gemini 2.0 Flash...');
+          // For PDF files, now process directly with Gemini 1.5 Flash
+          setLoadingMessage('Processing PDF with Gemini 1.5 Flash...');
           
           // We'll upload the file to Supabase for tracking/storage purposes
           const { storagePath } = await uploadFileToSupabase(file, 'score-reports', { publicAccess: false });
@@ -517,7 +517,7 @@ const UploadReport: React.FC = () => {
                   <Typography variant="h6">Drag 'n' drop a file here, or click to select file</Typography>
                 )}
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                  (PDF files are now processed directly with Gemini 2.0 Flash)
+                  (PDF files are now processed directly with Gemini 1.5 Flash)
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
                   (Max file size: 10MB. Supported formats: PDF, TXT)

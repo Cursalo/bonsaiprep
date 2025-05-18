@@ -45,8 +45,8 @@ interface SATTestData {
 }
 
 const ANALYSIS_API_KEY = process.env.REACT_APP_GEMINI_API_KEY;
-// Update to use Gemini 2.0 Flash model which is optimized for document processing
-const ANALYSIS_API_URL = process.env.REACT_APP_GEMINI_API_URL || "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+// Update to use Gemini 1.5 Flash model which is optimized for document processing and file uploads
+const ANALYSIS_API_URL = process.env.REACT_APP_GEMINI_API_URL || "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent";
 
 const addProcessingDelay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
