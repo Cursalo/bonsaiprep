@@ -197,7 +197,7 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundImage: 'url(/altar.png)',
+            backgroundImage: 'url(/altar2.png)',
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             opacity: 0.85,
