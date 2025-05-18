@@ -1,6 +1,6 @@
 import React, { useMemo, useRef } from 'react';
 import { Box, Typography, Paper, useTheme } from '@mui/material';
-import { useSpring, animated, config } from 'react-spring';
+import { useSpring, animated, config, useSprings } from 'react-spring';
 
 // Helper functions
 const lerp = (a: number, b: number, t: number): number => a * (1 - t) + b * t;
@@ -226,15 +226,16 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
     delay: 400 
   });
   
-  // Pre-calculate branch animations for each branch
-  const branchAnimations = treeElements.branches.map((branch, index) => 
-    useSpring({
+  // Use useSprings for branch animations
+  const branchAnimations = useSprings(
+    treeElements.branches.length, // Number of springs
+    treeElements.branches.map((branch, index) => ({ // Array of spring props
       opacity: 1, 
       transform: 'scale(1)', 
       from: { opacity: 0, transform: 'scale(0.8)' }, 
       config: config.gentle, 
       delay: 600 + index * 200
-    })
+    }))
   );
 
   return (
