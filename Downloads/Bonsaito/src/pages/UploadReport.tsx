@@ -10,10 +10,14 @@ import {
   Toolbar,
   IconButton,
   CircularProgress,
-  Alert
+  Alert,
+  Tabs,
+  Tab,
+  TextField
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import TextFieldsIcon from '@mui/icons-material/TextFields';
 import { useDropzone } from 'react-dropzone';
 import { uploadFileToSupabase, ocrPdfFromSupabase } from '../services/ocrService'; 
 import { generateQuestionsFromMistakes, GeneratedQuestion } from '../services/aiService';
@@ -27,6 +31,8 @@ const UploadReport: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [loadingMessage, setLoadingMessage] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
+  const [inputMethod, setInputMethod] = useState<string>('file'); // 'file' or 'text'
+  const [pastedText, setPastedText] = useState<string>('');
 
   const handleDrawerToggle = () => {
     setDrawerOpen(!drawerOpen);
@@ -35,11 +41,14 @@ const UploadReport: React.FC = () => {
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles && acceptedFiles.length > 0) {
       const file = acceptedFiles[0];
-      if (file.type !== 'application/pdf') {
-        setError('Invalid file type. Please upload a PDF.');
+      const validFileTypes = ['application/pdf', 'text/plain'];
+      
+      if (!validFileTypes.includes(file.type)) {
+        setError('Invalid file type. Please upload a PDF or TXT file.');
         setUploadedFile(null);
         return;
       }
+      
       setUploadedFile(file);
       setError(null);
       setExtractedText(null);
@@ -54,26 +63,34 @@ const UploadReport: React.FC = () => {
           return;
         }
 
-        setLoadingMessage('Uploading PDF to secure storage...');
-        // You might want to make this public if your OCR function needs a public URL
-        // and your bucket policies allow. Otherwise, pass storagePath.
-        const { storagePath, publicUrl } = await uploadFileToSupabase(file, 'score-reports', { publicAccess: false });
-        console.log('File uploaded:', { storagePath, publicUrl });
+        // Handle differently based on file type
+        if (file.type === 'text/plain') {
+          // For text files, read the content directly
+          setLoadingMessage('Reading text file content...');
+          const text = await file.text();
+          setExtractedText(text);
+          
+          setLoadingMessage('Generating practice questions with AI...');
+          const questions = await generateQuestionsFromMistakes(text);
+          setGeneratedQuestions(questions);
+        } else {
+          // PDF processing flow
+          setLoadingMessage('Uploading PDF to secure storage...');
+          const { storagePath, publicUrl } = await uploadFileToSupabase(file, 'score-reports', { publicAccess: false });
+          console.log('File uploaded:', { storagePath, publicUrl });
 
-        setLoadingMessage('Extracting text from PDF (OCR process)... This may take a moment.');
-        // Use publicUrl if available and preferred by your OCR function, otherwise storagePath
-        const text = await ocrPdfFromSupabase(publicUrl, storagePath);
-        setExtractedText(text);
-        console.log('Text extracted:', text.substring(0, 100) + '...');
-        
-        setLoadingMessage('Generating practice questions with AI...');
-        const questions = await generateQuestionsFromMistakes(text);
-        setGeneratedQuestions(questions);
-        console.log('Questions generated:', questions);
-
+          setLoadingMessage('Extracting text from PDF (OCR process)... This may take a moment.');
+          const text = await ocrPdfFromSupabase(publicUrl, storagePath);
+          setExtractedText(text);
+          console.log('Text extracted:', text.substring(0, 100) + '...');
+          
+          setLoadingMessage('Generating practice questions with AI...');
+          const questions = await generateQuestionsFromMistakes(text);
+          setGeneratedQuestions(questions);
+        }
       } catch (err: any) {
         console.error("Error processing file:", err);
-        setError(`Failed to process the PDF: ${err.message || 'Unknown error'}. Check console for details.`);
+        setError(`Failed to process the file: ${err.message || 'Unknown error'}. Check console for details.`);
       } finally {
         setIsLoading(false);
         setLoadingMessage('');
@@ -81,11 +98,60 @@ const UploadReport: React.FC = () => {
     }
   }, []);
 
+  const handleTextSubmit = async () => {
+    if (!pastedText.trim()) {
+      setError('Please paste some text before submitting.');
+      return;
+    }
+
+    setError(null);
+    setExtractedText(null);
+    setGeneratedQuestions([]);
+    setIsLoading(true);
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setError('No active session. Please log in again.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Process the pasted text directly
+      setLoadingMessage('Processing your text input...');
+      setExtractedText(pastedText);
+      
+      setLoadingMessage('Generating practice questions with AI...');
+      const questions = await generateQuestionsFromMistakes(pastedText);
+      setGeneratedQuestions(questions);
+    } catch (err: any) {
+      console.error("Error processing text:", err);
+      setError(`Failed to process text: ${err.message || 'Unknown error'}. Check console for details.`);
+    } finally {
+      setIsLoading(false);
+      setLoadingMessage('');
+    }
+  };
+
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: { 'application/pdf': ['.pdf'] },
-    multiple: false
+    accept: { 
+      'application/pdf': ['.pdf'],
+      'text/plain': ['.txt']
+    },
+    multiple: false,
+    disabled: isLoading || inputMethod === 'text'
   });
+
+  const handleInputMethodChange = (_event: React.SyntheticEvent, newValue: string) => {
+    setInputMethod(newValue);
+    // Reset state when changing methods
+    setError(null);
+    setUploadedFile(null);
+    setPastedText('');
+    setExtractedText(null);
+    setGeneratedQuestions([]);
+  };
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
@@ -111,37 +177,76 @@ const UploadReport: React.FC = () => {
           Upload Your SAT Practice Report
         </Typography>
         <Typography variant="subtitle1" align="center" color="text.secondary" paragraph>
-          Upload your PDF score report to get personalized lessons and practice questions.
+          Upload your report or paste text to get personalized lessons and practice questions.
         </Typography>
 
-        <Paper
-          {...getRootProps()}
-          elevation={3}
-          sx={{
-            p: 4,
-            mt: 3,
-            textAlign: 'center',
-            border: isDragActive ? '2px dashed primary.main' : '2px dashed grey.500',
-            backgroundColor: isDragActive ? 'action.hover' : 'background.paper',
-            cursor: 'pointer',
-            minHeight: 200,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
-        >
-          <input {...getInputProps()} />
-          <CloudUploadIcon sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
-          {isDragActive ? (
-            <Typography variant="h6">Drop the PDF here ...</Typography>
-          ) : (
-            <Typography variant="h6">Drag 'n' drop a PDF file here, or click to select file</Typography>
-          )}
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            (Max file size: 10MB. Supported format: PDF)
-          </Typography>
-        </Paper>
+        <Box sx={{ width: '100%', mb: 3 }}>
+          <Tabs
+            value={inputMethod}
+            onChange={handleInputMethodChange}
+            centered
+            indicatorColor="primary"
+            textColor="primary"
+          >
+            <Tab value="file" label="Upload File" icon={<CloudUploadIcon />} iconPosition="start" />
+            <Tab value="text" label="Paste Text" icon={<TextFieldsIcon />} iconPosition="start" />
+          </Tabs>
+        </Box>
+
+        {inputMethod === 'file' ? (
+          <Paper
+            {...getRootProps()}
+            elevation={3}
+            sx={{
+              p: 4,
+              mt: 3,
+              textAlign: 'center',
+              border: isDragActive ? '2px dashed primary.main' : '2px dashed grey.500',
+              backgroundColor: isDragActive ? 'action.hover' : 'background.paper',
+              cursor: 'pointer',
+              minHeight: 200,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            <input {...getInputProps()} />
+            <CloudUploadIcon sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
+            {isDragActive ? (
+              <Typography variant="h6">Drop the file here ...</Typography>
+            ) : (
+              <Typography variant="h6">Drag 'n' drop a file here, or click to select file</Typography>
+            )}
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              (Max file size: 10MB. Supported formats: PDF, TXT)
+            </Typography>
+          </Paper>
+        ) : (
+          <Paper elevation={3} sx={{ p: 4, mt: 3 }}>
+            <Typography variant="h6" gutterBottom>Paste Your SAT Report Text</Typography>
+            <TextField
+              fullWidth
+              multiline
+              rows={10}
+              variant="outlined"
+              placeholder="Paste the content of your SAT report here..."
+              value={pastedText}
+              onChange={(e) => setPastedText(e.target.value)}
+              disabled={isLoading}
+              sx={{ mb: 2 }}
+            />
+            <Button 
+              variant="contained" 
+              color="primary" 
+              onClick={handleTextSubmit}
+              disabled={!pastedText.trim() || isLoading}
+              fullWidth
+            >
+              Process Text
+            </Button>
+          </Paper>
+        )}
 
         {error && (
           <Alert severity="error" sx={{ mt: 2 }}>
@@ -149,7 +254,7 @@ const UploadReport: React.FC = () => {
           </Alert>
         )}
 
-        {uploadedFile && !error && !isLoading && (
+        {uploadedFile && inputMethod === 'file' && !error && !isLoading && (
           <Paper elevation={1} sx={{ p: 2, mt: 3 }}>
             <Typography variant="h6">Uploaded File:</Typography>
             <Typography>{uploadedFile.name} ({Math.round(uploadedFile.size / 1024)} KB)</Typography>
@@ -165,7 +270,7 @@ const UploadReport: React.FC = () => {
 
         {extractedText && !isLoading && (
           <Paper elevation={1} sx={{ p: 2, mt: 3 }}>
-            <Typography variant="h6">Extracted Text (Preview from OCR):</Typography>
+            <Typography variant="h6">Extracted Text (Preview):</Typography>
             <Typography variant="body2" sx={{ maxHeight: 150, overflowY: 'auto', whiteSpace: 'pre-wrap', backgroundColor: 'grey.100', p:1, borderRadius:1 }}>
               {extractedText}
             </Typography>
