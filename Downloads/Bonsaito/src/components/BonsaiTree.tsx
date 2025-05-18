@@ -52,6 +52,7 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
   const theme = useTheme();
   const [correctAnswersCount, setCorrectAnswersCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [imageError, setImageError] = useState(false);
 
   // Determine which bonsai image to show (1.png to 11.png)
   const getBonsaiImageNumber = () => {
@@ -64,7 +65,11 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
   };
 
   const bonsaiImageNumber = getBonsaiImageNumber();
-  const bonsaiImagePath = `/bonsaipng/${bonsaiImageNumber}.png`;
+  // Use process.env.PUBLIC_URL to ensure correct path resolution
+  const bonsaiImagePath = `${process.env.PUBLIC_URL}/bonsaipng/${bonsaiImageNumber}.png`;
+
+  // Log the image path for debugging
+  console.log('Loading bonsai image:', bonsaiImagePath);
 
   // Animations
   const containerAnimation = useSpring({ 
@@ -106,6 +111,7 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
 
         // Calculate how many questions were answered correctly
         const correctAnswers = data ? data.filter(q => q.correct === true).length : 0;
+        console.log('Correct answers:', correctAnswers);
         setCorrectAnswersCount(correctAnswers);
       } catch (error) {
         console.error('Error fetching user progress:', error);
@@ -117,87 +123,100 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
     fetchUserProgress();
   }, []);
 
+  const handleImageError = () => {
+    console.error(`Failed to load image: ${bonsaiImagePath}`);
+    setImageError(true);
+  };
+
   return (
     <animated.div style={containerAnimation}>
-      <Paper 
-        elevation={0} 
+      <Box 
         sx={{ 
-          p: 3, 
-          mb: 4, 
-          borderRadius: '20px',
-          backgroundColor: 'transparent',
+          width: '100%',
           position: 'relative',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundImage: 'url(/altar2.png)',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            opacity: 0.85,
-            borderRadius: '20px',
-            zIndex: 0,
-          }
+          borderRadius: '20px',
+          overflow: 'hidden',
+          aspectRatio: '16/9',
+          backgroundImage: 'url(/altar2.png)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
         }}
       >
-        <Box sx={{ position: 'relative', zIndex: 1 }}>
-          <Typography 
-            variant="h5" 
-            gutterBottom 
-            align="center" 
-            sx={{ 
-              fontWeight: 'bold', 
-              color: '#2C1810',
-              textShadow: '0 2px 4px rgba(0,0,0,0.1)',
-              mb: 3
-            }}
-          >
-            Your Learning Bonsai
-          </Typography>
-          
-          <Box sx={{ 
-            width: '100%', 
-            height: 450, 
+        <Paper 
+          elevation={0} 
+          sx={{ 
+            p: 3, 
+            borderRadius: '20px',
+            backgroundColor: 'transparent',
+            height: '100%',
+            width: '100%',
             position: 'relative',
-            mt: 2,
             display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            flexDirection: 'column'
-          }}>
-            <animated.div style={imageAnimation}>
-              <Box 
-                component="img" 
-                src={bonsaiImagePath}
-                alt={`Bonsai tree growth stage ${bonsaiImageNumber}`}
-                sx={{
-                  maxWidth: '100%',
-                  height: 'auto',
-                  maxHeight: 350,
-                  filter: 'drop-shadow(0px 5px 15px rgba(0,0,0,0.3))',
-                }}
-              />
-            </animated.div>
-            
+            flexDirection: 'column',
+          }}
+        >
+          <Box sx={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
             <Typography 
-              variant="body1" 
+              variant="h5" 
+              gutterBottom 
               align="center" 
               sx={{ 
-                mt: 3, 
-                fontWeight: 'medium',
+                fontWeight: 'bold', 
                 color: '#2C1810',
+                textShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                mb: 3
               }}
             >
-              {correctAnswersCount === 0 
-                ? "Complete practice questions to grow your bonsai!" 
-                : `You've answered ${correctAnswersCount} question${correctAnswersCount === 1 ? '' : 's'} correctly!`}
+              Your Learning Bonsai
             </Typography>
+            
+            <Box sx={{ 
+              flexGrow: 1,
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              flexDirection: 'column',
+              position: 'relative',
+            }}>
+              <animated.div style={imageAnimation}>
+                {!imageError ? (
+                  <Box 
+                    component="img" 
+                    src={bonsaiImagePath}
+                    alt={`Bonsai tree growth stage ${bonsaiImageNumber}`}
+                    onError={handleImageError}
+                    sx={{ 
+                      maxWidth: '80%',
+                      height: 'auto',
+                      maxHeight: '70%',
+                      filter: 'drop-shadow(0px 5px 15px rgba(0,0,0,0.3))',
+                      objectFit: 'contain',
+                      display: 'block',
+                      margin: '0 auto',
+                    }}
+                  />
+                ) : (
+                  <Typography color="error">Image failed to load</Typography>
+                )}
+              </animated.div>
+              
+              <Typography 
+                variant="body1" 
+                align="center" 
+                sx={{ 
+                  mt: 3, 
+                  fontWeight: 'medium',
+                  color: '#2C1810',
+                }}
+              >
+                {correctAnswersCount === 0 
+                  ? "Complete practice questions to grow your bonsai!" 
+                  : `You've answered ${correctAnswersCount} question${correctAnswersCount === 1 ? '' : 's'} correctly!`}
+              </Typography>
+            </Box>
           </Box>
-        </Box>
-      </Paper>
+        </Paper>
+      </Box>
     </animated.div>
   );
 };
