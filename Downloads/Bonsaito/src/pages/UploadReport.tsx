@@ -50,7 +50,7 @@ import { uploadFileToSupabase } from '../services/ocrService';
 import { generateQuestionsFromMistakes, GeneratedQuestion } from '../services/geminiPdfService';
 import { supabase } from '../supabaseClient';
 import { useSkills } from '../components/SkillsProvider';
-import { DotLottieReact } from '@lottiefiles/dotlottie-react';
+import LoadingAnimation from '../components/LoadingAnimation';
 
 // Define an interface for user answers
 interface StudentAnswers {
@@ -198,8 +198,8 @@ const UploadReport: React.FC = () => {
           setGeneratedQuestions(questions);
           setActiveStep(3);
         } else {
-          // For PDF files, now process directly with Gemini 2.5 Flash
-          setLoadingMessage('Processing PDF with Gemini 2.5 Flash...');
+          // For PDF files, now process directly with Gemini 2.0 Flash
+          setLoadingMessage('Processing PDF with Gemini 2.0 Flash...');
           
           // We'll upload the file to Supabase for tracking/storage purposes
           const { storagePath } = await uploadFileToSupabase(file, 'score-reports', { publicAccess: false });
@@ -212,7 +212,7 @@ const UploadReport: React.FC = () => {
           setActiveStep(2);
           setLoadingMessage('Analyzing PDF and generating personalized questions...');
           
-          // Generate questions directly from the PDF file using Gemini 2.5 Flash
+          // Generate questions directly from the PDF file using Gemini 2.0 Flash
           await addProcessingDelay(15000);
           const questions = await generateQuestionsFromMistakes(file);
           setGeneratedQuestions(questions);
@@ -517,7 +517,7 @@ const UploadReport: React.FC = () => {
                   <Typography variant="h6">Drag 'n' drop a file here, or click to select file</Typography>
                 )}
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                  (PDF files are now processed directly with Gemini 2.5 Flash)
+                  (PDF files are now processed directly with Gemini 2.0 Flash)
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
                   (Max file size: 10MB. Supported formats: PDF, TXT)
@@ -567,25 +567,11 @@ const UploadReport: React.FC = () => {
         )}
 
         {isLoading && (
-          <Box 
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: 4,
-            }}
-          >
-            <DotLottieReact
-              src="https://lottie.host/d2496ec5-3972-45c9-8e12-74123f42fa49/GGA5w0BWEP.lottie"
-              loop
-              autoplay
-              style={{ width: 280, height: 280 }}
-            />
-            <Typography variant="h6" mt={2} align="center">
-              {loadingMessage || 'Processing...'}
-            </Typography>
-          </Box>
+          <LoadingAnimation
+            message={loadingMessage || 'Processing...'}
+            width={280}
+            height={280}
+          />
         )}
 
         {extractedText && !isLoading && activeStep === 2 && (

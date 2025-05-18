@@ -4,6 +4,7 @@ import { useDropzone } from 'react-dropzone';
 import { BarLoader } from 'react-spinners';
 import { toast } from 'react-toastify';
 import { generateQuestionsFromMistakes } from '../services/geminiPdfService';
+import LoadingAnimation from './LoadingAnimation';
 
 interface User {
   id: string;
@@ -223,16 +224,14 @@ const UploadReport: React.FC<UploadReportProps> = ({ user }) => {
               disabled={(!file && inputMethod === 'file') || (!pastedText && inputMethod === 'text') || uploading || generatingQuestions}
               className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
             >
-              {uploading ? (
-                <>
-                  <BarLoader color="#ffffff" height={4} width={100} className="mr-2"/>
-                  Processing...
-                </>
-              ) : generatingQuestions ? (
-                <>
-                  <BarLoader color="#ffffff" height={4} width={100} className="mr-2"/>
-                  Generating questions...
-                </>
+              {uploading || generatingQuestions ? (
+                <div className="flex items-center justify-center w-full">
+                  <LoadingAnimation 
+                    message={uploading ? "Processing..." : "Generating questions..."} 
+                    width={60} 
+                    height={60} 
+                  />
+                </div>
               ) : (
                 'Process Report'
               )}
