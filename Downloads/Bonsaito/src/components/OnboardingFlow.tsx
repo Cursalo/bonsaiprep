@@ -32,6 +32,7 @@ import PdfUploader from './PdfUploader';
 import SubscriptionPlans from './SubscriptionPlans';
 import { generateQuestionsFromMistakes } from '../services/geminiPdfService';
 import { toast } from 'react-toastify';
+import { createTheme, ThemeProvider } from '@mui/material/styles';
 
 // Country data with flags (simplified version for this example)
 const countries = [
@@ -109,6 +110,34 @@ const gradients = [
   'linear-gradient(135deg, #0c3b2e 0%, #18514a 100%)', // Step 9 (Subscription)
 ];
 
+// Custom styles for better text readability based on dark theme best practices
+const textStyles = {
+  heading: {
+    color: 'rgba(255, 255, 255, 0.87)', // High-emphasis text at 87% opacity
+    textShadow: '0 1px 2px rgba(0,0,0,0.2)'
+  },
+  subheading: {
+    color: 'rgba(255, 255, 255, 0.87)', // High-emphasis text at 87% opacity
+    opacity: 0.9
+  },
+  body: {
+    color: 'rgba(255, 255, 255, 0.7)' // Medium-emphasis text at 70% opacity
+  },
+  label: {
+    color: 'rgba(255, 255, 255, 0.87)',  // High-emphasis text at 87% opacity
+    fontWeight: 500
+  },
+  secondary: {
+    color: 'rgba(255, 255, 255, 0.6)' // Secondary text at 60% opacity
+  },
+  disabled: {
+    color: 'rgba(255, 255, 255, 0.38)' // Disabled text at 38% opacity
+  },
+  accent: {
+    color: 'rgba(136, 212, 152, 0.9)' // Desaturated accent color
+  }
+};
+
 const OnboardingFlow: React.FC = () => {
   const navigate = useNavigate();
   const [activeStep, setActiveStep] = useState(0);
@@ -116,25 +145,6 @@ const OnboardingFlow: React.FC = () => {
   const [cities, setCities] = useState<string[]>([]);
   const [direction, setDirection] = useState<'forward' | 'backward'>('forward');
   const [processingReport, setProcessingReport] = useState(false);
-  
-  // Custom styles for better text readability
-  const textStyles = {
-    heading: {
-      color: '#f8f9fa',
-      textShadow: '0 1px 2px rgba(0,0,0,0.2)'
-    },
-    subheading: {
-      color: '#f8f9fa',
-      opacity: 0.9
-    },
-    body: {
-      color: '#dae1e7'
-    },
-    label: {
-      color: '#f8f9fa',
-      fontWeight: 500
-    }
-  };
   
   // Form data
   const [data, setData] = useState<OnboardingData>({
@@ -174,6 +184,61 @@ const OnboardingFlow: React.FC = () => {
       transform: 'translateX(0px)' 
     },
     config: { tension: 280, friction: 60 }
+  });
+
+  // Create a theme override for form inputs to ensure proper contrast
+  const darkTheme = createTheme({
+    palette: {
+      mode: 'dark',
+      primary: {
+        main: 'rgba(136, 212, 152, 0.9)',
+      },
+      text: {
+        primary: 'rgba(255, 255, 255, 0.87)',
+        secondary: 'rgba(255, 255, 255, 0.6)',
+      },
+      background: {
+        paper: 'rgba(30, 30, 30, 0.8)',
+        default: 'rgba(18, 18, 18, 0.95)',
+      },
+    },
+    components: {
+      MuiInputBase: {
+        styleOverrides: {
+          input: {
+            color: 'rgba(255, 255, 255, 0.87)',
+          },
+          root: {
+            backgroundColor: 'rgba(30, 30, 30, 0.4)',
+          }
+        },
+      },
+      MuiOutlinedInput: {
+        styleOverrides: {
+          root: {
+            '&:hover .MuiOutlinedInput-notchedOutline': {
+              borderColor: 'rgba(136, 212, 152, 0.5)',
+            },
+            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+              borderColor: 'rgba(136, 212, 152, 0.8)',
+            },
+          },
+          notchedOutline: {
+            borderColor: 'rgba(255, 255, 255, 0.23)',
+          },
+        },
+      },
+      MuiFormLabel: {
+        styleOverrides: {
+          root: {
+            color: 'rgba(255, 255, 255, 0.6)',
+            '&.Mui-focused': {
+              color: 'rgba(136, 212, 152, 0.8)',
+            },
+          },
+        },
+      },
+    },
   });
 
   // Load saved progress from localStorage
@@ -748,29 +813,35 @@ const OnboardingFlow: React.FC = () => {
               </Typography>
               <Box
                 sx={{
-                  border: '2px dashed #88d498',
+                  border: '2px dashed rgba(136, 212, 152, 0.6)',
                   borderRadius: 2,
                   p: 3,
                   textAlign: 'center',
                   cursor: 'pointer',
-                  background: 'rgba(12, 59, 46, 0.4)',
+                  background: 'rgba(18, 18, 18, 0.4)', // Using recommended dark theme surface color
                   '&:hover': {
-                    borderColor: '#88d498',
-                    background: 'rgba(12, 59, 46, 0.6)'
+                    borderColor: 'rgba(136, 212, 152, 0.8)',
+                    background: 'rgba(30, 58, 52, 0.4)' // Slightly lighter on hover
                   }
                 }}
                 {...getRootProps()}
               >
                 <input {...getInputProps()} />
-                <CloudUploadIcon fontSize="large" sx={{ color: '#88d498', mb: 2 }} />
+                <CloudUploadIcon fontSize="large" sx={{ color: 'rgba(136, 212, 152, 0.8)', mb: 2 }} />
                 <Typography variant="body1" gutterBottom sx={textStyles.body}>
                   Drag & drop a PDF file here, or click to select a file
                 </Typography>
-                <Typography variant="body2" sx={{ ...textStyles.body, opacity: 0.8 }}>
+                <Typography variant="body2" sx={textStyles.secondary}>
                   Supports PDF files only
                 </Typography>
                 {data.scoreReportFile && (
-                  <Box sx={{ mt: 2, p: 1, bgcolor: 'rgba(136, 212, 152, 0.1)', borderRadius: 1 }}>
+                  <Box sx={{ 
+                    mt: 2, 
+                    p: 1, 
+                    bgcolor: 'rgba(30, 58, 52, 0.4)', 
+                    borderRadius: 1,
+                    border: '1px solid rgba(136, 212, 152, 0.3)'
+                  }}>
                     <Typography variant="body2" sx={textStyles.body}>
                       Selected: {data.scoreReportFile.name}
                     </Typography>
@@ -780,8 +851,8 @@ const OnboardingFlow: React.FC = () => {
             </Grid>
             {processingReport && (
               <Grid item xs={12} sx={{ textAlign: 'center', mt: 2 }}>
-                <CircularProgress size={30} sx={{ color: '#88d498' }} />
-                <Typography variant="body2" sx={{ ...textStyles.body, mt: 1 }}>
+                <CircularProgress size={30} sx={{ color: 'rgba(136, 212, 152, 0.8)' }} />
+                <Typography variant="body2" sx={textStyles.secondary}>
                   Processing your report to generate personalized practice questions...
                 </Typography>
               </Grid>
@@ -803,7 +874,7 @@ const OnboardingFlow: React.FC = () => {
             <Grid item xs={12}>
               <Paper elevation={2} sx={{ 
                 p: 3, 
-                background: 'rgba(12, 59, 46, 0.6)',
+                background: 'rgba(24, 24, 24, 0.7)', // Slightly lighter than the main surface for elevation
                 boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
                 borderRadius: 2
               }}>
@@ -843,8 +914,8 @@ const OnboardingFlow: React.FC = () => {
                         p: 2, 
                         maxHeight: '100px', 
                         overflow: 'auto',
-                        background: 'rgba(12, 59, 46, 0.8)',
-                        borderColor: 'rgba(136, 212, 152, 0.3)'
+                        background: 'rgba(30, 30, 30, 0.8)', // Even lighter surface for nested elevation
+                        borderColor: 'rgba(136, 212, 152, 0.2)'
                       }}>
                         <Typography variant="body2" sx={{ 
                           whiteSpace: 'pre-wrap',
@@ -906,7 +977,7 @@ const OnboardingFlow: React.FC = () => {
   // Background style for current step
   const getBackgroundStyle = () => {
     return {
-      background: 'linear-gradient(135deg, #0c3b2e 0%, #18514a 100%)',
+      background: 'linear-gradient(135deg, #121212 0%, #1e3a34 100%)', // Using recommended dark theme surface color
       backgroundSize: '200% 200%',
       animation: 'gradient 15s ease infinite',
       height: '100%',
@@ -931,11 +1002,11 @@ const OnboardingFlow: React.FC = () => {
           alignItems: 'center', 
           justifyContent: 'center',
           minHeight: '100vh',
-          background: 'linear-gradient(135deg, #0c3b2e 0%, #18514a 100%)'
+          background: 'linear-gradient(135deg, #121212 0%, #1e3a34 100%)' // Using recommended dark theme surface color
         }}
       >
-        <CircularProgress size={60} sx={{ color: '#88d498' }} />
-        <Typography variant="h6" sx={{ mt: 3, color: '#f8f9fa' }}>
+        <CircularProgress size={60} sx={{ color: 'rgba(136, 212, 152, 0.9)' }} />
+        <Typography variant="h6" sx={{ mt: 3, ...textStyles.heading }}>
           Saving your information and preparing your custom experience...
         </Typography>
       </Box>
@@ -943,107 +1014,109 @@ const OnboardingFlow: React.FC = () => {
   }
 
   return (
-    <Box sx={getBackgroundStyle()}>
-      <Container maxWidth="md" sx={{ py: 8 }}>
-        <Paper 
-          elevation={3} 
-          sx={{ 
-            p: { xs: 2, sm: 4 }, 
-            borderRadius: 2, 
-            background: 'rgba(12, 59, 46, 0.9)',
-            backdropFilter: 'blur(10px)',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-            color: '#f8f9fa'
-          }}
-        >
-          <Stepper 
-            activeStep={activeStep} 
-            alternativeLabel
-            sx={{ mb: 4, display: { xs: 'none', md: 'flex' } }}
+    <ThemeProvider theme={darkTheme}>
+      <Box sx={getBackgroundStyle()}>
+        <Container maxWidth="md" sx={{ py: 8 }}>
+          <Paper 
+            elevation={3} 
+            sx={{ 
+              p: { xs: 2, sm: 4 }, 
+              borderRadius: 2, 
+              background: 'rgba(33, 33, 33, 0.95)',
+              backdropFilter: 'blur(10px)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+              color: 'rgba(255, 255, 255, 0.87)'
+            }}
           >
-            {steps.map((label: string) => (
-              <Step key={label}>
-                <StepLabel>{label}</StepLabel>
-              </Step>
-            ))}
-          </Stepper>
-          
-          {/* Mobile stepper status */}
-          <Box sx={{ mb: 4, display: { xs: 'block', md: 'none' }, textAlign: 'center' }}>
-            <Typography variant="body2" sx={textStyles.body}>
-              Step {activeStep + 1} of {steps.length}: {steps[activeStep]}
-            </Typography>
-          </Box>
-          
-          <animated.div style={fadeProps}>
-            <Box sx={{ minHeight: '300px', mb: 4 }}>
-              {getStepContent()}
-            </Box>
-          </animated.div>
-          
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', pt: 2 }}>
-            <Button
-              color="inherit"
-              disabled={activeStep === 0}
-              onClick={handleBack}
-              startIcon={<ArrowBackIcon />}
-              sx={{ 
-                color: '#f8f9fa',
-                '&:hover': {
-                  backgroundColor: 'rgba(255, 255, 255, 0.08)'
-                }
-              }}
-              style={{ opacity: activeStep === 0 ? 0 : 1 }}
+            <Stepper 
+              activeStep={activeStep} 
+              alternativeLabel
+              sx={{ mb: 4, display: { xs: 'none', md: 'flex' } }}
             >
-              Back
-            </Button>
+              {steps.map((label: string) => (
+                <Step key={label}>
+                  <StepLabel>{label}</StepLabel>
+                </Step>
+              ))}
+            </Stepper>
             
-            {activeStep === steps.length - 1 ? (
-              <Button 
-                variant="contained" 
-                onClick={handleSubmit}
-                endIcon={<CheckCircleOutlineIcon />}
-                sx={{
-                  background: 'linear-gradient(90deg, #1a936f 0%, #114b5f 100%)',
-                  color: '#ffffff',
-                  fontWeight: 600,
-                  padding: '10px 24px',
+            {/* Mobile stepper status */}
+            <Box sx={{ mb: 4, display: { xs: 'block', md: 'none' }, textAlign: 'center' }}>
+              <Typography variant="body2" sx={textStyles.body}>
+                Step {activeStep + 1} of {steps.length}: {steps[activeStep]}
+              </Typography>
+            </Box>
+            
+            <animated.div style={fadeProps}>
+              <Box sx={{ minHeight: '300px', mb: 4 }}>
+                {getStepContent()}
+              </Box>
+            </animated.div>
+            
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', pt: 2 }}>
+              <Button
+                color="inherit"
+                disabled={activeStep === 0}
+                onClick={handleBack}
+                startIcon={<ArrowBackIcon />}
+                sx={{ 
+                  color: 'rgba(255, 255, 255, 0.87)',
                   '&:hover': {
-                    background: 'linear-gradient(90deg, #114b5f 0%, #1a936f 100%)',
-                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)'
+                    backgroundColor: 'rgba(255, 255, 255, 0.08)'
                   }
                 }}
+                style={{ opacity: activeStep === 0 ? 0 : 1 }}
               >
-                Complete & Go to Dashboard
+                Back
               </Button>
-            ) : (
-              <Button 
-                variant="contained"
-                onClick={handleNext}
-                endIcon={<ArrowForwardIcon />}
-                disabled={activeStep === 6 && processingReport}
-                sx={{
-                  background: 'linear-gradient(90deg, #1a936f 0%, #114b5f 100%)',
-                  color: '#ffffff',
-                  fontWeight: 600,
-                  padding: '10px 24px',
-                  '&:hover': {
-                    background: 'linear-gradient(90deg, #114b5f 0%, #1a936f 100%)',
-                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)'
-                  },
-                  '&.Mui-disabled': {
-                    background: 'rgba(136, 212, 152, 0.2)',
-                    color: 'rgba(255, 255, 255, 0.4)'
-                  }
-                }}
-              >
-                Next
-              </Button>
-            )}
-          </Box>
-        </Paper>
-      </Container>
-    </Box>
+              
+              {activeStep === steps.length - 1 ? (
+                <Button 
+                  variant="contained" 
+                  onClick={handleSubmit}
+                  endIcon={<CheckCircleOutlineIcon />}
+                  sx={{
+                    background: 'linear-gradient(90deg, #1a936f 0%, #114b5f 100%)',
+                    color: 'rgba(255, 255, 255, 0.95)',
+                    fontWeight: 500,
+                    padding: '10px 24px',
+                    '&:hover': {
+                      background: 'linear-gradient(90deg, #114b5f 0%, #1a936f 100%)',
+                      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)'
+                    }
+                  }}
+                >
+                  Complete & Go to Dashboard
+                </Button>
+              ) : (
+                <Button 
+                  variant="contained"
+                  onClick={handleNext}
+                  endIcon={<ArrowForwardIcon />}
+                  disabled={activeStep === 6 && processingReport}
+                  sx={{
+                    background: 'linear-gradient(90deg, #1a936f 0%, #114b5f 100%)',
+                    color: 'rgba(255, 255, 255, 0.95)',
+                    fontWeight: 500,
+                    padding: '10px 24px',
+                    '&:hover': {
+                      background: 'linear-gradient(90deg, #114b5f 0%, #1a936f 100%)',
+                      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)'
+                    },
+                    '&.Mui-disabled': {
+                      background: 'rgba(136, 212, 152, 0.2)',
+                      color: 'rgba(255, 255, 255, 0.38)'
+                    }
+                  }}
+                >
+                  Next
+                </Button>
+              )}
+            </Box>
+          </Paper>
+        </Container>
+      </Box>
+    </ThemeProvider>
   );
 };
 
