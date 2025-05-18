@@ -40,6 +40,7 @@ interface Branch {
   level: number;
   skills: Skill[];
   subBranches: Branch[];
+  gradientId: string;
 }
 
 interface LeafCoordinates {
@@ -280,7 +281,8 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills, showGrowth
         masteryRatio: categoryMasteryRatio,
         level: 0,
         skills: [],
-        subBranches: []
+        subBranches: [],
+        gradientId: `branch-${i}-gradient`,
       };
       
       // Generate sub-branches
@@ -384,7 +386,8 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills, showGrowth
         masteryRatio: branchMasteryRatio,
         level,
         skills: branchSkills,
-        subBranches: []
+        subBranches: [],
+        gradientId: `${parentBranch.id}-sub-${i}-gradient`,
       };
       
       // Generate further sub-branches if we haven't reached max level
@@ -576,20 +579,10 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills, showGrowth
       y: baseY,
       size,
       // Add angle information for leaf orientation
-      angle: Math.atan2(perpY, perpX) + (side * Math.PI / 8),
+      angle: Math.atan2(perpY, perpX) + (side * Math.PI / 8) + randRange(-Math.PI / 16, Math.PI / 16),
       isRecentlyMastered: recentlyMastered.includes(skill.id) && skill.mastered,
       hue
     };
-  };
-  
-  // SVG path for leaf shape instead of circles
-  const getLeafPath = (x: number, y: number, size: number, angle: number) => {
-    // Rotate the leaf to point in the correct direction
-    return `
-      <g transform="translate(${x}, ${y}) rotate(${angle * 180 / Math.PI}) scale(${size / 10})">
-        <path d="M0,0 C1,-3 3,-5 5,-5 C8,-5 10,-2 10,2 C10,5 8,8 5,8 C2,8 0,5 0,3 C0,5 -2,8 -5,8 C-8,8 -10,5 -10,2 C-10,-2 -8,-5 -5,-5 C-3,-5 -1,-3 0,0 Z" />
-      </g>
-    `;
   };
   
   // Animation update
@@ -993,10 +986,10 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills, showGrowth
                 <animated.path
                   id="tree-trunk"
                   d={`
-                    M${150 - treeVitality.trunkWidth * 0.25}, 385
-                    C${150 - treeVitality.trunkWidth * 0.3}, ${385 - treeVitality.trunkHeight * 0.3}
-                     ${150 - treeVitality.trunkWidth * 0.1}, ${385 - treeVitality.trunkHeight * 0.7}
-                     ${150}, ${385 - treeVitality.trunkHeight}
+                    M${150 - treeVitality.trunkWidth * 0.4}, 385
+                    C${150 - treeVitality.trunkWidth * 0.5}, ${385 - treeVitality.trunkHeight * 0.3}
+                     ${150 + treeVitality.trunkWidth * 0.2}, ${385 - treeVitality.trunkHeight * 0.7}
+                     150, ${385 - treeVitality.trunkHeight}
                   `}
                   fill="none"
                   stroke="url(#trunkGradient)"
@@ -1005,21 +998,6 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills, showGrowth
                   style={trunkProps}
                 />
                 
-                {/* Secondary smaller trunk for more realism */}
-                <animated.path
-                  d={`
-                    M${150 + treeVitality.trunkWidth * 0.15}, 385
-                    C${150 + treeVitality.trunkWidth * 0.2}, ${385 - treeVitality.trunkHeight * 0.25}
-                     ${150 + treeVitality.trunkWidth * 0.05}, ${385 - treeVitality.trunkHeight * 0.5}
-                     ${150 + treeVitality.trunkWidth * 0.05}, ${385 - treeVitality.trunkHeight * 0.65}
-                  `}
-                  fill="none"
-                  stroke="url(#trunkGradient)"
-                  strokeWidth={treeVitality.trunkWidth * 0.6}
-                  strokeLinecap="round"
-                  style={trunkProps}
-                />
-              
                 {/* Branches */}
                 {renderBranches(mainBranches)}
               </g>
