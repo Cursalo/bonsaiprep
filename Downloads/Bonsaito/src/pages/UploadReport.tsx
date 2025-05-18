@@ -26,7 +26,12 @@ import {
   useMediaQuery,
   Accordion,
   AccordionSummary,
-  AccordionDetails
+  AccordionDetails,
+  RadioGroup,
+  Radio,
+  FormControlLabel,
+  Collapse,
+  Fade
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
@@ -34,10 +39,16 @@ import TextFieldsIcon from '@mui/icons-material/TextFields';
 import SchoolIcon from '@mui/icons-material/School';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CancelIcon from '@mui/icons-material/Cancel';
 import { useDropzone } from 'react-dropzone';
 import { uploadFileToSupabase, ocrPdfFromSupabase } from '../services/ocrService'; 
 import { generateQuestionsFromMistakes, GeneratedQuestion } from '../services/aiService';
 import { supabase } from '../supabaseClient';
+
+// Define an interface for user answers
+interface StudentAnswers {
+  [questionId: string]: string;
+}
 
 const UploadReport: React.FC = () => {
   const theme = useTheme();
@@ -54,6 +65,10 @@ const UploadReport: React.FC = () => {
   const [pastedText, setPastedText] = useState<string>('');
   const [activeStep, setActiveStep] = useState<number>(0);
   const [apiKeyMissing, setApiKeyMissing] = useState<boolean>(!process.env.REACT_APP_GEMINI_API_KEY);
+  
+  // New state for tracking student answers and showing explanations
+  const [studentAnswers, setStudentAnswers] = useState<StudentAnswers>({});
+  const [showExplanations, setShowExplanations] = useState<{[key: string]: boolean}>({});
   
   // Group questions by topic for better organization
   const questionsByTopic = React.useMemo(() => {
@@ -203,6 +218,39 @@ const UploadReport: React.FC = () => {
       case 'hard': return theme.palette.error.main;
       default: return theme.palette.info.main;
     }
+  };
+
+  // Handle student answer selection
+  const handleAnswerSelect = (questionId: string, answer: string) => {
+    setStudentAnswers(prev => ({
+      ...prev,
+      [questionId]: answer
+    }));
+  };
+
+  // Check if an answer is correct and reveal explanation
+  const checkAnswer = (questionId: string) => {
+    setShowExplanations(prev => ({
+      ...prev,
+      [questionId]: true
+    }));
+  };
+
+  // Reset a question to try again
+  const resetQuestion = (questionId: string) => {
+    const newAnswers = {...studentAnswers};
+    delete newAnswers[questionId];
+    setStudentAnswers(newAnswers);
+    
+    setShowExplanations(prev => ({
+      ...prev,
+      [questionId]: false
+    }));
+  };
+
+  // Function to determine if a student's answer is correct
+  const isAnswerCorrect = (question: GeneratedQuestion, studentAnswer: string) => {
+    return studentAnswer === question.answer;
   };
 
   return (
@@ -432,60 +480,127 @@ const UploadReport: React.FC = () => {
                           
                           {question.options && (
                             <Box sx={{ ml: 2, mb: 2 }}>
-                              {question.options.map((opt, i) => (
-                                <Box 
-                                  key={i} 
-                                  sx={{ 
-                                    p: 1.5, 
-                                    mb: 1, 
-                                    borderRadius: 1, 
-                                    border: '1px solid',
-                                    borderColor: 'divider',
-                                    bgcolor: question.answer === opt || question.answer === String.fromCharCode(65 + i) ? 'rgba(76, 175, 80, 0.12)' : 'transparent',
-                                    display: 'flex',
-                                    alignItems: 'center'
-                                  }}
-                                >
-                                  <Typography variant="body1" sx={{ fontWeight: question.answer === opt || question.answer === String.fromCharCode(65 + i) ? 'bold' : 'normal' }}>
-                                    {String.fromCharCode(65 + i)}. {opt}
-                                  </Typography>
-                                  {(question.answer === opt || question.answer === String.fromCharCode(65 + i)) && (
-                                    <CheckCircleIcon sx={{ ml: 1, color: 'success.main' }} />
-                                  )}
-                                </Box>
-                              ))}
+                              <RadioGroup 
+                                value={studentAnswers[question.id] || ''} 
+                                onChange={(e) => handleAnswerSelect(question.id, e.target.value)}
+                              >
+                                {question.options.map((opt, i) => (
+                                  <FormControlLabel
+                                    key={i}
+                                    value={String.fromCharCode(65 + i)} // A, B, C, D...
+                                    control={<Radio />}
+                                    label={
+                                      <Box sx={{ 
+                                        display: 'flex', 
+                                        alignItems: 'center',
+                                        color: showExplanations[question.id] && 
+                                               question.answer === String.fromCharCode(65 + i) ? 
+                                               'success.main' : 'text.primary'
+                                      }}>
+                                        <Typography variant="body1">
+                                          {String.fromCharCode(65 + i)}. {opt}
+                                        </Typography>
+                                        {showExplanations[question.id] && 
+                                          question.answer === String.fromCharCode(65 + i) && 
+                                          <CheckCircleIcon sx={{ ml: 1, color: 'success.main' }} />
+                                        }
+                                      </Box>
+                                    }
+                                    sx={{ 
+                                      p: 1.5, 
+                                      mb: 1, 
+                                      borderRadius: 1, 
+                                      border: '1px solid',
+                                      borderColor: 'divider',
+                                      bgcolor: showExplanations[question.id] && 
+                                               question.answer === String.fromCharCode(65 + i) ? 
+                                               'rgba(76, 175, 80, 0.12)' : 'transparent',
+                                    }}
+                                    disabled={showExplanations[question.id]}
+                                  />
+                                ))}
+                              </RadioGroup>
                             </Box>
                           )}
                           
-                          {question.explanation && (
-                            <Box sx={{ 
-                              mt: 2, 
-                              p: 2, 
-                              bgcolor: 'rgba(247, 247, 247, 0.9)', 
-                              borderRadius: 1.5,
-                              border: '1px solid',
-                              borderColor: 'grey.200',
-                              boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                              position: 'relative',
-                              '&::before': {
-                                content: '""',
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                width: '4px',
-                                height: '100%',
-                                backgroundColor: 'primary.main',
-                                borderTopLeftRadius: 4,
-                                borderBottomLeftRadius: 4
-                              }
-                            }}>
-                              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: 'text.primary', mb: 0.5 }}>
-                                Explanation:
-                              </Typography>
-                              <Typography variant="body2" sx={{ color: 'text.secondary', whiteSpace: 'pre-wrap' }}>
-                                {question.explanation}
-                              </Typography>
-                            </Box>
+                          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+                            {studentAnswers[question.id] && !showExplanations[question.id] && (
+                              <Button 
+                                variant="contained" 
+                                color="primary" 
+                                onClick={() => checkAnswer(question.id)}
+                                sx={{ mr: 1 }}
+                              >
+                                Check Answer
+                              </Button>
+                            )}
+                            {showExplanations[question.id] && (
+                              <Button 
+                                variant="outlined" 
+                                onClick={() => resetQuestion(question.id)}
+                              >
+                                Try Again
+                              </Button>
+                            )}
+                          </Box>
+                          
+                          {showExplanations[question.id] && (
+                            <Fade in={showExplanations[question.id]} timeout={500}>
+                              <Box>
+                                <Box sx={{ display: 'flex', alignItems: 'center', mt: 2, mb: 1 }}>
+                                  {isAnswerCorrect(question, studentAnswers[question.id]) ? (
+                                    <Alert 
+                                      severity="success" 
+                                      icon={<CheckCircleIcon fontSize="inherit" />}
+                                      sx={{ width: '100%' }}
+                                    >
+                                      <Typography variant="body1" fontWeight="bold">
+                                        Correct! Well done.
+                                      </Typography>
+                                    </Alert>
+                                  ) : (
+                                    <Alert 
+                                      severity="error" 
+                                      icon={<CancelIcon fontSize="inherit" />}
+                                      sx={{ width: '100%' }}
+                                    >
+                                      <Typography variant="body1" fontWeight="bold">
+                                        Incorrect. The correct answer is {question.answer}.
+                                      </Typography>
+                                    </Alert>
+                                  )}
+                                </Box>
+                                
+                                <Box sx={{ 
+                                  mt: 2, 
+                                  p: 2, 
+                                  bgcolor: 'rgba(247, 247, 247, 0.9)', 
+                                  borderRadius: 1.5,
+                                  border: '1px solid',
+                                  borderColor: 'grey.200',
+                                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                                  position: 'relative',
+                                  '&::before': {
+                                    content: '""',
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    width: '4px',
+                                    height: '100%',
+                                    backgroundColor: 'primary.main',
+                                    borderTopLeftRadius: 4,
+                                    borderBottomLeftRadius: 4
+                                  }
+                                }}>
+                                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: 'text.primary', mb: 0.5 }}>
+                                    Explanation:
+                                  </Typography>
+                                  <Typography variant="body2" sx={{ color: 'text.secondary', whiteSpace: 'pre-wrap' }}>
+                                    {question.explanation}
+                                  </Typography>
+                                </Box>
+                              </Box>
+                            </Fade>
                           )}
                         </CardContent>
                       </Card>
@@ -517,6 +632,8 @@ const UploadReport: React.FC = () => {
                   setInputMethod('file');
                   setUploadedFile(null);
                   setPastedText('');
+                  setStudentAnswers({});
+                  setShowExplanations({});
                 }}
               >
                 Upload Another Report
