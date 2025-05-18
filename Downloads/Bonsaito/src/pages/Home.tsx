@@ -6,6 +6,7 @@ import SchoolIcon from '@mui/icons-material/School';
 import InsightsIcon from '@mui/icons-material/Insights';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import LocalFloristIcon from '@mui/icons-material/LocalFlorist';
+import bonsaiImage from '../../../bonsai1024.png'; // Added import for the new image
 
 // Import our custom components
 import GradientButton from '../components/GradientButton';
@@ -88,17 +89,7 @@ const Home: React.FC = () => {
       >
         <Toolbar>
           <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
-            <EmojiNatureIcon sx={{ mr: 2, color: '#88d498' }} />
-            <Typography 
-              variant="h6" 
-              component="div" 
-              sx={{ 
-                fontWeight: 700,
-                letterSpacing: '-0.01em'
-              }}
-            >
-              BonsaiPrep
-            </Typography>
+            <img src="/bonsaiwhitenobg.png" alt="Bonsai Prep Logo" style={{ height: '40px', marginRight: '16px' }} />
           </Box>
           
           <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
@@ -141,7 +132,7 @@ const Home: React.FC = () => {
                   textShadow: '0 2px 10px rgba(0, 0, 0, 0.2)'
                 }}
               >
-                Grow Your SAT Skills With <span style={{ color: '#88d498' }}>BonsaiPrep</span>
+                Grow Your SAT Skills With <span style={{ color: '#88d498' }}>Bonsai</span>
               </Typography>
               <Typography 
                 variant="h5" 
@@ -180,7 +171,7 @@ const Home: React.FC = () => {
             <FloatAnimation>
               <Box
                 component="img"
-                src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAwIiBoZWlnaHQ9IjUwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KIDxnPgogIDx0aXRsZT5MYXllciAxPC90aXRsZT4KICA8cmVjdCB4PSIwIiB5PSIwIiB3aWR0aD0iNTAwIiBoZWlnaHQ9IjUwMCIgaWQ9ImNhbnZhc19iYWNrZ3JvdW5kIiBmaWxsPSJub25lIi8+CiAgPGNpcmNsZSBjeD0iMjUwIiBjeT0iNDIwIiByPSI2MCIgZmlsbD0iIzFhOTM2ZiIvPgogIDxyZWN0IHg9IjIzNSIgeT0iMjAwIiB3aWR0aD0iMzAiIGhlaWdodD0iMjIwIiBmaWxsPSIjODhkNDk4Ii8+CiAgPGNpcmNsZSBjeD0iMjUwIiBjeT0iMTUwIiByPSIxMDAiIGZpbGw9IiM4OGQ0OTgiLz4KICA8Y2lyY2xlIGN4PSIyMDAiIGN5PSIxMDAiIHI9IjUwIiBmaWxsPSIjODhkNDk4Ii8+CiAgPGNpcmNsZSBjeD0iMzAwIiBjeT0iMTAwIiByPSI1MCIgZmlsbD0iIzg4ZDQ5OCIvPgogIDxjaXJjbGUgY3g9IjE1MCIgY3k9IjE1MCIgcj0iNDAiIGZpbGw9IiM4OGQ0OTgiLz4KICA8Y2lyY2xlIGN4PSIzNTAiIGN5PSIxNTAiIHI9IjQwIiBmaWxsPSIjODhkNDk4Ii8+CiA8L2c+Cjwvc3ZnPg=="
+                src="/bonsai1024.png" // Use path from public folder
                 alt="Bonsai Tree"
                 sx={{
                   width: '100%',
@@ -209,7 +200,7 @@ const Home: React.FC = () => {
               letterSpacing: '-0.02em'
             }}
           >
-            Why Choose BonsaiPrep?
+            Why Choose Bonsai?
           </Typography>
           <Typography 
             variant="h6" 
@@ -275,7 +266,7 @@ const Home: React.FC = () => {
                 Ready to grow your SAT skills?
               </Typography>
               <Typography variant="h6" sx={{ color: 'rgba(255, 255, 255, 0.8)', mb: 4, maxWidth: '800px', mx: 'auto' }}>
-                Join thousands of students who have improved their SAT scores with BonsaiPrep's unique learning approach.
+                Join thousands of students who have improved their SAT scores with Bonsai's unique learning approach.
               </Typography>
               <RouterLink to="/login" style={{ textDecoration: 'none' }}>
                 <GradientButton
@@ -305,7 +296,7 @@ const Home: React.FC = () => {
       >
         <Container>
           <Typography variant="body2" sx={{ opacity: 0.7 }}>
-            &copy; {new Date().getFullYear()} BonsaiPrep. All rights reserved.
+            &copy; {new Date().getFullYear()} Bonsai. All rights reserved.
           </Typography>
         </Container>
       </Box>
