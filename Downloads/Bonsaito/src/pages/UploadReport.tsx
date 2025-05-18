@@ -104,19 +104,28 @@ const darkTheme = createTheme({
   palette: {
     mode: 'dark',
     primary: {
-      main: 'rgba(136, 212, 152, 0.9)',
+      main: '#88d498',
     },
     secondary: {
       main: '#88d498',
     },
     background: {
       paper: 'rgba(33, 33, 33, 0.95)',
-      default: 'rgba(18, 18, 18, 0.95)',
+      default: '#121212',
     },
     text: {
       primary: 'rgba(255, 255, 255, 0.87)',
       secondary: 'rgba(255, 255, 255, 0.6)',
     },
+  },
+  typography: {
+    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+    h4: {
+      fontWeight: 600,
+    },
+    h6: {
+      fontWeight: 500,
+    }
   },
   components: {
     MuiInputBase: {
@@ -133,10 +142,10 @@ const darkTheme = createTheme({
       styleOverrides: {
         root: {
           '&:hover .MuiOutlinedInput-notchedOutline': {
-            borderColor: 'rgba(136, 212, 152, 0.5)',
+            borderColor: '#88d498',
           },
           '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-            borderColor: 'rgba(136, 212, 152, 0.8)',
+            borderColor: '#88d498',
           },
         },
         notchedOutline: {
@@ -149,7 +158,7 @@ const darkTheme = createTheme({
         root: {
           color: 'rgba(255, 255, 255, 0.6)',
           '&.Mui-focused': {
-            color: 'rgba(136, 212, 152, 0.8)',
+            color: '#88d498',
           },
         },
       },
@@ -158,6 +167,10 @@ const darkTheme = createTheme({
       styleOverrides: {
         root: {
           backgroundImage: 'none',
+          backgroundColor: 'rgba(30, 30, 30, 0.6)',
+          backdropFilter: 'blur(10px)',
+          borderRadius: 12,
+          border: '1px solid rgba(255, 255, 255, 0.1)',
         },
       },
     },
@@ -166,6 +179,72 @@ const darkTheme = createTheme({
         root: {
           background: 'rgba(24, 24, 24, 0.8)',
           backdropFilter: 'blur(10px)',
+          borderRadius: 12,
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+        },
+      },
+    },
+    MuiAppBar: {
+      styleOverrides: {
+        root: {
+          background: 'rgba(12, 59, 46, 0.8)',
+          backdropFilter: 'blur(10px)',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
+        },
+      },
+    },
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          borderRadius: 8,
+          textTransform: 'none',
+          fontWeight: 500,
+        },
+        contained: {
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+          backgroundColor: '#88d498',
+          '&:hover': {
+            backgroundColor: '#6bbb7b',
+          },
+        },
+        outlined: {
+          borderColor: '#88d498',
+          color: '#88d498',
+          '&:hover': {
+            borderColor: '#6bbb7b',
+            backgroundColor: 'rgba(136, 212, 152, 0.08)',
+          },
+        },
+      },
+    },
+    MuiTab: {
+      styleOverrides: {
+        root: {
+          textTransform: 'none',
+          fontWeight: 500,
+          '&.Mui-selected': {
+            color: '#88d498',
+          },
+        },
+      },
+    },
+    MuiTabs: {
+      styleOverrides: {
+        indicator: {
+          backgroundColor: '#88d498',
+        },
+      },
+    },
+    MuiStepIcon: {
+      styleOverrides: {
+        root: {
+          color: 'rgba(30, 30, 30, 0.8)',
+          '&.Mui-active': {
+            color: '#88d498',
+          },
+          '&.Mui-completed': {
+            color: '#6bbb7b',
+          },
         },
       },
     },
@@ -521,7 +600,7 @@ const UploadReport: React.FC = () => {
     });
   };
 
-  // Background style to match onboarding
+  // Background style with animation to match onboarding
   const getBackgroundStyle = () => {
     return {
       background: 'linear-gradient(135deg, #121212 0%, #1e3a34 100%)',
@@ -529,8 +608,6 @@ const UploadReport: React.FC = () => {
       animation: 'gradient 15s ease infinite',
       minHeight: '100vh',
       transition: 'background 0.5s ease-in-out',
-      display: 'flex',
-      flexDirection: 'column',
       '@keyframes gradient': {
         '0%': { backgroundPosition: '0% 50%' },
         '50%': { backgroundPosition: '100% 50%' },
@@ -542,11 +619,7 @@ const UploadReport: React.FC = () => {
   return (
     <ThemeProvider theme={darkTheme}>
       <Box sx={getBackgroundStyle()}>
-        <AppBar position="static" sx={{ 
-          background: 'rgba(12, 59, 46, 0.8)',
-          backdropFilter: 'blur(10px)',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)'
-        }}>
+        <AppBar position="static">
           <Toolbar>
             <IconButton
               color="inherit"
@@ -565,7 +638,6 @@ const UploadReport: React.FC = () => {
             <Avatar sx={{ 
               bgcolor: 'primary.main',
               boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
-              transition: 'all 0.3s ease'
             }}>
               {loadingUserData ? '' : userData?.firstName?.charAt(0) || 'U'}
             </Avatar>
@@ -599,47 +671,38 @@ const UploadReport: React.FC = () => {
         </AppBar>
 
         <Container maxWidth="md" sx={{ py: 4 }}>
-          <Paper 
-            elevation={3} 
-            sx={{ 
-              p: { xs: 2, sm: 4 }, 
-              borderRadius: 2, 
-              background: 'rgba(33, 33, 33, 0.95)',
-              backdropFilter: 'blur(10px)',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-              color: 'rgba(255, 255, 255, 0.87)'
-            }}
-          >
-            <Box sx={{ mb: 4, textAlign: 'center' }}>
-              <FadeIn>
-                <Typography variant="h4" gutterBottom sx={textStyles.heading}>
-                  Upload Your SAT Practice Report
-                </Typography>
-                <Typography variant="subtitle1" paragraph sx={textStyles.body}>
-                  Upload your report or paste text to get personalized lessons and practice questions
-                </Typography>
-              </FadeIn>
-            </Box>
+          <FadeIn>
+            <Typography variant="h4" gutterBottom align="center" 
+              sx={{ color: 'rgba(255, 255, 255, 0.87)', textShadow: '0 2px 4px rgba(0,0,0,0.3)', fontWeight: 'bold', mb: 2 }}>
+              Upload Your SAT Practice Report
+            </Typography>
+            <Typography variant="subtitle1" paragraph align="center" 
+              sx={{ color: 'rgba(255, 255, 255, 0.7)', mb: 4 }}>
+              Upload your report or paste text to get personalized lessons and practice questions
+            </Typography>
+          </FadeIn>
 
-            {apiKeyMissing && (
-              <Alert 
-                severity="warning" 
-                sx={{ 
-                  mb: 3, 
-                  background: 'rgba(237, 108, 2, 0.15)', 
-                  color: 'rgba(255, 255, 255, 0.87)',
-                  '& .MuiAlert-icon': {
-                    color: 'rgba(255, 167, 38, 0.9)'
-                  }
-                }}
-              >
-                <Typography variant="subtitle2" fontWeight="bold">API Key Missing</Typography>
-                <Typography variant="body2">
-                  The application is running in limited mode. Some advanced features may not be available. Please contact the administrator for full functionality.
-                </Typography>
-              </Alert>
-            )}
+          {apiKeyMissing && (
+            <Alert 
+              severity="warning" 
+              sx={{ 
+                mb: 3, 
+                background: 'rgba(237, 108, 2, 0.15)', 
+                color: 'rgba(255, 255, 255, 0.87)',
+                '& .MuiAlert-icon': {
+                  color: 'rgba(255, 167, 38, 0.9)'
+                },
+                borderRadius: 2
+              }}
+            >
+              <Typography variant="subtitle2" fontWeight="bold">API Key Missing</Typography>
+              <Typography variant="body2">
+                The application is running in limited mode. Some advanced features may not be available. Please contact the administrator for full functionality.
+              </Typography>
+            </Alert>
+          )}
 
+          <GlassCard sx={{ p: {xs: 3, md: 4}, mb: 4, backdropFilter: 'blur(10px)' }}>
             <Stepper 
               activeStep={activeStep} 
               alternativeLabel 
@@ -647,7 +710,8 @@ const UploadReport: React.FC = () => {
                 mb: 4, 
                 display: { xs: 'none', sm: 'flex' },
                 '& .MuiStepLabel-label': {
-                  color: 'rgba(255, 255, 255, 0.6)'
+                  color: 'rgba(255, 255, 255, 0.6)',
+                  mt: 1
                 },
                 '& .MuiStepLabel-active': {
                   color: 'rgba(255, 255, 255, 0.87)'
@@ -656,10 +720,13 @@ const UploadReport: React.FC = () => {
                   color: 'rgba(30, 30, 30, 0.8)'
                 },
                 '& .MuiStepIcon-active': {
-                  color: 'rgba(136, 212, 152, 0.9)'
+                  color: '#88d498'
                 },
                 '& .MuiStepIcon-completed': {
                   color: 'rgba(136, 212, 152, 0.7)'
+                },
+                '& .MuiStepConnector-line': {
+                  borderColor: 'rgba(255, 255, 255, 0.12)'
                 }
               }}
             >
@@ -679,7 +746,7 @@ const UploadReport: React.FC = () => {
             
             {/* Mobile stepper status */}
             <Box sx={{ mb: 4, display: { xs: 'block', sm: 'none' }, textAlign: 'center' }}>
-              <Typography variant="body2" sx={textStyles.body}>
+              <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
                 Step {activeStep + 1} of 4: {['Upload Report', 'Process Content', 'Extract Information', 'Generate Questions'][activeStep]}
               </Typography>
             </Box>
@@ -691,10 +758,12 @@ const UploadReport: React.FC = () => {
                 centered
                 sx={{
                   '& .MuiTabs-indicator': {
-                    backgroundColor: 'rgba(136, 212, 152, 0.9)'
+                    backgroundColor: '#88d498',
+                    height: 3
                   },
                   '& .MuiTab-root': {
                     color: 'rgba(255, 255, 255, 0.6)',
+                    fontSize: '1rem',
                     '&.Mui-selected': {
                       color: 'rgba(255, 255, 255, 0.87)'
                     }
@@ -728,9 +797,10 @@ const UploadReport: React.FC = () => {
                       p: 4,
                       textAlign: 'center',
                       border: '2px dashed',
-                      borderColor: isDragActive ? 'rgba(136, 212, 152, 0.9)' : 'rgba(255, 255, 255, 0.23)',
+                      borderColor: isDragActive ? '#88d498' : 'rgba(255, 255, 255, 0.23)',
                       borderRadius: 2,
-                      backgroundColor: isDragActive ? 'rgba(26, 147, 111, 0.08)' : 'rgba(30, 30, 30, 0.3)',
+                      backgroundColor: isDragActive ? 'rgba(26, 147, 111, 0.08)' : 'rgba(18, 18, 18, 0.5)',
+                      backdropFilter: 'blur(8px)',
                       cursor: 'pointer',
                       minHeight: 200,
                       display: 'flex',
@@ -738,18 +808,44 @@ const UploadReport: React.FC = () => {
                       alignItems: 'center',
                       justifyContent: 'center',
                       transition: 'all 0.3s ease',
+                      overflow: 'hidden',
+                      position: 'relative',
                       '&:hover': {
-                        borderColor: 'rgba(136, 212, 152, 0.6)',
+                        borderColor: '#88d498',
                         backgroundColor: 'rgba(26, 147, 111, 0.05)'
+                      },
+                      '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        zIndex: -1,
+                        opacity: 0.1,
+                        background: 'linear-gradient(135deg, rgba(136, 212, 152, 0.2) 0%, rgba(12, 59, 46, 0.2) 100%)',
+                        animation: 'gradientBackground 15s ease infinite',
+                        '@keyframes gradientBackground': {
+                          '0%': { backgroundPosition: '0% 50%' },
+                          '50%': { backgroundPosition: '100% 50%' },
+                          '100%': { backgroundPosition: '0% 50%' }
+                        }
                       }
                     }}
                   >
                     <input {...getInputProps()} />
-                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      alignItems: 'center',
+                      position: 'relative',
+                      zIndex: 1
+                    }}>
                       <CloudUploadIcon sx={{ 
                         fontSize: 60, 
-                        color: 'rgba(136, 212, 152, 0.9)', 
+                        color: '#88d498', 
                         mb: 1,
+                        filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.2))',
                         animation: isDragActive ? 'pulse 1.5s infinite' : 'none',
                         '@keyframes pulse': {
                           '0%': { transform: 'scale(1)' },
@@ -757,23 +853,46 @@ const UploadReport: React.FC = () => {
                           '100%': { transform: 'scale(1)' },
                         }
                       }} />
-                      <PictureAsPdfIcon sx={{ fontSize: 40, color: 'rgba(255, 255, 255, 0.6)', mb: 2 }} />
+                      <PictureAsPdfIcon sx={{ 
+                        fontSize: 40, 
+                        color: 'rgba(255, 255, 255, 0.6)', 
+                        mb: 2,
+                        filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))'
+                      }} />
                     </Box>
                     {isDragActive ? (
-                      <Typography variant="h6" sx={textStyles.accent}>Drop the file here ...</Typography>
+                      <Typography variant="h6" sx={{ 
+                        color: '#88d498', 
+                        fontWeight: 'bold',
+                        textShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                      }}>
+                        Drop the file here ...
+                      </Typography>
                     ) : (
-                      <Typography variant="h6" sx={textStyles.heading}>Drag 'n' drop a file here, or click to select file</Typography>
+                      <Typography variant="h6" sx={{ 
+                        color: 'rgba(255, 255, 255, 0.87)', 
+                        fontWeight: 'medium',
+                        textShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                      }}>
+                        Drag 'n' drop a file here, or click to select file
+                      </Typography>
                     )}
-                    <Typography variant="body2" sx={{ ...textStyles.secondary, mt: 1 }}>
+                    <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.6)', mt: 1 }}>
                       (PDF files are now processed directly with Gemini 1.5 Flash)
                     </Typography>
-                    <Typography variant="body2" sx={{ ...textStyles.secondary, mt: 0.5 }}>
+                    <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.6)', mt: 0.5 }}>
                       (Max file size: 10MB. Supported formats: PDF, TXT)
                     </Typography>
                   </Box>
                 ) : (
                   <Box sx={{ p: 2 }}>
-                    <Typography variant="h6" gutterBottom sx={textStyles.heading}>Paste Your SAT Report Text</Typography>
+                    <Typography variant="h6" gutterBottom sx={{ 
+                      color: 'rgba(255, 255, 255, 0.87)',
+                      fontWeight: 'medium',
+                      mb: 2
+                    }}>
+                      Paste Your SAT Report Text
+                    </Typography>
                     <TextField
                       fullWidth
                       multiline
@@ -784,14 +903,17 @@ const UploadReport: React.FC = () => {
                       onChange={(e) => setPastedText(e.target.value)}
                       disabled={isLoading}
                       sx={{ 
-                        mb: 2,
+                        mb: 3,
                         '& .MuiOutlinedInput-root': {
-                          backgroundColor: 'rgba(30, 30, 30, 0.4)',
+                          backgroundColor: 'rgba(18, 18, 18, 0.5)',
+                          backdropFilter: 'blur(8px)',
+                          borderRadius: 2,
                           '&:hover .MuiOutlinedInput-notchedOutline': {
-                            borderColor: 'rgba(136, 212, 152, 0.5)'
+                            borderColor: '#88d498'
                           },
                           '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                            borderColor: 'rgba(136, 212, 152, 0.8)'
+                            borderColor: '#88d498',
+                            borderWidth: 2
                           }
                         },
                         '& .MuiInputBase-input': {
@@ -824,7 +946,8 @@ const UploadReport: React.FC = () => {
                   color: 'rgba(255, 255, 255, 0.87)',
                   '& .MuiAlert-icon': {
                     color: 'rgba(244, 67, 54, 0.9)'
-                  }
+                  },
+                  borderRadius: 2
                 }}
               >
                 {error}
@@ -832,89 +955,111 @@ const UploadReport: React.FC = () => {
             )}
 
             {uploadedFile && inputMethod === 'file' && !error && !isLoading && activeStep < 3 && (
-              <Box sx={{ 
-                p: 2, 
-                mt: 3, 
-                backgroundColor: 'rgba(30, 30, 30, 0.4)', 
-                borderRadius: 2,
-                border: '1px solid rgba(136, 212, 152, 0.2)'
-              }}>
-                <Typography variant="h6" sx={textStyles.heading}>Uploaded File:</Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-                  <PictureAsPdfIcon sx={{ color: 'rgba(136, 212, 152, 0.9)', mr: 1 }} />
-                  <Typography sx={textStyles.body}>
-                    {uploadedFile.name} ({Math.round(uploadedFile.size / 1024)} KB)
+              <ScaleIn>
+                <Box sx={{ 
+                  p: 3, 
+                  mt: 3, 
+                  backgroundColor: 'rgba(18, 18, 18, 0.7)', 
+                  backdropFilter: 'blur(10px)',
+                  borderRadius: 2,
+                  border: '1px solid rgba(136, 212, 152, 0.2)',
+                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)'
+                }}>
+                  <Typography variant="h6" sx={{ 
+                    color: 'rgba(255, 255, 255, 0.87)',
+                    fontWeight: 'medium',
+                    mb: 2
+                  }}>
+                    Uploaded File:
                   </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                    <PictureAsPdfIcon sx={{ color: '#88d498', mr: 1, filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }} />
+                    <Typography sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+                      {uploadedFile.name} ({Math.round(uploadedFile.size / 1024)} KB)
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3 }}>
+                    <GradientButton 
+                      variant="contained" 
+                      gradient="primary"
+                      onClick={() => {
+                        onDrop([uploadedFile]);
+                      }}
+                      size="medium"
+                    >
+                      Process File
+                    </GradientButton>
+                  </Box>
                 </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
-                  <GradientButton 
-                    variant="contained" 
-                    gradient="primary"
-                    onClick={() => {
-                      onDrop([uploadedFile]);
-                    }}
-                    size="small"
-                  >
-                    Process File
-                  </GradientButton>
-                </Box>
-              </Box>
+              </ScaleIn>
             )}
 
             {isLoading && (
-              <Box sx={{ textAlign: 'center', my: 4 }}>
-                <LoadingAnimation
-                  message={loadingMessage || 'Processing...'}
-                  width={280}
-                  height={280}
-                />
+              <Box sx={{ textAlign: 'center', my: 6, position: 'relative' }}>
+                <FloatAnimation>
+                  <LoadingAnimation
+                    message={loadingMessage || 'Processing...'}
+                    width={280}
+                    height={280}
+                  />
+                </FloatAnimation>
               </Box>
             )}
 
             {extractedText && !isLoading && activeStep === 2 && (
-              <Box sx={{ 
-                p: 3, 
-                mt: 4, 
-                backgroundColor: 'rgba(30, 30, 30, 0.4)', 
-                borderRadius: 2,
-                border: '1px solid rgba(136, 212, 152, 0.2)'
-              }}>
-                <Typography variant="h6" gutterBottom sx={textStyles.heading}>Extracted Text (Preview):</Typography>
+              <ScaleIn>
                 <Box sx={{ 
-                  maxHeight: 150, 
-                  overflowY: 'auto', 
-                  whiteSpace: 'pre-wrap', 
-                  backgroundColor: 'rgba(18, 18, 18, 0.8)', 
-                  p: 2, 
-                  borderRadius: 1 
+                  p: 4, 
+                  mt: 4, 
+                  backgroundColor: 'rgba(18, 18, 18, 0.7)', 
+                  backdropFilter: 'blur(10px)',
+                  borderRadius: 2,
+                  border: '1px solid rgba(136, 212, 152, 0.2)',
+                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)'
                 }}>
-                  <Typography variant="body2" sx={textStyles.body}>
-                    {extractedText}
+                  <Typography variant="h6" gutterBottom sx={{ 
+                    color: 'rgba(255, 255, 255, 0.87)',
+                    fontWeight: 'medium',
+                    mb: 2
+                  }}>
+                    Extracted Text (Preview):
                   </Typography>
+                  <Box sx={{ 
+                    maxHeight: 150, 
+                    overflowY: 'auto', 
+                    whiteSpace: 'pre-wrap', 
+                    backgroundColor: 'rgba(12, 12, 12, 0.9)', 
+                    p: 3, 
+                    borderRadius: 2,
+                    border: '1px solid rgba(255, 255, 255, 0.1)'
+                  }}>
+                    <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+                      {extractedText}
+                    </Typography>
+                  </Box>
                 </Box>
-              </Box>
+              </ScaleIn>
             )}
             
             {generatedQuestions.length > 0 && !isLoading && (
               <Box sx={{ mt: 4 }}>
                 <FadeIn>
-                  <Box sx={{ 
+                  <GlassCard sx={{ 
                     p: 3, 
                     borderRadius: 2, 
                     mb: 4,
-                    background: 'rgba(24, 24, 24, 0.9)',
                     backdropFilter: 'blur(10px)',
                     boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
                     border: '1px solid rgba(136, 212, 152, 0.2)',
                   }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                      <SchoolIcon sx={{ fontSize: 32, color: 'rgba(136, 212, 152, 0.9)', mr: 1.5 }} />
-                      <Typography variant="h5" sx={{ ...textStyles.heading, fontWeight: 'bold' }}>
+                      <SchoolIcon sx={{ fontSize: 32, color: '#88d498', mr: 1.5, filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }} />
+                      <Typography variant="h5" sx={{ color: 'rgba(255, 255, 255, 0.87)', fontWeight: 'bold' }}>
                         Your Personalized Practice Questions
                       </Typography>
                     </Box>
                     
-                    <Typography variant="body1" paragraph sx={textStyles.body}>
+                    <Typography variant="body1" paragraph sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
                       Based on your test results, we've created {generatedQuestions.length} personalized practice questions 
                       covering different topics to help you improve your SAT score.
                     </Typography>
@@ -1229,7 +1374,7 @@ const UploadReport: React.FC = () => {
                         </AccordionDetails>
                       </Accordion>
                     ))}
-                  </Box>
+                  </GlassCard>
                 </FadeIn>
                 
                 <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center', gap: 2 }}>
@@ -1266,7 +1411,7 @@ const UploadReport: React.FC = () => {
               </Box>
             )}
 
-          </Paper>
+          </GlassCard>
         </Container>
       </Box>
     </ThemeProvider>
