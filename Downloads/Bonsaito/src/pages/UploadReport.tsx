@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useCallback, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -31,7 +31,9 @@ import {
   Radio,
   FormControlLabel,
   Collapse,
-  Fade
+  Fade,
+  Badge,
+  Tooltip
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
@@ -40,14 +42,22 @@ import SchoolIcon from '@mui/icons-material/School';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
+import LocalFloristIcon from '@mui/icons-material/LocalFlorist';
+import EmojiNatureIcon from '@mui/icons-material/EmojiNature';
 import { useDropzone } from 'react-dropzone';
 import { uploadFileToSupabase, ocrPdfFromSupabase } from '../services/ocrService'; 
 import { generateQuestionsFromMistakes, GeneratedQuestion } from '../services/aiService';
 import { supabase } from '../supabaseClient';
+import { useSkills } from '../components/SkillsProvider';
 
 // Define an interface for user answers
 interface StudentAnswers {
   [questionId: string]: string;
+}
+
+// Interface for tracking which skills are improved by which questions
+interface QuestionSkillMapping {
+  [questionId: string]: string; // maps question id to skill id
 }
 
 // Function to simulate processing delay
@@ -56,6 +66,8 @@ const addProcessingDelay = (ms: number) => new Promise(resolve => setTimeout(res
 const UploadReport: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const navigate = useNavigate();
+  const { skills, updateSkillProgress } = useSkills();
   
   const [drawerOpen, setDrawerOpen] = useState<boolean>(false); 
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -72,6 +84,10 @@ const UploadReport: React.FC = () => {
   // New state for tracking student answers and showing explanations
   const [studentAnswers, setStudentAnswers] = useState<StudentAnswers>({});
   const [showExplanations, setShowExplanations] = useState<{[key: string]: boolean}>({});
+  const [correctAnswers, setCorrectAnswers] = useState<string[]>([]);
+  const [questionSkillMap, setQuestionSkillMap] = useState<QuestionSkillMapping>({});
+  const [showTreeGrowthBadge, setShowTreeGrowthBadge] = useState<boolean>(false);
+  const [treeBadgeCount, setTreeBadgeCount] = useState<number>(0);
   
   // Group questions by topic for better organization
   const questionsByTopic = React.useMemo(() => {
@@ -84,6 +100,56 @@ const UploadReport: React.FC = () => {
     });
     return grouped;
   }, [generatedQuestions]);
+
+  // Maps generated questions to skills
+  const mapQuestionsToSkills = useCallback((questions: GeneratedQuestion[]) => {
+    // Create a mapping between question topics and skill categories
+    const topicToCategory: Record<string, string> = {
+      'Grammar': 'Standard English Conventions',
+      'Punctuation': 'Standard English Conventions',
+      'Sentence Structure': 'Standard English Conventions',
+      'Evidence': 'Expression of Ideas',
+      'Organization': 'Expression of Ideas',
+      'Vocabulary': 'Expression of Ideas',
+      'Algebra': 'Math',
+      'Geometry': 'Math',
+      'Data Analysis': 'Math'
+    };
+    
+    // Generate a mapping between question IDs and skill IDs
+    const mapping: QuestionSkillMapping = {};
+    
+    questions.forEach(question => {
+      // Find matching skills from the skills context
+      const category = topicToCategory[question.topic] || question.topic;
+      
+      // Find skills that match this category
+      const matchingSkills = skills.filter(s => 
+        s.category === category || 
+        s.subcategory === question.topic ||
+        s.name.toLowerCase().includes(question.topic.toLowerCase())
+      );
+      
+      if (matchingSkills.length > 0) {
+        // Pick a skill to associate with this question (preferably one that's not mastered yet)
+        const notYetMastered = matchingSkills.filter(s => !s.mastered);
+        const skillToUse = notYetMastered.length > 0 
+          ? notYetMastered[Math.floor(Math.random() * notYetMastered.length)]
+          : matchingSkills[Math.floor(Math.random() * matchingSkills.length)];
+        
+        mapping[question.id] = skillToUse.id;
+      }
+    });
+    
+    setQuestionSkillMap(mapping);
+  }, [skills]);
+
+  // Effect to map questions to skills when questions are generated
+  useEffect(() => {
+    if (generatedQuestions.length > 0) {
+      mapQuestionsToSkills(generatedQuestions);
+    }
+  }, [generatedQuestions, mapQuestionsToSkills]);
 
   const handleDrawerToggle = () => {
     setDrawerOpen(!drawerOpen);
@@ -249,6 +315,36 @@ const UploadReport: React.FC = () => {
       ...prev,
       [questionId]: true
     }));
+    
+    const question = generatedQuestions.find(q => q.id === questionId);
+    if (question && isAnswerCorrect(question, studentAnswers[questionId])) {
+      // If correct and not already in correctAnswers, add it
+      if (!correctAnswers.includes(questionId)) {
+        setCorrectAnswers(prev => [...prev, questionId]);
+        
+        // Update the associated skill's progress
+        const skillId = questionSkillMap[questionId];
+        if (skillId) {
+          // Find current skill to determine new progress level
+          const skill = skills.find(s => s.id === skillId);
+          if (skill) {
+            // Increase skill mastery level by 10-20% for each correct answer
+            const progressIncrease = Math.floor(Math.random() * 11) + 10; // 10-20
+            const newProgress = Math.min(100, skill.masteryLevel + progressIncrease);
+            updateSkillProgress(skillId, newProgress);
+            
+            // Show growth badge and increment counter
+            setShowTreeGrowthBadge(true);
+            setTreeBadgeCount(prev => prev + 1);
+            
+            // Hide badge after a few seconds
+            setTimeout(() => {
+              setShowTreeGrowthBadge(false);
+            }, 3000);
+          }
+        }
+      }
+    }
   };
 
   // Reset a question to try again
@@ -261,11 +357,26 @@ const UploadReport: React.FC = () => {
       ...prev,
       [questionId]: false
     }));
+    
+    // If it was a correct answer, remove it from correctAnswers
+    if (correctAnswers.includes(questionId)) {
+      setCorrectAnswers(prev => prev.filter(id => id !== questionId));
+    }
   };
 
   // Function to determine if a student's answer is correct
   const isAnswerCorrect = (question: GeneratedQuestion, studentAnswer: string) => {
     return studentAnswer === question.answer;
+  };
+
+  // Handle navigate to dashboard to see tree growth
+  const handleViewTreeGrowth = () => {
+    navigate('/dashboard', { 
+      state: { 
+        fromUpload: true, 
+        correctAnswers: correctAnswers.length 
+      } 
+    });
   };
 
   return (
@@ -284,6 +395,32 @@ const UploadReport: React.FC = () => {
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
             Upload Score Report
           </Typography>
+          
+          {/* Tree growth badge */}
+          {correctAnswers.length > 0 && (
+            <Tooltip title="Your bonsai tree is growing! Click to view">
+              <Badge 
+                badgeContent={treeBadgeCount} 
+                color="success"
+                sx={{ mr: 2, opacity: showTreeGrowthBadge ? 1 : 0.8, transition: 'all 0.3s ease' }}
+              >
+                <IconButton 
+                  color="inherit" 
+                  onClick={handleViewTreeGrowth}
+                  sx={{ 
+                    animation: showTreeGrowthBadge ? 'treeGrow 1s ease-in-out' : 'none',
+                    '@keyframes treeGrow': {
+                      '0%': { transform: 'scale(1)' },
+                      '50%': { transform: 'scale(1.3)' },
+                      '100%': { transform: 'scale(1)' }
+                    }
+                  }}
+                >
+                  <EmojiNatureIcon />
+                </IconButton>
+              </Badge>
+            </Tooltip>
+          )}
         </Toolbar>
       </AppBar>
 
@@ -452,6 +589,31 @@ const UploadReport: React.FC = () => {
                 covering different topics to help you improve your SAT score.
               </Typography>
               
+              {correctAnswers.length > 0 && (
+                <Alert 
+                  severity="success" 
+                  icon={<LocalFloristIcon />}
+                  sx={{ mb: 3, display: 'flex', alignItems: 'center' }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                    <Typography>
+                      You've correctly answered {correctAnswers.length} question{correctAnswers.length !== 1 ? 's' : ''}! 
+                      Your Bonsai Tree is growing with each correct answer.
+                    </Typography>
+                    <Button 
+                      variant="outlined" 
+                      size="small" 
+                      color="success" 
+                      startIcon={<EmojiNatureIcon />}
+                      onClick={handleViewTreeGrowth}
+                      sx={{ ml: 2 }}
+                    >
+                      View Growth
+                    </Button>
+                  </Box>
+                </Alert>
+              )}
+              
               <Divider sx={{ mb: 3 }} />
               
               {Object.entries(questionsByTopic).map(([topic, questions], topicIndex) => (
@@ -464,9 +626,35 @@ const UploadReport: React.FC = () => {
                       borderColor: 'divider'
                     }}
                   >
-                    <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                      {topic} ({questions.length})
-                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', justifyContent: 'space-between' }}>
+                      <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                        {topic} ({questions.length})
+                      </Typography>
+                      
+                      {/* Show mini progress for this topic */}
+                      {questions.length > 0 && (
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>
+                            {questions.filter(q => correctAnswers.includes(q.id)).length}/{questions.length} Correct
+                          </Typography>
+                          {questions.some(q => correctAnswers.includes(q.id)) && (
+                            <LocalFloristIcon 
+                              fontSize="small" 
+                              color="success" 
+                              sx={{ 
+                                opacity: questions.every(q => correctAnswers.includes(q.id)) ? 1 : 0.6,
+                                animation: showTreeGrowthBadge ? 'pulse 1.5s infinite' : 'none',
+                                '@keyframes pulse': {
+                                  '0%': { transform: 'scale(1)' },
+                                  '50%': { transform: 'scale(1.2)' },
+                                  '100%': { transform: 'scale(1)' }
+                                }
+                              }} 
+                            />
+                          )}
+                        </Box>
+                      )}
+                    </Box>
                   </AccordionSummary>
                   <AccordionDetails sx={{ p: 0 }}>
                     {questions.map((question, qIndex) => (
@@ -475,6 +663,28 @@ const UploadReport: React.FC = () => {
                           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                             <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
                               Question {topicIndex + 1}.{qIndex + 1}
+                              
+                              {/* Show which skill this question helps */}
+                              {questionSkillMap[question.id] && (
+                                <Tooltip 
+                                  title={`Answering this correctly will help grow your "${skills.find(s => s.id === questionSkillMap[question.id])?.name}" skill`}
+                                  arrow
+                                >
+                                  <Typography
+                                    component="span"
+                                    variant="body2"
+                                    sx={{ 
+                                      ml: 1, 
+                                      color: 'text.secondary',
+                                      cursor: 'help',
+                                      textDecoration: 'underline',
+                                      textDecorationStyle: 'dotted'
+                                    }}
+                                  >
+                                    (Improves a skill)
+                                  </Typography>
+                                </Tooltip>
+                              )}
                             </Typography>
                             {question.difficulty && (
                               <Chip 
@@ -626,15 +836,15 @@ const UploadReport: React.FC = () => {
             </Paper>
             
             <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center', gap: 2 }}>
-              <Button 
-                component={Link} 
-                to="/dashboard" 
-                variant="outlined" 
-                size="large"
-                sx={{ textTransform: 'none' }}
-              >
-                Back to Dashboard
-              </Button>
+                          <Button 
+              onClick={handleViewTreeGrowth}
+              variant="outlined" 
+              size="large"
+              sx={{ textTransform: 'none' }}
+              startIcon={<EmojiNatureIcon />}
+            >
+              View Your Bonsai Tree
+            </Button>
               <Button
                 variant="contained"
                 color="primary"
@@ -649,6 +859,9 @@ const UploadReport: React.FC = () => {
                   setPastedText('');
                   setStudentAnswers({});
                   setShowExplanations({});
+                  setCorrectAnswers([]);
+                  setQuestionSkillMap({});
+                  setTreeBadgeCount(0);
                 }}
               >
                 Upload Another Report
