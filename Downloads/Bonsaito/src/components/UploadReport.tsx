@@ -1,24 +1,43 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../../supabaseClient';
+import { supabase } from '../supabaseClient';
 import { useDropzone } from 'react-dropzone';
 import { BarLoader } from 'react-spinners';
 import { toast } from 'react-toastify';
 
-const UploadReport = ({ user }) => {
+interface User {
+  id: string;
+  [key: string]: any;
+}
+
+interface UploadReportProps {
+  user: User | null;
+}
+
+const UploadReport: React.FC<UploadReportProps> = ({ user }) => {
   const [uploading, setUploading] = useState(false);
-  const [file, setFile] = useState(null);
+  const [file, setFile] = useState<File | null>(null);
   const [inputMethod, setInputMethod] = useState('file'); // 'file' or 'text'
   const [pastedText, setPastedText] = useState('');
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    accept: '.pdf,.txt',
+    accept: {
+      'application/pdf': ['.pdf'],
+      'text/plain': ['.txt']
+    },
     onDrop: acceptedFiles => {
-      setFile(acceptedFiles[0]);
-      setInputMethod('file');
+      if (acceptedFiles.length > 0) {
+        setFile(acceptedFiles[0]);
+        setInputMethod('file');
+      }
     }
   });
 
   const handleUpload = async () => {
+    if (!user) {
+      toast.error('You must be logged in to upload a report');
+      return;
+    }
+
     if (!file && inputMethod === 'file') {
       toast.error('Please select a file to upload');
       return;
@@ -32,20 +51,20 @@ const UploadReport = ({ user }) => {
     setUploading(true);
     
     try {
-      if (inputMethod === 'file') {
+      if (inputMethod === 'file' && file) {
         // Handle file upload
         const { data, error } = await supabase.storage
           .from('score-reports')
           .upload(`${user.id}/${Date.now()}_${file.name}`, file);
 
         if (error) {
-          throw error;
+          throw new Error(error.message);
         }
         
         // Process the uploaded file with OCR Edge Function
         // Your existing file processing code...
         
-      } else {
+      } else if (inputMethod === 'text' && pastedText) {
         // Handle pasted text
         // Create a .txt file from the pasted text
         const blob = new Blob([pastedText], { type: 'text/plain' });
@@ -57,7 +76,7 @@ const UploadReport = ({ user }) => {
           .upload(`${user.id}/${Date.now()}_pasted_text.txt`, textFile);
           
         if (error) {
-          throw error;
+          throw new Error(error.message);
         }
       }
 
@@ -65,8 +84,9 @@ const UploadReport = ({ user }) => {
       setFile(null);
       setPastedText('');
       
-    } catch (error) {
-      toast.error('Error uploading report: ' + error.message);
+    } catch (error: any) {
+      const errorMessage = error?.message || 'Unknown error occurred';
+      toast.error('Error uploading report: ' + errorMessage);
     } finally {
       setUploading(false);
     }
@@ -99,7 +119,7 @@ const UploadReport = ({ user }) => {
                 // File Upload UI
                 <>
                   <div {...getRootProps()} className="dropzone bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-blue-500 transition-colors">
-                    <input {...getInputProps()} accept=".pdf,.txt" />
+                    <input {...getInputProps()} />
                     {isDragActive ? (
                       <p className="text-blue-600">Drop the files here ...</p>
                     ) : (
