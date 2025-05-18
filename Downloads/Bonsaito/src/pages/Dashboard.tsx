@@ -711,7 +711,10 @@ const Dashboard: React.FC = () => {
                         <Box sx={{ 
                           position: 'relative',
                           height: 380,
-                          background: 'linear-gradient(180deg, rgba(30, 30, 30, 0.7) 0%, rgba(18, 18, 18, 0.8) 100%)',
+                          backgroundImage: 'url(/altar2.png)',
+                          backgroundSize: 'contain',
+                          backgroundRepeat: 'no-repeat',
+                          backgroundPosition: 'center bottom',
                           backdropFilter: 'blur(8px)',
                           borderRadius: 4,
                           mt: 2,
