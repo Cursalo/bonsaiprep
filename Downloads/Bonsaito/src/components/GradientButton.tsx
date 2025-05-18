@@ -77,7 +77,6 @@ export interface GradientButtonProps extends ButtonProps {
   withRipple?: boolean;
   rounded?: boolean;
   elevated?: boolean;
-  component?: React.ElementType;
 }
 
 const GradientButton = forwardRef<HTMLButtonElement, GradientButtonProps>((props, ref) => {
@@ -89,7 +88,6 @@ const GradientButton = forwardRef<HTMLButtonElement, GradientButtonProps>((props
     elevated = true,
     children,
     sx,
-    component,
     ...rest
   } = props;
 
@@ -135,7 +133,6 @@ const GradientButton = forwardRef<HTMLButtonElement, GradientButtonProps>((props
     <StyledButton
       ref={ref}
       disableRipple={!withRipple}
-      {...(component && { component })}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       sx={{
