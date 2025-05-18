@@ -121,7 +121,7 @@ const OnboardingFlow: React.FC = () => {
   const textStyles = {
     heading: {
       color: '#f8f9fa',
-      textShadow: '0 1px 2px rgba(0,0,0,0.1)'
+      textShadow: '0 1px 2px rgba(0,0,0,0.2)'
     },
     subheading: {
       color: '#f8f9fa',
@@ -443,10 +443,10 @@ const OnboardingFlow: React.FC = () => {
         return (
           <Grid container spacing={3}>
             <Grid item xs={12}>
-              <Typography variant="h4" align="center" gutterBottom>
+              <Typography variant="h4" align="center" gutterBottom sx={textStyles.heading}>
                 Let's get to know you better
               </Typography>
-              <Typography variant="body1" align="center" color="textSecondary" paragraph>
+              <Typography variant="body1" align="center" paragraph sx={textStyles.body}>
                 We'll personalize your learning experience based on your information.
               </Typography>
             </Grid>
@@ -482,10 +482,10 @@ const OnboardingFlow: React.FC = () => {
         return (
           <Grid container spacing={3}>
             <Grid item xs={12}>
-              <Typography variant="h4" align="center" gutterBottom>
+              <Typography variant="h4" align="center" gutterBottom sx={textStyles.heading}>
                 How old are you?
               </Typography>
-              <Typography variant="body1" align="center" color="textSecondary" paragraph>
+              <Typography variant="body1" align="center" paragraph sx={textStyles.body}>
                 We use this to customize content appropriate for your age group.
               </Typography>
             </Grid>
@@ -510,10 +510,10 @@ const OnboardingFlow: React.FC = () => {
         return (
           <Grid container spacing={3}>
             <Grid item xs={12}>
-              <Typography variant="h4" align="center" gutterBottom>
+              <Typography variant="h4" align="center" gutterBottom sx={textStyles.heading}>
                 Where are you located?
               </Typography>
-              <Typography variant="body1" align="center" color="textSecondary" paragraph>
+              <Typography variant="body1" align="center" paragraph sx={textStyles.body}>
                 We'll use this to provide region-specific resources and recommendations.
               </Typography>
             </Grid>
@@ -567,10 +567,10 @@ const OnboardingFlow: React.FC = () => {
         return (
           <Grid container spacing={3}>
             <Grid item xs={12}>
-              <Typography variant="h4" align="center" gutterBottom>
+              <Typography variant="h4" align="center" gutterBottom sx={textStyles.heading}>
                 What's your current SAT score?
               </Typography>
-              <Typography variant="body1" align="center" color="textSecondary" paragraph>
+              <Typography variant="body1" align="center" paragraph sx={textStyles.body}>
                 If you haven't taken the SAT yet or don't know your score, we'll help you upload or enter it later.
               </Typography>
             </Grid>
@@ -607,10 +607,10 @@ const OnboardingFlow: React.FC = () => {
         return (
           <Grid container spacing={3}>
             <Grid item xs={12}>
-              <Typography variant="h4" align="center" gutterBottom>
+              <Typography variant="h4" align="center" gutterBottom sx={textStyles.heading}>
                 What's your target SAT score?
               </Typography>
-              <Typography variant="body1" align="center" color="textSecondary" paragraph>
+              <Typography variant="body1" align="center" paragraph sx={textStyles.body}>
                 Setting a goal helps us customize your learning path.
               </Typography>
             </Grid>
@@ -635,12 +635,12 @@ const OnboardingFlow: React.FC = () => {
               </Box>
             </Grid>
             <Grid item xs={12} sx={{ textAlign: 'center' }}>
-              <Typography variant="h6" color="primary">
+              <Typography variant="h6" sx={{ ...textStyles.subheading, color: '#88d498' }}>
                 Target Score: {data.targetSatScore}
               </Typography>
             </Grid>
             <Grid item xs={12} sx={{ textAlign: 'center' }}>
-              <Typography variant="subtitle2" color="textSecondary">
+              <Typography variant="subtitle2" sx={textStyles.body}>
                 Or choose a preset target:
               </Typography>
               <Box sx={{ mt: 2 }}>
@@ -681,10 +681,10 @@ const OnboardingFlow: React.FC = () => {
         return (
           <Grid container spacing={3}>
             <Grid item xs={12}>
-              <Typography variant="h4" align="center" gutterBottom>
+              <Typography variant="h4" align="center" gutterBottom sx={textStyles.heading}>
                 What's your primary motivation for improving your SAT score?
               </Typography>
-              <Typography variant="body1" align="center" color="textSecondary" paragraph>
+              <Typography variant="body1" align="center" paragraph sx={textStyles.body}>
                 This helps us understand your goals and tailor our guidance.
               </Typography>
             </Grid>
@@ -718,10 +718,10 @@ const OnboardingFlow: React.FC = () => {
         return (
           <Grid container spacing={3}>
             <Grid item xs={12}>
-              <Typography variant="h4" align="center" gutterBottom>
+              <Typography variant="h4" align="center" gutterBottom sx={textStyles.heading}>
                 Copy & Paste your SAT Score Report
               </Typography>
-              <Typography variant="body1" align="center" color="textSecondary" paragraph>
+              <Typography variant="body1" align="center" paragraph sx={textStyles.body}>
                 This will help us analyze your strengths and weaknesses in detail.
               </Typography>
             </Grid>
@@ -738,39 +738,40 @@ const OnboardingFlow: React.FC = () => {
               />
             </Grid>
             <Grid item xs={12}>
-              <Typography variant="h6" align="center" sx={{ mt: 3, mb: 2 }}>
+              <Typography variant="h6" align="center" sx={{ ...textStyles.subheading, mt: 3, mb: 2 }}>
                 OR
               </Typography>
             </Grid>
             <Grid item xs={12}>
-              <Typography variant="body1" align="center" sx={{ mb: 2 }}>
+              <Typography variant="body1" align="center" sx={{ ...textStyles.body, mb: 2 }}>
                 Upload your SAT score report PDF
               </Typography>
               <Box
                 sx={{
-                  border: '2px dashed #ccc',
+                  border: '2px dashed #88d498',
                   borderRadius: 2,
                   p: 3,
                   textAlign: 'center',
                   cursor: 'pointer',
+                  background: 'rgba(12, 59, 46, 0.4)',
                   '&:hover': {
-                    borderColor: 'primary.main',
-                    bgcolor: 'rgba(76, 175, 80, 0.04)'
+                    borderColor: '#88d498',
+                    background: 'rgba(12, 59, 46, 0.6)'
                   }
                 }}
                 {...getRootProps()}
               >
                 <input {...getInputProps()} />
-                <CloudUploadIcon fontSize="large" color="primary" sx={{ mb: 2 }} />
-                <Typography variant="body1" gutterBottom>
+                <CloudUploadIcon fontSize="large" sx={{ color: '#88d498', mb: 2 }} />
+                <Typography variant="body1" gutterBottom sx={textStyles.body}>
                   Drag & drop a PDF file here, or click to select a file
                 </Typography>
-                <Typography variant="body2" color="textSecondary">
+                <Typography variant="body2" sx={{ ...textStyles.body, opacity: 0.8 }}>
                   Supports PDF files only
                 </Typography>
                 {data.scoreReportFile && (
-                  <Box sx={{ mt: 2, p: 1, bgcolor: 'rgba(76, 175, 80, 0.08)', borderRadius: 1 }}>
-                    <Typography variant="body2">
+                  <Box sx={{ mt: 2, p: 1, bgcolor: 'rgba(136, 212, 152, 0.1)', borderRadius: 1 }}>
+                    <Typography variant="body2" sx={textStyles.body}>
                       Selected: {data.scoreReportFile.name}
                     </Typography>
                   </Box>
@@ -779,8 +780,8 @@ const OnboardingFlow: React.FC = () => {
             </Grid>
             {processingReport && (
               <Grid item xs={12} sx={{ textAlign: 'center', mt: 2 }}>
-                <CircularProgress size={30} />
-                <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
+                <CircularProgress size={30} sx={{ color: '#88d498' }} />
+                <Typography variant="body2" sx={{ ...textStyles.body, mt: 1 }}>
                   Processing your report to generate personalized practice questions...
                 </Typography>
               </Grid>
@@ -792,49 +793,64 @@ const OnboardingFlow: React.FC = () => {
         return (
           <Grid container spacing={3}>
             <Grid item xs={12}>
-              <Typography variant="h4" align="center" gutterBottom sx={{ color: '#f8f9fa' }}>
+              <Typography variant="h4" align="center" gutterBottom sx={textStyles.heading}>
                 Review Your Information
               </Typography>
-              <Typography variant="body1" align="center" paragraph sx={{ color: '#dae1e7' }}>
+              <Typography variant="body1" align="center" paragraph sx={textStyles.body}>
                 Please verify that everything is correct before proceeding.
               </Typography>
             </Grid>
             <Grid item xs={12}>
-              <Paper elevation={2} sx={{ p: 3 }}>
+              <Paper elevation={2} sx={{ 
+                p: 3, 
+                background: 'rgba(12, 59, 46, 0.6)',
+                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
+                borderRadius: 2
+              }}>
                 <Grid container spacing={2}>
                   <Grid item xs={12} sm={6}>
-                    <Typography variant="subtitle2">Name:</Typography>
-                    <Typography variant="body1" gutterBottom>{data.firstName} {data.lastName}</Typography>
+                    <Typography variant="subtitle2" sx={textStyles.label}>Name:</Typography>
+                    <Typography variant="body1" gutterBottom sx={textStyles.body}>{data.firstName} {data.lastName}</Typography>
                   </Grid>
                   <Grid item xs={12} sm={6}>
-                    <Typography variant="subtitle2">Age:</Typography>
-                    <Typography variant="body1" gutterBottom>{data.age}</Typography>
+                    <Typography variant="subtitle2" sx={textStyles.label}>Age:</Typography>
+                    <Typography variant="body1" gutterBottom sx={textStyles.body}>{data.age}</Typography>
                   </Grid>
                   <Grid item xs={12} sm={6}>
-                    <Typography variant="subtitle2">Location:</Typography>
-                    <Typography variant="body1" gutterBottom>
+                    <Typography variant="subtitle2" sx={textStyles.label}>Location:</Typography>
+                    <Typography variant="body1" gutterBottom sx={textStyles.body}>
                       {data.city}, {data.country}
                     </Typography>
                   </Grid>
                   <Grid item xs={12} sm={6}>
-                    <Typography variant="subtitle2">Current SAT Score:</Typography>
-                    <Typography variant="body1" gutterBottom>
+                    <Typography variant="subtitle2" sx={textStyles.label}>Current SAT Score:</Typography>
+                    <Typography variant="body1" gutterBottom sx={textStyles.body}>
                       {data.hasSatScoreReport ? 'To be provided later' : data.satScore}
                     </Typography>
                   </Grid>
                   <Grid item xs={12} sm={6}>
-                    <Typography variant="subtitle2">Target SAT Score:</Typography>
-                    <Typography variant="body1" gutterBottom>{data.targetSatScore}</Typography>
+                    <Typography variant="subtitle2" sx={textStyles.label}>Target SAT Score:</Typography>
+                    <Typography variant="body1" gutterBottom sx={textStyles.body}>{data.targetSatScore}</Typography>
                   </Grid>
                   <Grid item xs={12} sm={6}>
-                    <Typography variant="subtitle2">Motivation:</Typography>
-                    <Typography variant="body1" gutterBottom>{data.motivation}</Typography>
+                    <Typography variant="subtitle2" sx={textStyles.label}>Motivation:</Typography>
+                    <Typography variant="body1" gutterBottom sx={textStyles.body}>{data.motivation}</Typography>
                   </Grid>
                   {data.scoreReport && (
                     <Grid item xs={12}>
-                      <Typography variant="subtitle2">SAT Score Report:</Typography>
-                      <Paper variant="outlined" sx={{ p: 2, maxHeight: '100px', overflow: 'auto' }}>
-                        <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                      <Typography variant="subtitle2" sx={textStyles.label}>SAT Score Report:</Typography>
+                      <Paper variant="outlined" sx={{ 
+                        p: 2, 
+                        maxHeight: '100px', 
+                        overflow: 'auto',
+                        background: 'rgba(12, 59, 46, 0.8)',
+                        borderColor: 'rgba(136, 212, 152, 0.3)'
+                      }}>
+                        <Typography variant="body2" sx={{ 
+                          whiteSpace: 'pre-wrap',
+                          ...textStyles.body,
+                          fontSize: '0.85rem'
+                        }}>
                           {data.scoreReport.length > 200 
                             ? data.scoreReport.substring(0, 200) + '...' 
                             : data.scoreReport}
@@ -852,10 +868,10 @@ const OnboardingFlow: React.FC = () => {
         return (
           <Grid container spacing={3}>
             <Grid item xs={12}>
-              <Typography variant="h4" align="center" gutterBottom>
+              <Typography variant="h4" align="center" gutterBottom sx={textStyles.heading}>
                 Choose Your Plan
               </Typography>
-              <Typography variant="body1" align="center" color="textSecondary" paragraph>
+              <Typography variant="body1" align="center" paragraph sx={textStyles.body}>
                 Select the subscription plan that works best for you.
               </Typography>
             </Grid>
@@ -890,7 +906,7 @@ const OnboardingFlow: React.FC = () => {
   // Background style for current step
   const getBackgroundStyle = () => {
     return {
-      background: gradients[activeStep],
+      background: 'linear-gradient(135deg, #0c3b2e 0%, #18514a 100%)',
       backgroundSize: '200% 200%',
       animation: 'gradient 15s ease infinite',
       height: '100%',
@@ -915,11 +931,11 @@ const OnboardingFlow: React.FC = () => {
           alignItems: 'center', 
           justifyContent: 'center',
           minHeight: '100vh',
-          background: gradients[8]
+          background: 'linear-gradient(135deg, #0c3b2e 0%, #18514a 100%)'
         }}
       >
-        <CircularProgress size={60} />
-        <Typography variant="h6" sx={{ mt: 3 }}>
+        <CircularProgress size={60} sx={{ color: '#88d498' }} />
+        <Typography variant="h6" sx={{ mt: 3, color: '#f8f9fa' }}>
           Saving your information and preparing your custom experience...
         </Typography>
       </Box>
@@ -934,9 +950,9 @@ const OnboardingFlow: React.FC = () => {
           sx={{ 
             p: { xs: 2, sm: 4 }, 
             borderRadius: 2, 
-            background: 'rgba(12, 59, 46, 0.8)',
+            background: 'rgba(12, 59, 46, 0.9)',
             backdropFilter: 'blur(10px)',
-            boxShadow: '0 8px 32px rgba(31, 38, 135, 0.2)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
             color: '#f8f9fa'
           }}
         >
@@ -954,7 +970,7 @@ const OnboardingFlow: React.FC = () => {
           
           {/* Mobile stepper status */}
           <Box sx={{ mb: 4, display: { xs: 'block', md: 'none' }, textAlign: 'center' }}>
-            <Typography variant="body2" color="textSecondary">
+            <Typography variant="body2" sx={textStyles.body}>
               Step {activeStep + 1} of {steps.length}: {steps[activeStep]}
             </Typography>
           </Box>
@@ -971,7 +987,13 @@ const OnboardingFlow: React.FC = () => {
               disabled={activeStep === 0}
               onClick={handleBack}
               startIcon={<ArrowBackIcon />}
-              sx={{ opacity: activeStep === 0 ? 0 : 1 }}
+              sx={{ 
+                color: '#f8f9fa',
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.08)'
+                }
+              }}
+              style={{ opacity: activeStep === 0 ? 0 : 1 }}
             >
               Back
             </Button>
@@ -979,19 +1001,41 @@ const OnboardingFlow: React.FC = () => {
             {activeStep === steps.length - 1 ? (
               <Button 
                 variant="contained" 
-                color="primary"
                 onClick={handleSubmit}
                 endIcon={<CheckCircleOutlineIcon />}
+                sx={{
+                  background: 'linear-gradient(90deg, #1a936f 0%, #114b5f 100%)',
+                  color: '#ffffff',
+                  fontWeight: 600,
+                  padding: '10px 24px',
+                  '&:hover': {
+                    background: 'linear-gradient(90deg, #114b5f 0%, #1a936f 100%)',
+                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)'
+                  }
+                }}
               >
                 Complete & Go to Dashboard
               </Button>
             ) : (
               <Button 
-                variant="contained" 
-                color="primary" 
+                variant="contained"
                 onClick={handleNext}
                 endIcon={<ArrowForwardIcon />}
                 disabled={activeStep === 6 && processingReport}
+                sx={{
+                  background: 'linear-gradient(90deg, #1a936f 0%, #114b5f 100%)',
+                  color: '#ffffff',
+                  fontWeight: 600,
+                  padding: '10px 24px',
+                  '&:hover': {
+                    background: 'linear-gradient(90deg, #114b5f 0%, #1a936f 100%)',
+                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)'
+                  },
+                  '&.Mui-disabled': {
+                    background: 'rgba(136, 212, 152, 0.2)',
+                    color: 'rgba(255, 255, 255, 0.4)'
+                  }
+                }}
               >
                 Next
               </Button>
