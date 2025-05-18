@@ -13,17 +13,36 @@ import {
   Alert,
   Tabs,
   Tab,
-  TextField
+  TextField,
+  Card,
+  CardContent,
+  Divider,
+  Chip,
+  Grid,
+  Stepper,
+  Step,
+  StepLabel,
+  useTheme,
+  useMediaQuery,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import TextFieldsIcon from '@mui/icons-material/TextFields';
+import SchoolIcon from '@mui/icons-material/School';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { useDropzone } from 'react-dropzone';
 import { uploadFileToSupabase, ocrPdfFromSupabase } from '../services/ocrService'; 
 import { generateQuestionsFromMistakes, GeneratedQuestion } from '../services/aiService';
 import { supabase } from '../supabaseClient';
 
 const UploadReport: React.FC = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  
   const [drawerOpen, setDrawerOpen] = useState<boolean>(false); 
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [extractedText, setExtractedText] = useState<string | null>(null);
@@ -33,6 +52,19 @@ const UploadReport: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [inputMethod, setInputMethod] = useState<string>('file'); // 'file' or 'text'
   const [pastedText, setPastedText] = useState<string>('');
+  const [activeStep, setActiveStep] = useState<number>(0);
+  
+  // Group questions by topic for better organization
+  const questionsByTopic = React.useMemo(() => {
+    const grouped: Record<string, GeneratedQuestion[]> = {};
+    generatedQuestions.forEach(q => {
+      if (!grouped[q.topic]) {
+        grouped[q.topic] = [];
+      }
+      grouped[q.topic].push(q);
+    });
+    return grouped;
+  }, [generatedQuestions]);
 
   const handleDrawerToggle = () => {
     setDrawerOpen(!drawerOpen);
@@ -54,6 +86,7 @@ const UploadReport: React.FC = () => {
       setExtractedText(null);
       setGeneratedQuestions([]);
       setIsLoading(true);
+      setActiveStep(1);
       
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -69,10 +102,12 @@ const UploadReport: React.FC = () => {
           setLoadingMessage('Reading text file content...');
           const text = await file.text();
           setExtractedText(text);
+          setActiveStep(2);
           
           setLoadingMessage('Generating practice questions with AI...');
           const questions = await generateQuestionsFromMistakes(text);
           setGeneratedQuestions(questions);
+          setActiveStep(3);
         } else {
           // PDF processing flow
           setLoadingMessage('Uploading PDF to secure storage...');
@@ -82,11 +117,13 @@ const UploadReport: React.FC = () => {
           setLoadingMessage('Extracting text from PDF (OCR process)... This may take a moment.');
           const text = await ocrPdfFromSupabase(publicUrl, storagePath);
           setExtractedText(text);
+          setActiveStep(2);
           console.log('Text extracted:', text.substring(0, 100) + '...');
           
           setLoadingMessage('Generating practice questions with AI...');
           const questions = await generateQuestionsFromMistakes(text);
           setGeneratedQuestions(questions);
+          setActiveStep(3);
         }
       } catch (err: any) {
         console.error("Error processing file:", err);
@@ -108,6 +145,7 @@ const UploadReport: React.FC = () => {
     setExtractedText(null);
     setGeneratedQuestions([]);
     setIsLoading(true);
+    setActiveStep(1);
     
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -120,10 +158,12 @@ const UploadReport: React.FC = () => {
       // Process the pasted text directly
       setLoadingMessage('Processing your text input...');
       setExtractedText(pastedText);
+      setActiveStep(2);
       
       setLoadingMessage('Generating practice questions with AI...');
       const questions = await generateQuestionsFromMistakes(pastedText);
       setGeneratedQuestions(questions);
+      setActiveStep(3);
     } catch (err: any) {
       console.error("Error processing text:", err);
       setError(`Failed to process text: ${err.message || 'Unknown error'}. Check console for details.`);
@@ -151,10 +191,21 @@ const UploadReport: React.FC = () => {
     setPastedText('');
     setExtractedText(null);
     setGeneratedQuestions([]);
+    setActiveStep(0);
+  };
+
+  // Function to determine difficulty level color
+  const getDifficultyColor = (difficulty?: string) => {
+    switch (difficulty?.toLowerCase()) {
+      case 'easy': return theme.palette.success.main;
+      case 'medium': return theme.palette.warning.main;
+      case 'hard': return theme.palette.error.main;
+      default: return theme.palette.info.main;
+    }
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: '#f8f9fa' }}>
       <AppBar position="static">
         <Toolbar>
           <IconButton
@@ -173,13 +224,28 @@ const UploadReport: React.FC = () => {
       </AppBar>
 
       <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
-        <Typography variant="h4" gutterBottom align="center">
+        <Typography variant="h4" gutterBottom align="center" sx={{ fontWeight: 'bold', color: theme.palette.primary.main }}>
           Upload Your SAT Practice Report
         </Typography>
         <Typography variant="subtitle1" align="center" color="text.secondary" paragraph>
-          Upload your report or paste text to get personalized lessons and practice questions.
+          Upload your report or paste text to get personalized lessons and practice questions
         </Typography>
 
+        <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 4, display: { xs: 'none', sm: 'flex' } }}>
+          <Step>
+            <StepLabel>Upload Report</StepLabel>
+          </Step>
+          <Step>
+            <StepLabel>Process Content</StepLabel>
+          </Step>
+          <Step>
+            <StepLabel>Extract Information</StepLabel>
+          </Step>
+          <Step>
+            <StepLabel>Generate Questions</StepLabel>
+          </Step>
+        </Stepper>
+        
         <Box sx={{ width: '100%', mb: 3 }}>
           <Tabs
             value={inputMethod}
@@ -187,65 +253,86 @@ const UploadReport: React.FC = () => {
             centered
             indicatorColor="primary"
             textColor="primary"
+            variant={isMobile ? "fullWidth" : "standard"}
           >
-            <Tab value="file" label="Upload File" icon={<CloudUploadIcon />} iconPosition="start" />
-            <Tab value="text" label="Paste Text" icon={<TextFieldsIcon />} iconPosition="start" />
+            <Tab 
+              value="file" 
+              label="Upload File" 
+              icon={<CloudUploadIcon />} 
+              iconPosition="start"
+              disabled={isLoading}
+            />
+            <Tab 
+              value="text" 
+              label="Paste Text" 
+              icon={<TextFieldsIcon />} 
+              iconPosition="start"
+              disabled={isLoading}
+            />
           </Tabs>
         </Box>
 
-        {inputMethod === 'file' ? (
-          <Paper
-            {...getRootProps()}
-            elevation={3}
-            sx={{
-              p: 4,
-              mt: 3,
-              textAlign: 'center',
-              border: isDragActive ? '2px dashed primary.main' : '2px dashed grey.500',
-              backgroundColor: isDragActive ? 'action.hover' : 'background.paper',
-              cursor: 'pointer',
-              minHeight: 200,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-          >
-            <input {...getInputProps()} />
-            <CloudUploadIcon sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
-            {isDragActive ? (
-              <Typography variant="h6">Drop the file here ...</Typography>
+        {!isLoading && activeStep < 3 && (
+          <>
+            {inputMethod === 'file' ? (
+              <Paper
+                {...getRootProps()}
+                elevation={3}
+                sx={{
+                  p: 4,
+                  mt: 3,
+                  textAlign: 'center',
+                  border: isDragActive ? '2px dashed' : '2px dashed grey.500',
+                  borderColor: isDragActive ? 'primary.main' : 'grey.500',
+                  backgroundColor: isDragActive ? 'rgba(76, 175, 80, 0.04)' : 'background.paper',
+                  cursor: 'pointer',
+                  minHeight: 200,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.3s ease'
+                }}
+              >
+                <input {...getInputProps()} />
+                <CloudUploadIcon sx={{ fontSize: 80, color: 'primary.main', mb: 2 }} />
+                {isDragActive ? (
+                  <Typography variant="h6" color="primary.main">Drop the file here ...</Typography>
+                ) : (
+                  <Typography variant="h6">Drag 'n' drop a file here, or click to select file</Typography>
+                )}
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                  (Max file size: 10MB. Supported formats: PDF, TXT)
+                </Typography>
+              </Paper>
             ) : (
-              <Typography variant="h6">Drag 'n' drop a file here, or click to select file</Typography>
+              <Paper elevation={3} sx={{ p: 4, mt: 3 }}>
+                <Typography variant="h6" gutterBottom>Paste Your SAT Report Text</Typography>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={10}
+                  variant="outlined"
+                  placeholder="Paste the content of your SAT report here..."
+                  value={pastedText}
+                  onChange={(e) => setPastedText(e.target.value)}
+                  disabled={isLoading}
+                  sx={{ mb: 2 }}
+                />
+                <Button 
+                  variant="contained" 
+                  color="primary" 
+                  onClick={handleTextSubmit}
+                  disabled={!pastedText.trim() || isLoading}
+                  fullWidth
+                  size="large"
+                  sx={{ py: 1.5, textTransform: 'none', fontWeight: 'bold' }}
+                >
+                  Process Text
+                </Button>
+              </Paper>
             )}
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              (Max file size: 10MB. Supported formats: PDF, TXT)
-            </Typography>
-          </Paper>
-        ) : (
-          <Paper elevation={3} sx={{ p: 4, mt: 3 }}>
-            <Typography variant="h6" gutterBottom>Paste Your SAT Report Text</Typography>
-            <TextField
-              fullWidth
-              multiline
-              rows={10}
-              variant="outlined"
-              placeholder="Paste the content of your SAT report here..."
-              value={pastedText}
-              onChange={(e) => setPastedText(e.target.value)}
-              disabled={isLoading}
-              sx={{ mb: 2 }}
-            />
-            <Button 
-              variant="contained" 
-              color="primary" 
-              onClick={handleTextSubmit}
-              disabled={!pastedText.trim() || isLoading}
-              fullWidth
-            >
-              Process Text
-            </Button>
-          </Paper>
+          </>
         )}
 
         {error && (
@@ -254,7 +341,7 @@ const UploadReport: React.FC = () => {
           </Alert>
         )}
 
-        {uploadedFile && inputMethod === 'file' && !error && !isLoading && (
+        {uploadedFile && inputMethod === 'file' && !error && !isLoading && activeStep < 3 && (
           <Paper elevation={1} sx={{ p: 2, mt: 3 }}>
             <Typography variant="h6">Uploaded File:</Typography>
             <Typography>{uploadedFile.name} ({Math.round(uploadedFile.size / 1024)} KB)</Typography>
@@ -262,48 +349,151 @@ const UploadReport: React.FC = () => {
         )}
 
         {isLoading && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 4 }}>
-            <CircularProgress />
-            <Typography sx={{ ml: 2 }}>{loadingMessage || 'Processing your report...'}</Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', mt: 6, mb: 4 }}>
+            <CircularProgress size={60} thickness={4} />
+            <Typography variant="h6" sx={{ mt: 3, fontWeight: 'bold' }}>{loadingMessage || 'Processing your report...'}</Typography>
           </Box>
         )}
 
-        {extractedText && !isLoading && (
-          <Paper elevation={1} sx={{ p: 2, mt: 3 }}>
-            <Typography variant="h6">Extracted Text (Preview):</Typography>
-            <Typography variant="body2" sx={{ maxHeight: 150, overflowY: 'auto', whiteSpace: 'pre-wrap', backgroundColor: 'grey.100', p:1, borderRadius:1 }}>
+        {extractedText && !isLoading && activeStep === 2 && (
+          <Paper elevation={1} sx={{ p: 3, mt: 4 }}>
+            <Typography variant="h6" gutterBottom>Extracted Text (Preview):</Typography>
+            <Typography variant="body2" sx={{ maxHeight: 150, overflowY: 'auto', whiteSpace: 'pre-wrap', backgroundColor: 'grey.100', p:2, borderRadius:1 }}>
               {extractedText}
             </Typography>
           </Paper>
         )}
         
         {generatedQuestions.length > 0 && !isLoading && (
-          <Paper elevation={1} sx={{ p: 2, mt: 3 }}>
-            <Typography variant="h6">AI Generated Practice Questions:</Typography>
-            {generatedQuestions.map(q => (
-              <Box key={q.id} sx={{ mb: 2, p:1.5, border: '1px solid #e0e0e0', borderRadius: 1}}>
-                <Typography variant="subtitle1" gutterBottom>Topic: {q.topic}</Typography>
-                <Typography variant="body1" gutterBottom><strong>Question:</strong> {q.text}</Typography>
-                {q.options && (
-                  <Box sx={{mb:1}}>
-                    <Typography variant="body2">Options:</Typography>
-                    <ul>
-                      {q.options.map((opt, index) => <li key={index}><Typography variant="body2">{opt}</Typography></li>)}
-                    </ul>
-                  </Box>
-                )}
-                {q.answer && <Typography variant="body2" sx={{color: 'green', fontWeight: 'bold'}}>Answer: {q.answer}</Typography>}
-                {q.explanation && <Typography variant="caption" display="block" sx={{mt:0.5, color: 'text.secondary'}}>Explanation: {q.explanation}</Typography>}
+          <Box sx={{ mt: 4 }}>
+            <Paper elevation={3} sx={{ p: 3, borderRadius: 2, mb: 4 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                <SchoolIcon sx={{ fontSize: 32, color: 'primary.main', mr: 1.5 }} />
+                <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+                  Your Personalized Practice Questions
+                </Typography>
               </Box>
-            ))}
-          </Paper>
+              
+              <Typography variant="body1" paragraph>
+                Based on your test results, we've generated {generatedQuestions.length} personalized practice questions 
+                covering different topics to help you improve your SAT score.
+              </Typography>
+              
+              <Divider sx={{ mb: 3 }} />
+              
+              {Object.entries(questionsByTopic).map(([topic, questions], topicIndex) => (
+                <Accordion key={topicIndex} defaultExpanded={topicIndex === 0} sx={{ mb: 2, boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
+                  <AccordionSummary 
+                    expandIcon={<ExpandMoreIcon />}
+                    sx={{ 
+                      backgroundColor: 'rgba(0, 0, 0, 0.02)',
+                      borderBottom: '1px solid',
+                      borderColor: 'divider'
+                    }}
+                  >
+                    <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                      {topic} ({questions.length})
+                    </Typography>
+                  </AccordionSummary>
+                  <AccordionDetails sx={{ p: 0 }}>
+                    {questions.map((question, qIndex) => (
+                      <Card key={question.id} sx={{ mb: 2, boxShadow: 'none', border: '1px solid', borderColor: 'divider', m: 2 }}>
+                        <CardContent>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                              Question {topicIndex + 1}.{qIndex + 1}
+                            </Typography>
+                            {question.difficulty && (
+                              <Chip 
+                                label={question.difficulty} 
+                                size="small" 
+                                sx={{ 
+                                  bgcolor: getDifficultyColor(question.difficulty),
+                                  color: 'white',
+                                  fontWeight: 'bold'
+                                }} 
+                              />
+                            )}
+                          </Box>
+                          
+                          <Typography variant="body1" paragraph sx={{ whiteSpace: 'pre-wrap' }}>
+                            {question.text}
+                          </Typography>
+                          
+                          {question.options && (
+                            <Box sx={{ ml: 2, mb: 2 }}>
+                              {question.options.map((opt, i) => (
+                                <Box 
+                                  key={i} 
+                                  sx={{ 
+                                    p: 1.5, 
+                                    mb: 1, 
+                                    borderRadius: 1, 
+                                    border: '1px solid',
+                                    borderColor: 'divider',
+                                    bgcolor: question.answer === opt || question.answer === String.fromCharCode(65 + i) ? 'rgba(76, 175, 80, 0.12)' : 'transparent',
+                                    display: 'flex',
+                                    alignItems: 'center'
+                                  }}
+                                >
+                                  <Typography variant="body1" sx={{ fontWeight: question.answer === opt || question.answer === String.fromCharCode(65 + i) ? 'bold' : 'normal' }}>
+                                    {String.fromCharCode(65 + i)}. {opt}
+                                  </Typography>
+                                  {(question.answer === opt || question.answer === String.fromCharCode(65 + i)) && (
+                                    <CheckCircleIcon sx={{ ml: 1, color: 'success.main' }} />
+                                  )}
+                                </Box>
+                              ))}
+                            </Box>
+                          )}
+                          
+                          {question.explanation && (
+                            <Box sx={{ mt: 2, p: 2, bgcolor: 'info.light', borderRadius: 1 }}>
+                              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: 'info.dark' }}>
+                                Explanation:
+                              </Typography>
+                              <Typography variant="body2" sx={{ color: 'info.dark', whiteSpace: 'pre-wrap' }}>
+                                {question.explanation}
+                              </Typography>
+                            </Box>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </AccordionDetails>
+                </Accordion>
+              ))}
+            </Paper>
+            
+            <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center', gap: 2 }}>
+              <Button 
+                component={Link} 
+                to="/dashboard" 
+                variant="outlined" 
+                size="large"
+                sx={{ textTransform: 'none' }}
+              >
+                Back to Dashboard
+              </Button>
+              <Button
+                variant="contained"
+                color="primary"
+                size="large"
+                sx={{ textTransform: 'none', fontWeight: 'bold' }}
+                onClick={() => {
+                  setActiveStep(0);
+                  setGeneratedQuestions([]);
+                  setExtractedText(null);
+                  setInputMethod('file');
+                  setUploadedFile(null);
+                  setPastedText('');
+                }}
+              >
+                Upload Another Report
+              </Button>
+            </Box>
+          </Box>
         )}
-
-        <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
-          <Button component={Link} to="/dashboard" variant="outlined">
-            Back to Dashboard
-          </Button>
-        </Box>
       </Container>
     </Box>
   );
