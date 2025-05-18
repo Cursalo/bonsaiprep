@@ -208,16 +208,37 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
     return { trunkPath, branches: generatedBranches, pot };
   }, [skillsByCategory, overallMasteryRatio, theme.palette.grey]);
 
-  const animProps = useSpring({ opacity: 1, from: { opacity: 0 }, config: config.molasses });
-  const useElementAnimProps = (delay = 0) => useSpring({
-    to: { opacity: 1, transform: 'scale(1)' },
-    from: { opacity: 0, transform: 'scale(0.8)' },
-    config: config.gentle,
-    delay
+  // Create all animations at the top level
+  const containerAnimation = useSpring({ opacity: 1, from: { opacity: 0 }, config: config.molasses });
+  const potAnimation = useSpring({ 
+    opacity: 1, 
+    transform: 'scale(1)', 
+    from: { opacity: 0, transform: 'scale(0.8)' }, 
+    config: config.gentle, 
+    delay: 200 
   });
+  
+  const trunkAnimation = useSpring({ 
+    opacity: 1, 
+    transform: 'scale(1)', 
+    from: { opacity: 0, transform: 'scale(0.8)' }, 
+    config: config.gentle, 
+    delay: 400 
+  });
+  
+  // Pre-calculate branch animations for each branch
+  const branchAnimations = treeElements.branches.map((branch, index) => 
+    useSpring({
+      opacity: 1, 
+      transform: 'scale(1)', 
+      from: { opacity: 0, transform: 'scale(0.8)' }, 
+      config: config.gentle, 
+      delay: 600 + index * 200
+    })
+  );
 
   return (
-    <animated.div style={animProps}>
+    <animated.div style={containerAnimation}>
       <Paper elevation={0} sx={{ p: 3, mb: 4, borderRadius: '20px', backgroundColor: '#f7f7f7' }}>
         <Typography variant="h5" gutterBottom align="center" sx={{ fontWeight: 'bold', color: '#555' }}>
           Your Growth Tree
@@ -236,7 +257,7 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
             </defs>
 
             {/* Pot */}
-            <animated.g style={useElementAnimProps(200)}>
+            <animated.g style={potAnimation}>
               <path d={treeElements.pot.body} fill={POT_COLOR_BODY} filter="url(#subtleShadow)"/>
               <path d={treeElements.pot.rim} fill={POT_COLOR_RIM} />
               {treeElements.pot.feet.map((footPath, i) => (
@@ -250,13 +271,13 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
               fill="url(#trunkStrokeGradient)" // Using the solid color gradient for fill
               stroke={TRUNK_COLOR} // Stroke for definition
               strokeWidth="1.5"
-              style={useElementAnimProps(400)}
+              style={trunkAnimation}
               filter="url(#subtleShadow)"
             />
             
             {treeElements.branches.map((branch, branchIndex) => (
-              <animated.g key={branch.id} style={useElementAnimProps(600 + branchIndex * 200)}>
-                <path
+              <animated.g key={branch.id} style={branchAnimations[branchIndex]}>
+                <path 
                   d={`M ${branch.start.x} ${branch.start.y} C ${branch.control1.x} ${branch.control1.y}, ${branch.control2.x} ${branch.control2.y}, ${branch.end.x} ${branch.end.y}`}
                   stroke={BRANCH_COLOR}
                   strokeWidth={branch.thickness}
