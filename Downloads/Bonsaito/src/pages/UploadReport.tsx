@@ -33,8 +33,10 @@ import {
   Collapse,
   Fade,
   Badge,
-  Tooltip
+  Tooltip,
+  Avatar
 } from '@mui/material';
+import { createTheme, ThemeProvider } from '@mui/material/styles';
 import MenuIcon from '@mui/icons-material/Menu';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import TextFieldsIcon from '@mui/icons-material/TextFields';
@@ -45,12 +47,16 @@ import CancelIcon from '@mui/icons-material/Cancel';
 import LocalFloristIcon from '@mui/icons-material/LocalFlorist';
 import EmojiNatureIcon from '@mui/icons-material/EmojiNature';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useDropzone } from 'react-dropzone';
 import { uploadFileToSupabase } from '../services/ocrService'; 
 import { generateQuestionsFromMistakes, GeneratedQuestion } from '../services/geminiPdfService';
 import { supabase } from '../supabaseClient';
 import { useSkills } from '../components/SkillsProvider';
 import LoadingAnimation from '../components/LoadingAnimation';
+import GlassCard from '../components/GlassCard';
+import GradientButton from '../components/GradientButton';
+import { FadeIn, ScaleIn, FloatAnimation, SlideIn } from '../components/AnimationEffects';
 
 // Define an interface for user answers
 interface StudentAnswers {
@@ -64,6 +70,107 @@ interface QuestionSkillMapping {
 
 // Function to simulate processing delay
 const addProcessingDelay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Text styles for better readability based on dark theme best practices
+const textStyles = {
+  heading: {
+    color: 'rgba(255, 255, 255, 0.87)', // High-emphasis text at 87% opacity
+    textShadow: '0 1px 2px rgba(0,0,0,0.2)'
+  },
+  subheading: {
+    color: 'rgba(255, 255, 255, 0.87)', // High-emphasis text at 87% opacity
+    opacity: 0.9
+  },
+  body: {
+    color: 'rgba(255, 255, 255, 0.7)' // Medium-emphasis text at 70% opacity
+  },
+  label: {
+    color: 'rgba(255, 255, 255, 0.87)',  // High-emphasis text at 87% opacity
+    fontWeight: 500
+  },
+  secondary: {
+    color: 'rgba(255, 255, 255, 0.6)' // Secondary text at 60% opacity
+  },
+  disabled: {
+    color: 'rgba(255, 255, 255, 0.38)' // Disabled text at 38% opacity
+  },
+  accent: {
+    color: 'rgba(136, 212, 152, 0.9)' // Desaturated accent color
+  }
+};
+
+// Create a dark theme to match onboarding
+const darkTheme = createTheme({
+  palette: {
+    mode: 'dark',
+    primary: {
+      main: 'rgba(136, 212, 152, 0.9)',
+    },
+    secondary: {
+      main: '#88d498',
+    },
+    background: {
+      paper: 'rgba(33, 33, 33, 0.95)',
+      default: 'rgba(18, 18, 18, 0.95)',
+    },
+    text: {
+      primary: 'rgba(255, 255, 255, 0.87)',
+      secondary: 'rgba(255, 255, 255, 0.6)',
+    },
+  },
+  components: {
+    MuiInputBase: {
+      styleOverrides: {
+        input: {
+          color: 'rgba(255, 255, 255, 0.87)',
+        },
+        root: {
+          backgroundColor: 'rgba(30, 30, 30, 0.4)',
+        }
+      },
+    },
+    MuiOutlinedInput: {
+      styleOverrides: {
+        root: {
+          '&:hover .MuiOutlinedInput-notchedOutline': {
+            borderColor: 'rgba(136, 212, 152, 0.5)',
+          },
+          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+            borderColor: 'rgba(136, 212, 152, 0.8)',
+          },
+        },
+        notchedOutline: {
+          borderColor: 'rgba(255, 255, 255, 0.23)',
+        },
+      },
+    },
+    MuiFormLabel: {
+      styleOverrides: {
+        root: {
+          color: 'rgba(255, 255, 255, 0.6)',
+          '&.Mui-focused': {
+            color: 'rgba(136, 212, 152, 0.8)',
+          },
+        },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          backgroundImage: 'none',
+        },
+      },
+    },
+    MuiCard: {
+      styleOverrides: {
+        root: {
+          background: 'rgba(24, 24, 24, 0.8)',
+          backdropFilter: 'blur(10px)',
+        },
+      },
+    },
+  },
+});
 
 const UploadReport: React.FC = () => {
   const theme = useTheme();
@@ -90,6 +197,8 @@ const UploadReport: React.FC = () => {
   const [questionSkillMap, setQuestionSkillMap] = useState<QuestionSkillMapping>({});
   const [showTreeGrowthBadge, setShowTreeGrowthBadge] = useState<boolean>(false);
   const [treeBadgeCount, setTreeBadgeCount] = useState<number>(0);
+  const [userData, setUserData] = useState<{firstName?: string, lastName?: string} | null>(null);
+  const [loadingUserData, setLoadingUserData] = useState<boolean>(true);
   
   // Group questions by topic for better organization
   const questionsByTopic = React.useMemo(() => {
@@ -102,6 +211,37 @@ const UploadReport: React.FC = () => {
     });
     return grouped;
   }, [generatedQuestions]);
+
+  // Fetch user data for personalization
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: onboardingData, error } = await supabase
+            .from('user_onboarding')
+            .select('first_name, last_name')
+            .eq('user_id', user.id)
+            .single();
+
+          if (error) {
+            console.error("Error fetching user onboarding data:", error);
+          } else if (onboardingData) {
+            setUserData({
+              firstName: onboardingData.first_name,
+              lastName: onboardingData.last_name,
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching user session:", error);
+      } finally {
+        setLoadingUserData(false);
+      }
+    };
+
+    fetchUserData();
+  }, []);
 
   // Maps generated questions to skills
   const mapQuestionsToSkills = useCallback((questions: GeneratedQuestion[]) => {
@@ -381,505 +521,755 @@ const UploadReport: React.FC = () => {
     });
   };
 
+  // Background style to match onboarding
+  const getBackgroundStyle = () => {
+    return {
+      background: 'linear-gradient(135deg, #121212 0%, #1e3a34 100%)',
+      backgroundSize: '200% 200%',
+      animation: 'gradient 15s ease infinite',
+      minHeight: '100vh',
+      transition: 'background 0.5s ease-in-out',
+      display: 'flex',
+      flexDirection: 'column',
+      '@keyframes gradient': {
+        '0%': { backgroundPosition: '0% 50%' },
+        '50%': { backgroundPosition: '100% 50%' },
+        '100%': { backgroundPosition: '0% 50%' }
+      }
+    } as React.CSSProperties;
+  };
+
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: '#f8f9fa' }}>
-      <AppBar position="static">
-        <Toolbar>
-          <IconButton
-            color="inherit"
-            aria-label="open drawer"
-            edge="start"
-            onClick={handleDrawerToggle} 
-            sx={{ mr: 2 }}
-          >
-            <MenuIcon />
-          </IconButton>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Upload Score Report
-          </Typography>
-          
-          {/* Tree growth badge */}
-          {correctAnswers.length > 0 && (
-            <Tooltip title="Your bonsai tree is growing! Click to view">
-              <Badge 
-                badgeContent={treeBadgeCount} 
-                color="success"
-                sx={{ mr: 2, opacity: showTreeGrowthBadge ? 1 : 0.8, transition: 'all 0.3s ease' }}
-              >
-                <IconButton 
-                  color="inherit" 
-                  onClick={handleViewTreeGrowth}
-                  sx={{ 
-                    animation: showTreeGrowthBadge ? 'treeGrow 1s ease-in-out' : 'none',
-                    '@keyframes treeGrow': {
-                      '0%': { transform: 'scale(1)' },
-                      '50%': { transform: 'scale(1.3)' },
-                      '100%': { transform: 'scale(1)' }
-                    }
-                  }}
-                >
-                  <EmojiNatureIcon />
-                </IconButton>
-              </Badge>
-            </Tooltip>
-          )}
-        </Toolbar>
-      </AppBar>
-
-      <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
-        <Typography variant="h4" gutterBottom align="center" sx={{ fontWeight: 'bold', color: theme.palette.primary.main }}>
-          Upload Your SAT Practice Report
-        </Typography>
-        <Typography variant="subtitle1" align="center" color="text.secondary" paragraph>
-          Upload your report or paste text to get personalized lessons and practice questions
-        </Typography>
-
-        {apiKeyMissing && (
-          <Alert severity="warning" sx={{ mb: 3 }}>
-            <Typography variant="subtitle2" fontWeight="bold">API Key Missing</Typography>
-            <Typography variant="body2">
-              The application is running in limited mode. Some advanced features may not be available. Please contact the administrator for full functionality.
+    <ThemeProvider theme={darkTheme}>
+      <Box sx={getBackgroundStyle()}>
+        <AppBar position="static" sx={{ 
+          background: 'rgba(12, 59, 46, 0.8)',
+          backdropFilter: 'blur(10px)',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)'
+        }}>
+          <Toolbar>
+            <IconButton
+              color="inherit"
+              aria-label="open drawer"
+              edge="start"
+              onClick={handleDrawerToggle} 
+              sx={{ mr: 2 }}
+            >
+              <MenuIcon />
+            </IconButton>
+            <Typography variant="h6" component="div" sx={{ flexGrow: 1, letterSpacing: '-0.01em' }}>
+              Upload Score Report
             </Typography>
-          </Alert>
-        )}
-
-        <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 4, display: { xs: 'none', sm: 'flex' } }}>
-          <Step>
-            <StepLabel>Upload Report</StepLabel>
-          </Step>
-          <Step>
-            <StepLabel>Process Content</StepLabel>
-          </Step>
-          <Step>
-            <StepLabel>Extract Information</StepLabel>
-          </Step>
-          <Step>
-            <StepLabel>Generate Questions</StepLabel>
-          </Step>
-        </Stepper>
-        
-        <Box sx={{ width: '100%', mb: 3 }}>
-          <Tabs
-            value={inputMethod}
-            onChange={handleInputMethodChange}
-            centered
-            indicatorColor="primary"
-            textColor="primary"
-            variant={isMobile ? "fullWidth" : "standard"}
-          >
-            <Tab 
-              value="file" 
-              label="Upload File" 
-              icon={<CloudUploadIcon />} 
-              iconPosition="start"
-              disabled={isLoading}
-            />
-            <Tab 
-              value="text" 
-              label="Paste Text" 
-              icon={<TextFieldsIcon />} 
-              iconPosition="start"
-              disabled={isLoading}
-            />
-          </Tabs>
-        </Box>
-
-        {!isLoading && activeStep < 3 && (
-          <>
-            {inputMethod === 'file' ? (
-              <Paper
-                {...getRootProps()}
-                elevation={3}
-                sx={{
-                  p: 4,
-                  mt: 3,
-                  textAlign: 'center',
-                  border: isDragActive ? '2px dashed' : '2px dashed grey.500',
-                  borderColor: isDragActive ? 'primary.main' : 'grey.500',
-                  backgroundColor: isDragActive ? 'rgba(76, 175, 80, 0.04)' : 'background.paper',
-                  cursor: 'pointer',
-                  minHeight: 200,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'all 0.3s ease'
-                }}
-              >
-                <input {...getInputProps()} />
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <CloudUploadIcon sx={{ fontSize: 60, color: 'primary.main', mb: 1 }} />
-                  <PictureAsPdfIcon sx={{ fontSize: 40, color: 'secondary.main', mb: 2 }} />
-                </Box>
-                {isDragActive ? (
-                  <Typography variant="h6" color="primary.main">Drop the file here ...</Typography>
-                ) : (
-                  <Typography variant="h6">Drag 'n' drop a file here, or click to select file</Typography>
-                )}
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                  (PDF files are now processed directly with Gemini 1.5 Flash)
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                  (Max file size: 10MB. Supported formats: PDF, TXT)
-                </Typography>
-              </Paper>
-            ) : (
-              <Paper elevation={3} sx={{ p: 4, mt: 3 }}>
-                <Typography variant="h6" gutterBottom>Paste Your SAT Report Text</Typography>
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={10}
-                  variant="outlined"
-                  placeholder="Paste the content of your SAT report here..."
-                  value={pastedText}
-                  onChange={(e) => setPastedText(e.target.value)}
-                  disabled={isLoading}
-                  sx={{ mb: 2 }}
-                />
-                <Button 
-                  variant="contained" 
-                  color="primary" 
-                  onClick={handleTextSubmit}
-                  disabled={!pastedText.trim() || isLoading}
-                  fullWidth
-                  size="large"
-                  sx={{ py: 1.5, textTransform: 'none', fontWeight: 'bold' }}
+            
+            {/* User Avatar */}
+            <Avatar sx={{ 
+              bgcolor: 'primary.main',
+              boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
+              transition: 'all 0.3s ease'
+            }}>
+              {loadingUserData ? '' : userData?.firstName?.charAt(0) || 'U'}
+            </Avatar>
+            
+            {/* Tree growth badge */}
+            {correctAnswers.length > 0 && (
+              <Tooltip title="Your bonsai tree is growing! Click to view">
+                <Badge 
+                  badgeContent={treeBadgeCount} 
+                  color="success"
+                  sx={{ mr: 2, opacity: showTreeGrowthBadge ? 1 : 0.8, transition: 'all 0.3s ease' }}
                 >
-                  Process Text
-                </Button>
-              </Paper>
-            )}
-          </>
-        )}
-
-        {error && (
-          <Alert severity="error" sx={{ mt: 2 }}>
-            {error}
-          </Alert>
-        )}
-
-        {uploadedFile && inputMethod === 'file' && !error && !isLoading && activeStep < 3 && (
-          <Paper elevation={1} sx={{ p: 2, mt: 3 }}>
-            <Typography variant="h6">Uploaded File:</Typography>
-            <Typography>{uploadedFile.name} ({Math.round(uploadedFile.size / 1024)} KB)</Typography>
-          </Paper>
-        )}
-
-        {isLoading && (
-          <LoadingAnimation
-            message={loadingMessage || 'Processing...'}
-            width={280}
-            height={280}
-          />
-        )}
-
-        {extractedText && !isLoading && activeStep === 2 && (
-          <Paper elevation={1} sx={{ p: 3, mt: 4 }}>
-            <Typography variant="h6" gutterBottom>Extracted Text (Preview):</Typography>
-            <Typography variant="body2" sx={{ maxHeight: 150, overflowY: 'auto', whiteSpace: 'pre-wrap', backgroundColor: 'grey.100', p:2, borderRadius:1 }}>
-              {extractedText}
-            </Typography>
-          </Paper>
-        )}
-        
-        {generatedQuestions.length > 0 && !isLoading && (
-          <Box sx={{ mt: 4 }}>
-            <Paper elevation={3} sx={{ p: 3, borderRadius: 2, mb: 4 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                <SchoolIcon sx={{ fontSize: 32, color: 'primary.main', mr: 1.5 }} />
-                <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
-                  Your Personalized Practice Questions
-                </Typography>
-              </Box>
-              
-              <Typography variant="body1" paragraph>
-                Based on your test results, we've created {generatedQuestions.length} personalized practice questions 
-                covering different topics to help you improve your SAT score.
-              </Typography>
-              
-              {correctAnswers.length > 0 && (
-                <Alert 
-                  severity="success" 
-                  icon={<LocalFloristIcon />}
-                  sx={{ mb: 3, display: 'flex', alignItems: 'center' }}
-                >
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                    <Typography>
-                      You've correctly answered {correctAnswers.length} question{correctAnswers.length !== 1 ? 's' : ''}! 
-                      Your Bonsai Tree is growing with each correct answer.
-                    </Typography>
-                    <Button 
-                      variant="outlined" 
-                      size="small" 
-                      color="success" 
-                      startIcon={<EmojiNatureIcon />}
-                      onClick={handleViewTreeGrowth}
-                      sx={{ ml: 2 }}
-                    >
-                      View Growth
-                    </Button>
-                  </Box>
-                </Alert>
-              )}
-              
-              <Divider sx={{ mb: 3 }} />
-              
-              {Object.entries(questionsByTopic).map(([topic, questions], topicIndex) => (
-                <Accordion key={topicIndex} defaultExpanded={topicIndex === 0} sx={{ mb: 2, boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
-                  <AccordionSummary 
-                    expandIcon={<ExpandMoreIcon />}
+                  <IconButton 
+                    color="inherit" 
+                    onClick={handleViewTreeGrowth}
                     sx={{ 
-                      backgroundColor: 'rgba(0, 0, 0, 0.02)',
-                      borderBottom: '1px solid',
-                      borderColor: 'divider'
+                      animation: showTreeGrowthBadge ? 'treeGrow 1s ease-in-out' : 'none',
+                      '@keyframes treeGrow': {
+                        '0%': { transform: 'scale(1)' },
+                        '50%': { transform: 'scale(1.3)' },
+                        '100%': { transform: 'scale(1)' }
+                      }
                     }}
                   >
-                    <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', justifyContent: 'space-between' }}>
-                      <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                        {topic} ({questions.length})
-                      </Typography>
-                      
-                      {/* Show mini progress for this topic */}
-                      {questions.length > 0 && (
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>
-                            {questions.filter(q => correctAnswers.includes(q.id)).length}/{questions.length} Correct
-                          </Typography>
-                          {questions.some(q => correctAnswers.includes(q.id)) && (
-                            <LocalFloristIcon 
-                              fontSize="small" 
-                              color="success" 
-                              sx={{ 
-                                opacity: questions.every(q => correctAnswers.includes(q.id)) ? 1 : 0.6,
-                                animation: showTreeGrowthBadge ? 'pulse 1.5s infinite' : 'none',
-                                '@keyframes pulse': {
-                                  '0%': { transform: 'scale(1)' },
-                                  '50%': { transform: 'scale(1.2)' },
-                                  '100%': { transform: 'scale(1)' }
-                                }
-                              }} 
-                            />
-                          )}
-                        </Box>
-                      )}
-                    </Box>
-                  </AccordionSummary>
-                  <AccordionDetails sx={{ p: 0 }}>
-                    {questions.map((question, qIndex) => (
-                      <Card key={question.id} sx={{ mb: 2, boxShadow: 'none', border: '1px solid', borderColor: 'divider', m: 2 }}>
-                        <CardContent>
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                            <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                              Question {topicIndex + 1}.{qIndex + 1}
-                              
-                              {/* Show which skill this question helps */}
-                              {questionSkillMap[question.id] && (
-                                <Tooltip 
-                                  title={`Answering this correctly will help grow your "${skills.find(s => s.id === questionSkillMap[question.id])?.name}" skill`}
-                                  arrow
-                                >
-                                  <Typography
-                                    component="span"
-                                    variant="body2"
-                                    sx={{ 
-                                      ml: 1, 
-                                      color: 'text.secondary',
-                                      cursor: 'help',
-                                      textDecoration: 'underline',
-                                      textDecorationStyle: 'dotted'
-                                    }}
-                                  >
-                                    (Improves a skill)
-                                  </Typography>
-                                </Tooltip>
-                              )}
-                            </Typography>
-                            {question.difficulty && (
-                              <Chip 
-                                label={question.difficulty} 
-                                size="small" 
-                                sx={{ 
-                                  bgcolor: getDifficultyColor(question.difficulty),
-                                  color: 'white',
-                                  fontWeight: 'bold'
-                                }} 
-                              />
-                            )}
-                          </Box>
-                          
-                          <Typography variant="body1" paragraph sx={{ whiteSpace: 'pre-wrap' }}>
-                            {question.text}
-                          </Typography>
-                          
-                          {question.options && (
-                            <Box sx={{ ml: 2, mb: 2 }}>
-                              <RadioGroup 
-                                value={studentAnswers[question.id] || ''} 
-                                onChange={(e) => handleAnswerSelect(question.id, e.target.value)}
-                              >
-                                {question.options.map((opt, i) => (
-                                  <FormControlLabel
-                                    key={i}
-                                    value={String.fromCharCode(65 + i)} // A, B, C, D...
-                                    control={<Radio />}
-                                    label={
-                                      <Box sx={{ 
-                                        display: 'flex', 
-                                        alignItems: 'center',
-                                        color: showExplanations[question.id] && 
-                                               question.answer === String.fromCharCode(65 + i) ? 
-                                               'success.main' : 'text.primary'
-                                      }}>
-                                        <Typography variant="body1">
-                                          {String.fromCharCode(65 + i)}. {opt}
-                                        </Typography>
-                                        {showExplanations[question.id] && 
-                                          question.answer === String.fromCharCode(65 + i) && 
-                                          <CheckCircleIcon sx={{ ml: 1, color: 'success.main' }} />
-                                        }
-                                      </Box>
-                                    }
-                                    sx={{ 
-                                      p: 1.5, 
-                                      mb: 1, 
-                                      borderRadius: 1, 
-                                      border: '1px solid',
-                                      borderColor: 'divider',
-                                      bgcolor: showExplanations[question.id] && 
-                                               question.answer === String.fromCharCode(65 + i) ? 
-                                               'rgba(76, 175, 80, 0.12)' : 'transparent',
-                                    }}
-                                    disabled={showExplanations[question.id]}
-                                  />
-                                ))}
-                              </RadioGroup>
-                            </Box>
-                          )}
-                          
-                          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
-                            {studentAnswers[question.id] && !showExplanations[question.id] && (
-                              <Button 
-                                variant="contained" 
-                                color="primary" 
-                                onClick={() => checkAnswer(question.id)}
-                                sx={{ mr: 1 }}
-                              >
-                                Check Answer
-                              </Button>
-                            )}
-                            {showExplanations[question.id] && (
-                              <Button 
-                                variant="outlined" 
-                                onClick={() => resetQuestion(question.id)}
-                              >
-                                Try Again
-                              </Button>
-                            )}
-                          </Box>
-                          
-                          {showExplanations[question.id] && (
-                            <Fade in={showExplanations[question.id]} timeout={500}>
-                              <Box>
-                                <Box sx={{ display: 'flex', alignItems: 'center', mt: 2, mb: 1 }}>
-                                  {isAnswerCorrect(question, studentAnswers[question.id]) ? (
-                                    <Alert 
-                                      severity="success" 
-                                      icon={<CheckCircleIcon fontSize="inherit" />}
-                                      sx={{ width: '100%' }}
-                                    >
-                                      <Typography variant="body1" fontWeight="bold">
-                                        Correct! Well done.
-                                      </Typography>
-                                    </Alert>
-                                  ) : (
-                                    <Alert 
-                                      severity="error" 
-                                      icon={<CancelIcon fontSize="inherit" />}
-                                      sx={{ width: '100%' }}
-                                    >
-                                      <Typography variant="body1" fontWeight="bold">
-                                        Incorrect. The correct answer is {question.answer}.
-                                      </Typography>
-                                    </Alert>
-                                  )}
-                                </Box>
-                                
-                                <Box sx={{ 
-                                  mt: 2, 
-                                  p: 2, 
-                                  bgcolor: 'rgba(247, 247, 247, 0.9)', 
-                                  borderRadius: 1.5,
-                                  border: '1px solid',
-                                  borderColor: 'grey.200',
-                                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                                  position: 'relative',
-                                  '&::before': {
-                                    content: '""',
-                                    position: 'absolute',
-                                    top: 0,
-                                    left: 0,
-                                    width: '4px',
-                                    height: '100%',
-                                    backgroundColor: 'primary.main',
-                                    borderTopLeftRadius: 4,
-                                    borderBottomLeftRadius: 4
-                                  }
-                                }}>
-                                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: 'text.primary', mb: 0.5 }}>
-                                    Explanation:
-                                  </Typography>
-                                  <Typography variant="body2" sx={{ color: 'text.secondary', whiteSpace: 'pre-wrap' }}>
-                                    {question.explanation}
-                                  </Typography>
-                                </Box>
-                              </Box>
-                            </Fade>
-                          )}
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </AccordionDetails>
-                </Accordion>
-              ))}
-            </Paper>
-            
-            <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center', gap: 2 }}>
-                          <Button 
-              onClick={handleViewTreeGrowth}
-              variant="outlined" 
-              size="large"
-              sx={{ textTransform: 'none' }}
-              startIcon={<EmojiNatureIcon />}
-            >
-              View Your Bonsai Tree
-            </Button>
-              <Button
-                variant="contained"
-                color="primary"
-                size="large"
-                sx={{ textTransform: 'none', fontWeight: 'bold' }}
-                onClick={() => {
-                  setActiveStep(0);
-                  setGeneratedQuestions([]);
-                  setExtractedText(null);
-                  setInputMethod('file');
-                  setUploadedFile(null);
-                  setPastedText('');
-                  setStudentAnswers({});
-                  setShowExplanations({});
-                  setCorrectAnswers([]);
-                  setQuestionSkillMap({});
-                  setTreeBadgeCount(0);
+                    <EmojiNatureIcon />
+                  </IconButton>
+                </Badge>
+              </Tooltip>
+            )}
+          </Toolbar>
+        </AppBar>
+
+        <Container maxWidth="md" sx={{ py: 4 }}>
+          <Paper 
+            elevation={3} 
+            sx={{ 
+              p: { xs: 2, sm: 4 }, 
+              borderRadius: 2, 
+              background: 'rgba(33, 33, 33, 0.95)',
+              backdropFilter: 'blur(10px)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+              color: 'rgba(255, 255, 255, 0.87)'
+            }}
+          >
+            <Box sx={{ mb: 4, textAlign: 'center' }}>
+              <FadeIn>
+                <Typography variant="h4" gutterBottom sx={textStyles.heading}>
+                  Upload Your SAT Practice Report
+                </Typography>
+                <Typography variant="subtitle1" paragraph sx={textStyles.body}>
+                  Upload your report or paste text to get personalized lessons and practice questions
+                </Typography>
+              </FadeIn>
+            </Box>
+
+            {apiKeyMissing && (
+              <Alert 
+                severity="warning" 
+                sx={{ 
+                  mb: 3, 
+                  background: 'rgba(237, 108, 2, 0.15)', 
+                  color: 'rgba(255, 255, 255, 0.87)',
+                  '& .MuiAlert-icon': {
+                    color: 'rgba(255, 167, 38, 0.9)'
+                  }
                 }}
               >
-                Upload Another Report
-              </Button>
+                <Typography variant="subtitle2" fontWeight="bold">API Key Missing</Typography>
+                <Typography variant="body2">
+                  The application is running in limited mode. Some advanced features may not be available. Please contact the administrator for full functionality.
+                </Typography>
+              </Alert>
+            )}
+
+            <Stepper 
+              activeStep={activeStep} 
+              alternativeLabel 
+              sx={{ 
+                mb: 4, 
+                display: { xs: 'none', sm: 'flex' },
+                '& .MuiStepLabel-label': {
+                  color: 'rgba(255, 255, 255, 0.6)'
+                },
+                '& .MuiStepLabel-active': {
+                  color: 'rgba(255, 255, 255, 0.87)'
+                },
+                '& .MuiStepIcon-root': {
+                  color: 'rgba(30, 30, 30, 0.8)'
+                },
+                '& .MuiStepIcon-active': {
+                  color: 'rgba(136, 212, 152, 0.9)'
+                },
+                '& .MuiStepIcon-completed': {
+                  color: 'rgba(136, 212, 152, 0.7)'
+                }
+              }}
+            >
+              <Step>
+                <StepLabel>Upload Report</StepLabel>
+              </Step>
+              <Step>
+                <StepLabel>Process Content</StepLabel>
+              </Step>
+              <Step>
+                <StepLabel>Extract Information</StepLabel>
+              </Step>
+              <Step>
+                <StepLabel>Generate Questions</StepLabel>
+              </Step>
+            </Stepper>
+            
+            {/* Mobile stepper status */}
+            <Box sx={{ mb: 4, display: { xs: 'block', sm: 'none' }, textAlign: 'center' }}>
+              <Typography variant="body2" sx={textStyles.body}>
+                Step {activeStep + 1} of 4: {['Upload Report', 'Process Content', 'Extract Information', 'Generate Questions'][activeStep]}
+              </Typography>
             </Box>
-          </Box>
-        )}
-      </Container>
-    </Box>
+            
+            <Box sx={{ width: '100%', mb: 3 }}>
+              <Tabs
+                value={inputMethod}
+                onChange={handleInputMethodChange}
+                centered
+                sx={{
+                  '& .MuiTabs-indicator': {
+                    backgroundColor: 'rgba(136, 212, 152, 0.9)'
+                  },
+                  '& .MuiTab-root': {
+                    color: 'rgba(255, 255, 255, 0.6)',
+                    '&.Mui-selected': {
+                      color: 'rgba(255, 255, 255, 0.87)'
+                    }
+                  }
+                }}
+                variant={isMobile ? "fullWidth" : "standard"}
+              >
+                <Tab 
+                  value="file" 
+                  label="Upload File" 
+                  icon={<CloudUploadIcon />} 
+                  iconPosition="start"
+                  disabled={isLoading}
+                />
+                <Tab 
+                  value="text" 
+                  label="Paste Text" 
+                  icon={<TextFieldsIcon />} 
+                  iconPosition="start"
+                  disabled={isLoading}
+                />
+              </Tabs>
+            </Box>
+
+            {!isLoading && activeStep < 3 && (
+              <>
+                {inputMethod === 'file' ? (
+                  <Box
+                    {...getRootProps()}
+                    sx={{
+                      p: 4,
+                      textAlign: 'center',
+                      border: '2px dashed',
+                      borderColor: isDragActive ? 'rgba(136, 212, 152, 0.9)' : 'rgba(255, 255, 255, 0.23)',
+                      borderRadius: 2,
+                      backgroundColor: isDragActive ? 'rgba(26, 147, 111, 0.08)' : 'rgba(30, 30, 30, 0.3)',
+                      cursor: 'pointer',
+                      minHeight: 200,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.3s ease',
+                      '&:hover': {
+                        borderColor: 'rgba(136, 212, 152, 0.6)',
+                        backgroundColor: 'rgba(26, 147, 111, 0.05)'
+                      }
+                    }}
+                  >
+                    <input {...getInputProps()} />
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <CloudUploadIcon sx={{ 
+                        fontSize: 60, 
+                        color: 'rgba(136, 212, 152, 0.9)', 
+                        mb: 1,
+                        animation: isDragActive ? 'pulse 1.5s infinite' : 'none',
+                        '@keyframes pulse': {
+                          '0%': { transform: 'scale(1)' },
+                          '50%': { transform: 'scale(1.1)' },
+                          '100%': { transform: 'scale(1)' },
+                        }
+                      }} />
+                      <PictureAsPdfIcon sx={{ fontSize: 40, color: 'rgba(255, 255, 255, 0.6)', mb: 2 }} />
+                    </Box>
+                    {isDragActive ? (
+                      <Typography variant="h6" sx={textStyles.accent}>Drop the file here ...</Typography>
+                    ) : (
+                      <Typography variant="h6" sx={textStyles.heading}>Drag 'n' drop a file here, or click to select file</Typography>
+                    )}
+                    <Typography variant="body2" sx={{ ...textStyles.secondary, mt: 1 }}>
+                      (PDF files are now processed directly with Gemini 1.5 Flash)
+                    </Typography>
+                    <Typography variant="body2" sx={{ ...textStyles.secondary, mt: 0.5 }}>
+                      (Max file size: 10MB. Supported formats: PDF, TXT)
+                    </Typography>
+                  </Box>
+                ) : (
+                  <Box sx={{ p: 2 }}>
+                    <Typography variant="h6" gutterBottom sx={textStyles.heading}>Paste Your SAT Report Text</Typography>
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={10}
+                      variant="outlined"
+                      placeholder="Paste the content of your SAT report here..."
+                      value={pastedText}
+                      onChange={(e) => setPastedText(e.target.value)}
+                      disabled={isLoading}
+                      sx={{ 
+                        mb: 2,
+                        '& .MuiOutlinedInput-root': {
+                          backgroundColor: 'rgba(30, 30, 30, 0.4)',
+                          '&:hover .MuiOutlinedInput-notchedOutline': {
+                            borderColor: 'rgba(136, 212, 152, 0.5)'
+                          },
+                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                            borderColor: 'rgba(136, 212, 152, 0.8)'
+                          }
+                        },
+                        '& .MuiInputBase-input': {
+                          color: 'rgba(255, 255, 255, 0.87)'
+                        }
+                      }}
+                    />
+                    <GradientButton 
+                      variant="contained" 
+                      gradient="primary"
+                      onClick={handleTextSubmit}
+                      disabled={!pastedText.trim() || isLoading}
+                      fullWidth
+                      size="large"
+                      sx={{ py: 1.5 }}
+                    >
+                      Process Text
+                    </GradientButton>
+                  </Box>
+                )}
+              </>
+            )}
+
+            {error && (
+              <Alert 
+                severity="error" 
+                sx={{ 
+                  mt: 2, 
+                  backgroundColor: 'rgba(211, 47, 47, 0.15)', 
+                  color: 'rgba(255, 255, 255, 0.87)',
+                  '& .MuiAlert-icon': {
+                    color: 'rgba(244, 67, 54, 0.9)'
+                  }
+                }}
+              >
+                {error}
+              </Alert>
+            )}
+
+            {uploadedFile && inputMethod === 'file' && !error && !isLoading && activeStep < 3 && (
+              <Box sx={{ 
+                p: 2, 
+                mt: 3, 
+                backgroundColor: 'rgba(30, 30, 30, 0.4)', 
+                borderRadius: 2,
+                border: '1px solid rgba(136, 212, 152, 0.2)'
+              }}>
+                <Typography variant="h6" sx={textStyles.heading}>Uploaded File:</Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                  <PictureAsPdfIcon sx={{ color: 'rgba(136, 212, 152, 0.9)', mr: 1 }} />
+                  <Typography sx={textStyles.body}>
+                    {uploadedFile.name} ({Math.round(uploadedFile.size / 1024)} KB)
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+                  <GradientButton 
+                    variant="contained" 
+                    gradient="primary"
+                    onClick={() => {
+                      onDrop([uploadedFile]);
+                    }}
+                    size="small"
+                  >
+                    Process File
+                  </GradientButton>
+                </Box>
+              </Box>
+            )}
+
+            {isLoading && (
+              <Box sx={{ textAlign: 'center', my: 4 }}>
+                <LoadingAnimation
+                  message={loadingMessage || 'Processing...'}
+                  width={280}
+                  height={280}
+                />
+              </Box>
+            )}
+
+            {extractedText && !isLoading && activeStep === 2 && (
+              <Box sx={{ 
+                p: 3, 
+                mt: 4, 
+                backgroundColor: 'rgba(30, 30, 30, 0.4)', 
+                borderRadius: 2,
+                border: '1px solid rgba(136, 212, 152, 0.2)'
+              }}>
+                <Typography variant="h6" gutterBottom sx={textStyles.heading}>Extracted Text (Preview):</Typography>
+                <Box sx={{ 
+                  maxHeight: 150, 
+                  overflowY: 'auto', 
+                  whiteSpace: 'pre-wrap', 
+                  backgroundColor: 'rgba(18, 18, 18, 0.8)', 
+                  p: 2, 
+                  borderRadius: 1 
+                }}>
+                  <Typography variant="body2" sx={textStyles.body}>
+                    {extractedText}
+                  </Typography>
+                </Box>
+              </Box>
+            )}
+            
+            {generatedQuestions.length > 0 && !isLoading && (
+              <Box sx={{ mt: 4 }}>
+                <FadeIn>
+                  <Box sx={{ 
+                    p: 3, 
+                    borderRadius: 2, 
+                    mb: 4,
+                    background: 'rgba(24, 24, 24, 0.9)',
+                    backdropFilter: 'blur(10px)',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+                    border: '1px solid rgba(136, 212, 152, 0.2)',
+                  }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                      <SchoolIcon sx={{ fontSize: 32, color: 'rgba(136, 212, 152, 0.9)', mr: 1.5 }} />
+                      <Typography variant="h5" sx={{ ...textStyles.heading, fontWeight: 'bold' }}>
+                        Your Personalized Practice Questions
+                      </Typography>
+                    </Box>
+                    
+                    <Typography variant="body1" paragraph sx={textStyles.body}>
+                      Based on your test results, we've created {generatedQuestions.length} personalized practice questions 
+                      covering different topics to help you improve your SAT score.
+                    </Typography>
+                    
+                    {correctAnswers.length > 0 && (
+                      <Alert 
+                        severity="success" 
+                        icon={<LocalFloristIcon />}
+                        sx={{ 
+                          mb: 3, 
+                          display: 'flex', 
+                          alignItems: 'center',
+                          background: 'rgba(46, 125, 50, 0.15)',
+                          color: 'rgba(255, 255, 255, 0.87)',
+                          '& .MuiAlert-icon': {
+                            color: 'rgba(129, 199, 132, 0.9)'
+                          }
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                          <Typography sx={textStyles.body}>
+                            You've correctly answered {correctAnswers.length} question{correctAnswers.length !== 1 ? 's' : ''}! 
+                            Your Bonsai Tree is growing with each correct answer.
+                          </Typography>
+                          <GradientButton 
+                            variant="outlined" 
+                            size="small" 
+                            gradient="success"
+                            startIcon={<EmojiNatureIcon />}
+                            onClick={handleViewTreeGrowth}
+                            sx={{ ml: 2 }}
+                          >
+                            View Growth
+                          </GradientButton>
+                        </Box>
+                      </Alert>
+                    )}
+                    
+                    <Divider sx={{ mb: 3, borderColor: 'rgba(255, 255, 255, 0.1)' }} />
+                    
+                    {Object.entries(questionsByTopic).map(([topic, questions], topicIndex) => (
+                      <Accordion 
+                        key={topicIndex} 
+                        defaultExpanded={topicIndex === 0} 
+                        sx={{ 
+                          mb: 2, 
+                          boxShadow: 'none', 
+                          background: 'rgba(30, 30, 30, 0.4)', 
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          borderRadius: '4px !important',
+                          '&:before': {
+                            display: 'none'
+                          },
+                          '&.Mui-expanded': {
+                            margin: '0 0 16px 0'
+                          }
+                        }}
+                      >
+                        <AccordionSummary 
+                          expandIcon={<ExpandMoreIcon sx={{ color: 'rgba(255, 255, 255, 0.6)' }} />}
+                          sx={{ 
+                            backgroundColor: 'rgba(18, 18, 18, 0.6)',
+                            borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                            borderRadius: '4px',
+                            '&.Mui-expanded': {
+                              borderBottomLeftRadius: 0,
+                              borderBottomRightRadius: 0
+                            }
+                          }}
+                        >
+                          <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', justifyContent: 'space-between' }}>
+                            <Typography variant="h6" sx={{ ...textStyles.heading, fontWeight: 'bold' }}>
+                              {topic} ({questions.length})
+                            </Typography>
+                            
+                            {/* Show mini progress for this topic */}
+                            {questions.length > 0 && (
+                              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                <Typography variant="body2" sx={{ ...textStyles.secondary, mr: 1 }}>
+                                  {questions.filter(q => correctAnswers.includes(q.id)).length}/{questions.length} Correct
+                                </Typography>
+                                {questions.some(q => correctAnswers.includes(q.id)) && (
+                                  <LocalFloristIcon 
+                                    fontSize="small" 
+                                    sx={{ 
+                                      color: 'rgba(129, 199, 132, 0.9)',
+                                      opacity: questions.every(q => correctAnswers.includes(q.id)) ? 1 : 0.6,
+                                      animation: showTreeGrowthBadge ? 'pulse 1.5s infinite' : 'none',
+                                      '@keyframes pulse': {
+                                        '0%': { transform: 'scale(1)' },
+                                        '50%': { transform: 'scale(1.2)' },
+                                        '100%': { transform: 'scale(1)' }
+                                      }
+                                    }} 
+                                  />
+                                )}
+                              </Box>
+                            )}
+                          </Box>
+                        </AccordionSummary>
+                        <AccordionDetails sx={{ p: 0 }}>
+                          {questions.map((question, qIndex) => (
+                            <Box 
+                              key={question.id} 
+                              sx={{ 
+                                mb: 2, 
+                                m: 2, 
+                                p: 3,
+                                borderRadius: 2, 
+                                background: 'rgba(24, 24, 24, 0.9)',
+                                border: '1px solid rgba(255, 255, 255, 0.1)'
+                              }}
+                            >
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                                <Typography variant="subtitle1" sx={{ ...textStyles.heading, fontWeight: 'bold' }}>
+                                  Question {topicIndex + 1}.{qIndex + 1}
+                                  
+                                  {/* Show which skill this question helps */}
+                                  {questionSkillMap[question.id] && (
+                                    <Tooltip 
+                                      title={`Answering this correctly will help grow your "${skills.find(s => s.id === questionSkillMap[question.id])?.name}" skill`}
+                                      arrow
+                                    >
+                                      <Typography
+                                        component="span"
+                                        variant="body2"
+                                        sx={{ 
+                                          ml: 1, 
+                                          color: 'rgba(255, 255, 255, 0.6)',
+                                          cursor: 'help',
+                                          textDecoration: 'underline',
+                                          textDecorationStyle: 'dotted'
+                                        }}
+                                      >
+                                        (Improves a skill)
+                                      </Typography>
+                                    </Tooltip>
+                                  )}
+                                </Typography>
+                                {question.difficulty && (
+                                  <Chip 
+                                    label={question.difficulty} 
+                                    size="small" 
+                                    sx={{ 
+                                      bgcolor: getDifficultyColor(question.difficulty),
+                                      color: 'white',
+                                      fontWeight: 'bold'
+                                    }} 
+                                  />
+                                )}
+                              </Box>
+                              
+                              <Typography variant="body1" paragraph sx={{ ...textStyles.body, whiteSpace: 'pre-wrap' }}>
+                                {question.text}
+                              </Typography>
+                              
+                              {question.options && (
+                                <Box sx={{ ml: 2, mb: 2 }}>
+                                  <RadioGroup 
+                                    value={studentAnswers[question.id] || ''} 
+                                    onChange={(e) => handleAnswerSelect(question.id, e.target.value)}
+                                  >
+                                    {question.options.map((opt, i) => (
+                                      <FormControlLabel
+                                        key={i}
+                                        value={String.fromCharCode(65 + i)} // A, B, C, D...
+                                        control={
+                                          <Radio 
+                                            sx={{
+                                              color: 'rgba(255, 255, 255, 0.6)',
+                                              '&.Mui-checked': {
+                                                color: 'rgba(136, 212, 152, 0.9)',
+                                              }
+                                            }}
+                                          />
+                                        }
+                                        label={
+                                          <Box sx={{ 
+                                            display: 'flex', 
+                                            alignItems: 'center',
+                                            color: showExplanations[question.id] && 
+                                                  question.answer === String.fromCharCode(65 + i) ? 
+                                                  'rgba(129, 199, 132, 0.9)' : 'rgba(255, 255, 255, 0.87)'
+                                          }}>
+                                            <Typography variant="body1">
+                                              {String.fromCharCode(65 + i)}. {opt}
+                                            </Typography>
+                                            {showExplanations[question.id] && 
+                                              question.answer === String.fromCharCode(65 + i) && 
+                                              <CheckCircleIcon sx={{ ml:.5, color: 'rgba(129, 199, 132, 0.9)' }} />
+                                            }
+                                          </Box>
+                                        }
+                                        sx={{ 
+                                          p: 1.5, 
+                                          mb: 1, 
+                                          borderRadius: 1, 
+                                          border: '1px solid',
+                                          borderColor: 'rgba(255, 255, 255, 0.1)',
+                                          backgroundColor: showExplanations[question.id] && 
+                                                    question.answer === String.fromCharCode(65 + i) ? 
+                                                    'rgba(76, 175, 80, 0.08)' : 'rgba(30, 30, 30, 0.3)',
+                                          transition: 'all 0.2s ease',
+                                          '&:hover': {
+                                            backgroundColor: !showExplanations[question.id] ? 
+                                              'rgba(30, 30, 30, 0.6)' : 
+                                              (question.answer === String.fromCharCode(65 + i) ? 
+                                                'rgba(76, 175, 80, 0.08)' : 'rgba(30, 30, 30, 0.3)')
+                                          }
+                                        }}
+                                        disabled={showExplanations[question.id]}
+                                      />
+                                    ))}
+                                  </RadioGroup>
+                                </Box>
+                              )}
+                              
+                              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+                                {studentAnswers[question.id] && !showExplanations[question.id] && (
+                                  <GradientButton 
+                                    variant="contained" 
+                                    gradient="primary" 
+                                    onClick={() => checkAnswer(question.id)}
+                                    sx={{ mr: 1 }}
+                                  >
+                                    Check Answer
+                                  </GradientButton>
+                                )}
+                                {showExplanations[question.id] && (
+                                  <GradientButton 
+                                    variant="outlined" 
+                                    gradient="primary"
+                                    onClick={() => resetQuestion(question.id)}
+                                  >
+                                    Try Again
+                                  </GradientButton>
+                                )}
+                              </Box>
+                              
+                              {showExplanations[question.id] && (
+                                <Fade in={showExplanations[question.id]} timeout={500}>
+                                  <Box>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', mt: 2, mb: 1 }}>
+                                      {isAnswerCorrect(question, studentAnswers[question.id]) ? (
+                                        <Alert 
+                                          severity="success" 
+                                          icon={<CheckCircleIcon fontSize="inherit" />}
+                                          sx={{ 
+                                            width: '100%',
+                                            backgroundColor: 'rgba(46, 125, 50, 0.15)',
+                                            color: 'rgba(255, 255, 255, 0.87)',
+                                            '& .MuiAlert-icon': {
+                                              color: 'rgba(129, 199, 132, 0.9)'
+                                            }
+                                          }}
+                                        >
+                                          <Typography variant="body1" fontWeight="bold">
+                                            Correct! Well done.
+                                          </Typography>
+                                        </Alert>
+                                      ) : (
+                                        <Alert 
+                                          severity="error" 
+                                          icon={<CancelIcon fontSize="inherit" />}
+                                          sx={{ 
+                                            width: '100%',
+                                            backgroundColor: 'rgba(211, 47, 47, 0.15)',
+                                            color: 'rgba(255, 255, 255, 0.87)',
+                                            '& .MuiAlert-icon': {
+                                              color: 'rgba(244, 67, 54, 0.9)'
+                                            }
+                                          }}
+                                        >
+                                          <Typography variant="body1" fontWeight="bold">
+                                            Incorrect. The correct answer is {question.answer}.
+                                          </Typography>
+                                        </Alert>
+                                      )}
+                                    </Box>
+                                    
+                                    <Box sx={{ 
+                                      mt: 2, 
+                                      p: 2, 
+                                      bgcolor: 'rgba(18, 18, 18, 0.8)', 
+                                      borderRadius: 1.5,
+                                      border: '1px solid rgba(136, 212, 152, 0.2)',
+                                      position: 'relative',
+                                      '&::before': {
+                                        content: '""',
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        width: '4px',
+                                        height: '100%',
+                                        backgroundColor: 'rgba(136, 212, 152, 0.9)',
+                                        borderTopLeftRadius: 4,
+                                        borderBottomLeftRadius: 4
+                                      }
+                                    }}>
+                                      <Typography variant="subtitle2" sx={{ fontWeight: 'bold', ...textStyles.heading, mb: 0.5, pl: 1 }}>
+                                        Explanation:
+                                      </Typography>
+                                      <Typography variant="body2" sx={{ ...textStyles.body, whiteSpace: 'pre-wrap', pl: 1 }}>
+                                        {question.explanation}
+                                      </Typography>
+                                    </Box>
+                                  </Box>
+                                </Fade>
+                              )}
+                            </Box>
+                          ))}
+                        </AccordionDetails>
+                      </Accordion>
+                    ))}
+                  </Box>
+                </FadeIn>
+                
+                <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center', gap: 2 }}>
+                  <GradientButton 
+                    onClick={handleViewTreeGrowth}
+                    variant="outlined" 
+                    gradient="success"
+                    size="large"
+                    startIcon={<EmojiNatureIcon />}
+                  >
+                    View Your Bonsai Tree
+                  </GradientButton>
+                  <GradientButton
+                    variant="contained"
+                    gradient="primary"
+                    size="large"
+                    onClick={() => {
+                      setActiveStep(0);
+                      setGeneratedQuestions([]);
+                      setExtractedText(null);
+                      setInputMethod('file');
+                      setUploadedFile(null);
+                      setPastedText('');
+                      setStudentAnswers({});
+                      setShowExplanations({});
+                      setCorrectAnswers([]);
+                      setQuestionSkillMap({});
+                      setTreeBadgeCount(0);
+                    }}
+                  >
+                    Upload Another Report
+                  </GradientButton>
+                </Box>
+              </Box>
+            )}
+
+          </Paper>
+        </Container>
+      </Box>
+    </ThemeProvider>
   );
 };
 
