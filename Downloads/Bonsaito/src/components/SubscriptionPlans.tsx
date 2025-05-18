@@ -78,16 +78,16 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onSelectPlan }) =
         </Typography>
         <Chip 
           label="Free Beta Access" 
-          color="primary" 
-          icon={<StarIcon />} 
+          icon={<StarIcon sx={{ color: 'rgba(136, 212, 152, 0.9)' }} />} 
           sx={{ 
             px: 2, 
             py: 3, 
             fontSize: '1rem',
             fontWeight: 'bold',
             borderRadius: '16px', 
-            background: 'linear-gradient(90deg, #4F46E5 0%, #7C3AED 100%)',
-            '& .MuiChip-icon': { color: 'white' }
+            background: 'linear-gradient(90deg, #1a936f 0%, #0c3b2e 100%)',
+            color: 'rgba(255,255,255,0.95)',
+            '& .MuiChip-icon': { color: 'rgba(136, 212, 152, 0.9)' }
           }} 
         />
       </Box>
