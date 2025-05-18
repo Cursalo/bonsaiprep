@@ -98,15 +98,15 @@ interface OnboardingData {
 
 // Gradients for each step
 const gradients = [
-  'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)', // Step 1
-  'linear-gradient(135deg, #c2e9fb 0%, #a1c4fd 100%)', // Step 2
-  'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)', // Step 3
-  'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)', // Step 4
-  'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', // Step 5
-  'linear-gradient(135deg, #96fbc4 0%, #f9f586 100%)', // Step 6
-  'linear-gradient(135deg, #cfd9df 0%, #e2ebf0 100%)', // Step 7
-  'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', // Step 8
-  'linear-gradient(135deg, #6a11cb 0%, #2575fc 100%)', // Step 9 (Subscription)
+  'linear-gradient(135deg, #0c3b2e 0%, #18514a 100%)', // Step 1
+  'linear-gradient(135deg, #0c3b2e 0%, #18514a 100%)', // Step 2
+  'linear-gradient(135deg, #0c3b2e 0%, #18514a 100%)', // Step 3
+  'linear-gradient(135deg, #0c3b2e 0%, #18514a 100%)', // Step 4
+  'linear-gradient(135deg, #0c3b2e 0%, #18514a 100%)', // Step 5
+  'linear-gradient(135deg, #0c3b2e 0%, #18514a 100%)', // Step 6
+  'linear-gradient(135deg, #0c3b2e 0%, #18514a 100%)', // Step 7
+  'linear-gradient(135deg, #0c3b2e 0%, #18514a 100%)', // Step 8
+  'linear-gradient(135deg, #0c3b2e 0%, #18514a 100%)', // Step 9 (Subscription)
 ];
 
 const OnboardingFlow: React.FC = () => {
@@ -116,6 +116,25 @@ const OnboardingFlow: React.FC = () => {
   const [cities, setCities] = useState<string[]>([]);
   const [direction, setDirection] = useState<'forward' | 'backward'>('forward');
   const [processingReport, setProcessingReport] = useState(false);
+  
+  // Custom styles for better text readability
+  const textStyles = {
+    heading: {
+      color: '#f8f9fa',
+      textShadow: '0 1px 2px rgba(0,0,0,0.1)'
+    },
+    subheading: {
+      color: '#f8f9fa',
+      opacity: 0.9
+    },
+    body: {
+      color: '#dae1e7'
+    },
+    label: {
+      color: '#f8f9fa',
+      fontWeight: 500
+    }
+  };
   
   // Form data
   const [data, setData] = useState<OnboardingData>({
@@ -773,10 +792,10 @@ const OnboardingFlow: React.FC = () => {
         return (
           <Grid container spacing={3}>
             <Grid item xs={12}>
-              <Typography variant="h4" align="center" gutterBottom>
+              <Typography variant="h4" align="center" gutterBottom sx={{ color: '#f8f9fa' }}>
                 Review Your Information
               </Typography>
-              <Typography variant="body1" align="center" color="textSecondary" paragraph>
+              <Typography variant="body1" align="center" paragraph sx={{ color: '#dae1e7' }}>
                 Please verify that everything is correct before proceeding.
               </Typography>
             </Grid>
@@ -915,9 +934,10 @@ const OnboardingFlow: React.FC = () => {
           sx={{ 
             p: { xs: 2, sm: 4 }, 
             borderRadius: 2, 
-            background: 'rgba(255, 255, 255, 0.9)',
+            background: 'rgba(12, 59, 46, 0.8)',
             backdropFilter: 'blur(10px)',
-            boxShadow: '0 8px 32px rgba(31, 38, 135, 0.2)'
+            boxShadow: '0 8px 32px rgba(31, 38, 135, 0.2)',
+            color: '#f8f9fa'
           }}
         >
           <Stepper 
