@@ -714,7 +714,7 @@ const Dashboard: React.FC = () => {
                           backgroundImage: 'url(/altar2.png)',
                           backgroundSize: 'cover',
                           backgroundRepeat: 'no-repeat',
-                          backgroundPosition: 'center bottom',
+                          backgroundPosition: '60% bottom',
                           backdropFilter: 'blur(8px)',
                           borderRadius: 4,
                           mt: 2,
