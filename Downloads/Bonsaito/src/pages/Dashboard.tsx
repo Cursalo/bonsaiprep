@@ -717,32 +717,20 @@ const Dashboard: React.FC = () => {
                           overflow: 'hidden',
                           border: 'none',
                           boxShadow: 'none',
-                          background: 'none',
+                          background: 'none', 
                           backgroundImage: `url('/altar2.png')`,
                           backgroundSize: 'cover',
-                          backgroundPosition: '60% bottom',
+                          backgroundPosition: 'calc(60% + 15px) bottom',
                           backgroundRepeat: 'no-repeat',
-                          backdropFilter: 'none',
                           display: 'flex',
                           justifyContent: 'center',
                           alignItems: 'center',
+                          transition: 'all 0.5s ease-in-out',
+                          '&:hover': {
+                            transform: 'scale(1.02)',
+                            boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
+                          }
                         }}>
-                          <Box sx={{
-                            position: 'absolute',
-                            top: 20,
-                            right: 25,
-                            width: 80,
-                            height: 80,
-                            borderRadius: '50%',
-                            background: 'radial-gradient(circle, rgba(255,236,179,0.3) 0%, rgba(255,236,179,0) 70%)',
-                            zIndex: 1,
-                            animation: 'pulse 8s infinite ease-in-out',
-                            '@keyframes pulse': {
-                              '0%': { opacity: 0.5, transform: 'scale(1)' },
-                              '50%': { opacity: 0.8, transform: 'scale(1.1)' },
-                              '100%': { opacity: 0.5, transform: 'scale(1)' }
-                            }
-                          }} />
                           <BonsaiTree skills={skills} totalSkills={totalSkills} />
                         </Box>
                         
