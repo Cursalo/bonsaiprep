@@ -219,6 +219,13 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
           mb: 4, 
           borderRadius: '20px',
           backgroundColor: 'transparent',
+          backdropFilter: 'none',
+          '&.MuiPaper-root': {
+            backgroundColor: 'transparent !important',
+            backdropFilter: 'none !important',
+            border: 'none !important',
+            boxShadow: 'none !important'
+          },
           position: 'relative',
           height: '100%',
           overflow: 'hidden',
