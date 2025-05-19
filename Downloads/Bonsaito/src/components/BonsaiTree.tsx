@@ -245,8 +245,13 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
             justifyContent: 'center',
             alignItems: 'flex-start',
             position: 'relative',
+            width: '100%',
+            aspectRatio: '16/9',
+            maxHeight: '600px',
             mt: '-20%', // Move the bonsai 20% higher
             '& img': {
+              maxWidth: '100%',
+              maxHeight: '100%',
               objectFit: 'contain',
               transition: 'transform 0.3s ease-in-out',
               '&:hover': {
@@ -260,11 +265,8 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
               style={{
                 ...imageProps,
                 opacity: isImageLoaded ? 1 : 0,
-                // Add floating animation and scale (now 0.2)
                 animation: 'floatBonsai 3.5s ease-in-out infinite',
-                transform: `${imageProps.transform ? imageProps.transform.get() : 'translateY(0)'} scale(0.2)`,
-                width: '20%',
-                height: 'auto',
+                transform: 'scale(0.5)'
               }}
               onLoad={() => setIsImageLoaded(true)}
               onError={handleImageError}
