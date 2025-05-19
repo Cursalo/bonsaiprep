@@ -819,89 +819,16 @@ const Dashboard: React.FC = () => {
                           />
                         </Box>
                         
-                        <Box sx={{ 
-                          display: 'flex', 
-                          justifyContent: 'center', 
-                          mt: 2,
-                          mb: 4,
-                          gap: 2,
-                          position: 'relative'
-                        }}>
-                          <Typography 
-                            variant="h4" 
-                            sx={{ 
-                              fontWeight: 'bold', 
-                              color: '#88d498',
-                              textShadow: '0 2px 4px rgba(0,0,0,0.3)',
-                              textAlign: 'center'
-                            }}
+                        <Box sx={{ mt: 3, display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
+                          <GradientButton
+                            variant="contained"
+                            gradient="phthalo"
+                            startIcon={<QuizIcon />}
+                            onClick={() => navigate('/upload')}
                           >
-                            {progressPercentage}%
-                          </Typography>
-                          <Typography 
-                            variant="h6" 
-                            sx={{ 
-                              fontWeight: 'medium', 
-                              color: 'rgba(255, 255, 255, 0.87)',
-                              alignSelf: 'flex-end',
-                              mb: 0.5
-                            }}
-                          >
-                            Skills Mastered
-                          </Typography>
-                          <Typography
-                            variant="body1"
-                            sx={{
-                              position: 'absolute',
-                              bottom: '-24px',
-                              left: 0,
-                              right: 0,
-                              textAlign: 'center',
-                              color: 'rgba(255, 255, 255, 0.87)',
-                              fontWeight: 'medium'
-                            }}
-                          >
-                            {correctAnswersCount >= 10
-                              ? 'Congratulations! Your bonsai is fully grown!'
-                              : `Progress: ${progressPercentage}% - Answer ${10 - correctAnswersCount} more questions to grow your bonsai!`}
-                          </Typography>
+                            Grow Your Tree
+                          </GradientButton>
                         </Box>
-                        
-                        <Typography variant="body2" sx={{ mt: 1, textAlign: 'center', color: 'rgba(255, 255, 255, 0.7)' }}>
-                          You've mastered {masteredSkillsCount} out of {totalSkills} questions. Keep growing!
-                        </Typography>
-                      </Box>
-                      
-                      {masteredSkillsCount < totalSkills && (
-                         <Box sx={{ mt: 2 }}>
-                           <LinearProgress 
-                             variant="determinate" 
-                             value={progressPercentage} 
-                             sx={{ 
-                               height: 10, 
-                               borderRadius: 5, 
-                               mb: 1,
-                               backgroundColor: 'rgba(30, 30, 30, 0.5)',
-                               '& .MuiLinearProgress-bar': {
-                                 backgroundColor: '#88d498',
-                                 boxShadow: '0 0 5px rgba(136, 212, 152, 0.5)'
-                               }
-                             }} 
-                           />
-                           <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.6)' }}>
-                             {progressPercentage}% complete
-                           </Typography>
-                         </Box>
-                      )}
-                      <Box sx={{ mt: 3, display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
-                        <GradientButton
-                          variant="contained"
-                          gradient="phthalo"
-                          startIcon={<QuizIcon />}
-                          onClick={() => navigate('/upload')}
-                        >
-                          Grow Your Tree
-                        </GradientButton>
                       </Box>
                     </GlassCard>
                   </FadeIn>
