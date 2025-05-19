@@ -1531,7 +1531,7 @@ const UploadReport: React.FC = () => {
                     overflow: 'hidden', // Ensure content respects border radius
                     margin: '20px auto' // Add some margin for spacing within the card
                   }}>
-                    <Box style={{ transform: 'translateY(7px)' }}> {/* Wrapper Box for styling */}
+                    <Box style={{ transform: 'translateY(1px)' }}> {/* Wrapper Box for styling */}
                       <BonsaiTree 
                         skills={skills} 
                         totalSkills={totalSkills} 
