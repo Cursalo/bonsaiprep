@@ -21,6 +21,7 @@ interface BonsaiTreeProps {
   totalSkills: number;
   correctAnswersCount?: number; // Add optional prop to allow direct control of correct answers
   maxCorrectAnswers?: number; // Maximum number of correct answers to reach the final tree stage
+  showProgressText?: boolean; // Prop to control visibility of progress text
 }
 
 interface Point {
@@ -54,7 +55,8 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({
   skills, 
   totalSkills, 
   correctAnswersCount: externalCorrectAnswersCount, 
-  maxCorrectAnswers = 10 // Default to 10 max correct answers
+  maxCorrectAnswers = 10, // Default to 10 max correct answers
+  showProgressText = true // Default to showing progress text
 }) => {
   const theme = useTheme();
   const [internalCorrectAnswersCount, setInternalCorrectAnswersCount] = useState(0);
@@ -335,21 +337,23 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({
             />
           </Box>
           
-          <Box sx={{ 
-            mt: 3, 
-            textAlign: 'center',
-            color: '#2C1810',
-            textShadow: '0 1px 2px rgba(0,0,0,0.1)'
-          }}>
-            <Typography variant="h6">
-              {correctAnswersCount} Questions Mastered
-            </Typography>
-            <Typography variant="body2" sx={{ mt: 1, opacity: 0.8 }}>
-              {correctAnswersCount >= maxCorrectAnswers
-                ? 'Congratulations! Your bonsai is fully grown!'
-                : `Progress: ${progressPercentage.toFixed(0)}% - Answer ${maxCorrectAnswers - correctAnswersCount} more questions to fully grow your bonsai!`}
-            </Typography>
-          </Box>
+          {showProgressText && (
+            <Box sx={{ 
+              mt: 3, 
+              textAlign: 'center',
+              color: '#2C1810',
+              textShadow: '0 1px 2px rgba(0,0,0,0.1)'
+            }}>
+              <Typography variant="h6">
+                {correctAnswersCount} Questions Mastered
+              </Typography>
+              <Typography variant="body2" sx={{ mt: 1, opacity: 0.8 }}>
+                {correctAnswersCount >= maxCorrectAnswers
+                  ? 'Congratulations! Your bonsai is fully grown!'
+                  : `Progress: ${progressPercentage.toFixed(0)}% - Answer ${maxCorrectAnswers - correctAnswersCount} more questions to fully grow your bonsai!`}
+              </Typography>
+            </Box>
+          )}
         </Box>
       </Paper>
     </animated.div>

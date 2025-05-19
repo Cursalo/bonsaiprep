@@ -811,6 +811,7 @@ const Dashboard: React.FC = () => {
                             totalSkills={totalSkills} 
                             correctAnswersCount={correctAnswersCount} 
                             maxCorrectAnswers={10}
+                            showProgressText={false}
                             key={`bonsai-tree-${correctAnswersCount}`}
                           />
                         </Box>
@@ -819,7 +820,9 @@ const Dashboard: React.FC = () => {
                           display: 'flex', 
                           justifyContent: 'center', 
                           mt: 2,
-                          gap: 2
+                          mb: 4,
+                          gap: 2,
+                          position: 'relative'
                         }}>
                           <Typography 
                             variant="h4" 
@@ -842,6 +845,22 @@ const Dashboard: React.FC = () => {
                             }}
                           >
                             Skills Mastered
+                          </Typography>
+                          <Typography
+                            variant="body1"
+                            sx={{
+                              position: 'absolute',
+                              bottom: '-24px',
+                              left: 0,
+                              right: 0,
+                              textAlign: 'center',
+                              color: 'rgba(255, 255, 255, 0.87)',
+                              fontWeight: 'medium'
+                            }}
+                          >
+                            {correctAnswersCount >= 10
+                              ? 'Congratulations! Your bonsai is fully grown!'
+                              : `Progress: ${progressPercentage}% - Answer ${10 - correctAnswersCount} more questions to grow your bonsai!`}
                           </Typography>
                         </Box>
                         
