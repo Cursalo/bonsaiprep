@@ -307,10 +307,13 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({
             aspectRatio: '16/9',
             maxHeight: '600px',
             mt: '-20%', // Move the bonsai 20% higher
+            borderRadius: '20px',
+            overflow: 'hidden',
             '& img': {
               maxWidth: '100%',
               maxHeight: '100%',
               objectFit: 'contain',
+              borderRadius: '20px',
               transition: 'transform 0.3s ease-in-out',
               '&:hover': {
                 transform: 'scale(1.02)'
@@ -328,7 +331,8 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({
                   : 'floatBonsai 3.5s ease-in-out infinite',
                 transform: 'scale(0.35)',
                 filter: 'contrast(130%)',
-                marginLeft: '4px'
+                marginLeft: '4px',
+                borderRadius: '20px'
               }}
               onLoad={() => setIsImageLoaded(true)}
               onError={handleImageError}
