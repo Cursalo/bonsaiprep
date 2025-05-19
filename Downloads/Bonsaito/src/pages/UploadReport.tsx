@@ -1519,7 +1519,6 @@ const UploadReport: React.FC = () => {
                     position: 'relative', 
                     width: '100%', // Take full width of its parent GlassCard
                     aspectRatio: '16/9', 
-                    maxHeight: '500px', // Match dashboard's height
                     backgroundColor: 'transparent', 
                     backgroundImage: `url('/altar4.png')`, // Use the same altar image
                     backgroundSize: 'cover',
