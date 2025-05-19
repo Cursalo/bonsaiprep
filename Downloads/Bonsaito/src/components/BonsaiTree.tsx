@@ -173,9 +173,9 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
   useEffect(() => {
     const style = document.createElement('style');
     style.innerHTML = `@keyframes floatBonsai {
-      0% { transform: translateY(0) scale(0.3); }
-      50% { transform: translateY(-10px) scale(0.3); }
-      100% { transform: translateY(0) scale(0.3); }
+      0% { transform: translateY(10px) scale(0.35); } /* Moved down 10px, scale 0.35 */
+      50% { transform: translateY(0px) scale(0.35); }  /* Adjusted for 10px downward shift, scale 0.35 */
+      100% { transform: translateY(10px) scale(0.35); }/* Moved down 10px, scale 0.35 */
     }`;
     document.head.appendChild(style);
     return () => { document.head.removeChild(style); };
@@ -273,7 +273,7 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
                 ...imageProps,
                 opacity: isImageLoaded ? 1 : 0,
                 animation: 'floatBonsai 3.5s ease-in-out infinite',
-                transform: 'scale(0.3)'
+                transform: 'scale(0.35)'
               }}
               onLoad={() => setIsImageLoaded(true)}
               onError={handleImageError}
