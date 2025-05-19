@@ -317,21 +317,23 @@ const Dashboard: React.FC = () => {
 
   const fetchCorrectAnswersCount = useCallback(async () => {
     try {
+      // First try to get the count from user_progress table
       const userProgress = await getUserProgress();
       if (userProgress && userProgress.correctAnswersCount !== undefined) {
         console.log('Dashboard - Fetched correct answers from user_progress table:', userProgress.correctAnswersCount);
         setCorrectAnswersCount(userProgress.correctAnswersCount);
       } else {
-        console.warn('Dashboard - Could not get user progress or count from user_progress table. Attempting to initialize or default.');
-        // getUserProgress should handle initialization returning 0 if new
-        // If it returns null (error), or object without count, default to 0.
-        setCorrectAnswersCount(userProgress?.correctAnswersCount || 0);
+        console.warn('Dashboard - Could not get user progress from user_progress table. Calculating from practice_questions.');
+        // Fall back to calculating from practice_questions and sync with user_progress
+        const calculatedCount = await calculateCorrectAnswersFromDatabase(true); // Sync with user_progress table
+        console.log('Dashboard - Calculated correct answers from database:', calculatedCount);
+        setCorrectAnswersCount(calculatedCount);
       }
     } catch (error) {
       console.error('Dashboard - Error in fetchCorrectAnswersCount:', error);
       setCorrectAnswersCount(0); // Default to 0 on error
     }
-  }, []); // Empty dependency array as getUserProgress doesn't depend on component state here
+  }, []); // Empty dependency array as these functions don't depend on component state
 
   useEffect(() => {
     const fetchUserData = async () => {

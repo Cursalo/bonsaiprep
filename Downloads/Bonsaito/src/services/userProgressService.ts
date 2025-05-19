@@ -206,33 +206,39 @@ export const recordCompletedTest = async (correctAnswers: number): Promise<UserP
 /**
  * Calculates correct answers count directly from practice_questions table
  * This should be used to sync the count with actual data
+ * @param syncUserProgressTable If true, updates the user_progress table with the calculated count. Defaults to false.
  * @returns The calculated correct answers count
  */
-export const calculateCorrectAnswersFromDatabase = async (): Promise<number> => {
+export const calculateCorrectAnswersFromDatabase = async (syncUserProgressTable: boolean = false): Promise<number> => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) {
-      console.error('No user logged in');
+      console.error('No user logged in for calculateCorrectAnswersFromDatabase');
       return 0;
     }
     
     // Get the completed questions for the user
     const { data, error } = await supabase
       .from('practice_questions')
-      .select('*')
+      .select('id, correct') // Only select what's needed
       .eq('user_id', user.id)
       .eq('completed', true);
       
     if (error) {
+      console.error('Error fetching practice questions:', error);
       throw error;
     }
     
     // Calculate how many questions were answered correctly
     const correctAnswers = data ? data.filter(q => q.correct === true).length : 0;
+    console.log('Calculated correct answers from database:', correctAnswers);
     
-    // Update the user progress record to match this calculation
-    await updateCorrectAnswersCount(correctAnswers);
+    // Update the user progress record to match this calculation if requested
+    if (syncUserProgressTable) {
+      console.log('Syncing user_progress table with calculated correct answers:', correctAnswers);
+      await updateCorrectAnswersCount(correctAnswers);
+    }
     
     return correctAnswers;
   } catch (error) {
