@@ -401,7 +401,7 @@ const Dashboard: React.FC = () => {
             >
               <MenuIcon />
             </IconButton>
-            <img src="/bonsaipng/bonsai1024.png" alt="Bonsai Prep Logo" style={{ height: '40px', flexGrow: 1 }} />
+            <img src="/bonsaiwhitenobg.png" alt="Bonsai Prep Logo" style={{ height: '40px', flexGrow: 1 }} />
             <Avatar sx={{ 
               bgcolor: 'primary.main',
               boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)'
@@ -431,9 +431,7 @@ const Dashboard: React.FC = () => {
           }}
         >
           <Box sx={{ display: 'flex', alignItems: 'center', p: 2 }}>
-            <Typography variant="h6" sx={{ flexGrow: 1, color: '#f8f9fa', letterSpacing: '-0.01em' }}>
-              Bonsai Prep
-            </Typography>
+            <img src="/bonsaiwhitenobg.png" alt="Bonsai Prep Logo" style={{ height: '30px', flexGrow: 1, marginRight: '8px' }} />
             <IconButton onClick={handleDrawerToggle} sx={{ color: '#f8f9fa' }}>
               <ChevronRightIcon />
             </IconButton>
@@ -803,11 +801,11 @@ const Dashboard: React.FC = () => {
                            </Typography>
                          </Box>
                       )}
-                      <Box sx={{ mt: 3, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                        <GradientButton 
-                          variant="contained" 
-                          gradient="success" 
-                          startIcon={<QuizIcon />} 
+                      <Box sx={{ mt: 3, display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
+                        <GradientButton
+                          variant="contained"
+                          gradient="phthalo"
+                          startIcon={<QuizIcon />}
                           onClick={() => navigate('/upload')}
                         >
                           Grow Your Tree
