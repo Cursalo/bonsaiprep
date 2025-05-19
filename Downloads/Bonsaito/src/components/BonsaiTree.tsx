@@ -341,14 +341,7 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({
             color: '#2C1810',
             textShadow: '0 1px 2px rgba(0,0,0,0.1)'
           }}>
-            <Typography variant="h6">
-              {correctAnswersCount} Questions Mastered
-            </Typography>
-            <Typography variant="body2" sx={{ mt: 1, opacity: 0.8 }}>
-              {correctAnswersCount >= maxCorrectAnswers
-                ? 'Congratulations! Your bonsai is fully grown!'
-                : `Progress: ${progressPercentage.toFixed(0)}% - Answer ${maxCorrectAnswers - correctAnswersCount} more questions to fully grow your bonsai!`}
-            </Typography>
+            {/* Removed Questions Mastered text and progress message */}
           </Box>
         </Box>
       </Paper>
