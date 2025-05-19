@@ -401,9 +401,7 @@ const Dashboard: React.FC = () => {
             >
               <MenuIcon />
             </IconButton>
-            <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, letterSpacing: '-0.01em' }}>
-              Bonsai Prep - Dashboard
-            </Typography>
+            <img src="/bonsaipng/bonsai1024.png" alt="Bonsai Prep Logo" style={{ height: '40px', flexGrow: 1 }} />
             <Avatar sx={{ 
               bgcolor: 'primary.main',
               boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)'
@@ -495,6 +493,23 @@ const Dashboard: React.FC = () => {
             </ListItem>
             <ListItem 
               button 
+              component={Link} 
+              to="/video-lessons" 
+              sx={{
+                borderRadius: '8px',
+                m: 0.5,
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                }
+              }}
+            >
+              <ListItemIcon sx={{ color: '#1a936f' }}>
+                <PlayLessonIcon />
+              </ListItemIcon>
+              <ListItemText primary="Video Lessons" />
+            </ListItem>
+            <ListItem 
+              button 
               onClick={() => setShowQuiz(true)}
               sx={{
                 borderRadius: '8px',
@@ -566,8 +581,6 @@ const Dashboard: React.FC = () => {
                   }}
                 >
                   <Tab label="Overview" icon={<InsightsIcon />} sx={{ minWidth: 120 }} />
-                  <Tab label="My Bonsai" icon={<EmojiNatureIcon />} sx={{ minWidth: 120 }} />
-                  <Tab label="Skill Progress" icon={<LocalFloristIcon />} sx={{ minWidth: 120 }} />
                   <Tab label="Profile" icon={<PersonIcon />} sx={{ minWidth: 120 }} />
                 </Tabs>
               </Box>
@@ -765,7 +778,7 @@ const Dashboard: React.FC = () => {
                         </Box>
                         
                         <Typography variant="body2" sx={{ mt: 1, textAlign: 'center', color: 'rgba(255, 255, 255, 0.7)' }}>
-                          You've mastered {masteredSkillsCount} out of {totalSkills} skills. Keep growing!
+                          You've mastered {masteredSkillsCount} out of {totalSkills} questions. Keep growing!
                         </Typography>
                       </Box>
                       
@@ -795,25 +808,9 @@ const Dashboard: React.FC = () => {
                           variant="contained" 
                           gradient="success" 
                           startIcon={<QuizIcon />} 
-                          onClick={() => setShowQuiz(true)}
-                        >
-                          Grow Your Tree
-                        </GradientButton>
-                        <GradientButton 
-                          variant="contained" 
-                          gradient="primary" 
-                          startIcon={<PlayLessonIcon />} 
-                          onClick={() => navigate('/lessons')}
-                        >
-                          Go to Lessons
-                        </GradientButton>
-                        <GradientButton 
-                          variant="contained" 
-                          gradient="secondary" 
-                          startIcon={<UploadIcon />} 
                           onClick={() => navigate('/upload')}
                         >
-                          Practice
+                          Grow Your Tree
                         </GradientButton>
                       </Box>
                     </GlassCard>
@@ -894,134 +891,6 @@ const Dashboard: React.FC = () => {
             </TabPanel>
 
             <TabPanel value={tabValue} index={1}>
-              {/* Bonsai Tree Content */}
-              <ScaleIn>
-                <GlassCard sx={{ 
-                  overflow: 'hidden',
-                  p: 0,
-                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
-                  border: '1px solid rgba(136, 212, 152, 0.2)'
-                }}>
-                  {/* Header */}
-                  <Box sx={{ 
-                    bgcolor: 'rgba(12, 59, 46, 0.8)',
-                    p: 2,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
-                  }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <EmojiNatureIcon sx={{ 
-                        color: '#88d498', 
-                        mr: 1, 
-                        fontSize: 28,
-                        filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.3))'
-                      }} />
-                      <Typography variant="h5" sx={{ 
-                        color: 'rgba(255, 255, 255, 0.87)', 
-                        fontWeight: 'bold',
-                        textShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                      }}>
-                        Your Learning Bonsai
-                      </Typography>
-                    </Box>
-                    <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-                      Growth Level: {masteredSkillsCount} / {totalSkills}
-                    </Typography>
-                  </Box>
-                  
-                  {/* Tree Visualization */}
-                  <Box sx={{ 
-                    background: 'linear-gradient(180deg, rgba(30, 30, 30, 0.9) 0%, rgba(18, 18, 18, 0.95) 100%)',
-                    p: 4,
-                    textAlign: 'center'
-                  }}>
-                    <Box sx={{ 
-                      position: 'relative',
-                      mb: 2,
-                      height: 400,
-                      display: 'flex',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      '&::before': {
-                        content: '""',
-                        position: 'absolute',
-                        bottom: 0,
-                        left: '10%',
-                        right: '10%',
-                        height: '2px',
-                        background: 'radial-gradient(ellipse at center, rgba(136, 212, 152, 0.3) 0%, rgba(0,0,0,0) 70%)',
-                        filter: 'blur(3px)',
-                      }
-                    }}>
-                      <BonsaiTree skills={skills} totalSkills={totalSkills} />
-                    </Box>
-                    
-                    <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center', gap: 2 }}>
-                      <GradientButton
-                        variant="contained"
-                        gradient="success"
-                        size="large"
-                        onClick={() => setShowQuiz(true)}
-                        startIcon={<QuizIcon />}
-                      >
-                        Grow Your Tree
-                      </GradientButton>
-                      <GradientButton
-                        variant="outlined"
-                        gradient="primary"
-                        size="large"
-                        onClick={() => navigate('/upload')}
-                        startIcon={<UploadIcon />}
-                      >
-                        Upload Report
-                      </GradientButton>
-                    </Box>
-                  </Box>
-                </GlassCard>
-              </ScaleIn>
-            </TabPanel>
-
-            <TabPanel value={tabValue} index={2}>
-              {/* Skill Progress Content */}
-              <Grid container spacing={3}>
-                <Grid item xs={12}>
-                  <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', color: '#113946' }}>Skill Progress</Typography>
-                  <Typography variant="body1" color="textSecondary" sx={{ mb: 2 }}>
-                    Track your progress in different SAT skill areas.
-                  </Typography>
-                </Grid>
-                {skills.map((skill, index) => (
-                  <Grid item xs={12} sm={6} md={4} key={skill.id}>
-                    <StaggeredList index={index}>
-                      {[
-                        <GlassCard sx={{ p: 2, height: '100%' }} key={`glass-${skill.id}`}>
-                          <Typography variant="h6" sx={{ fontWeight: 500, color: '#1B4D3E' }}>{skill.name}</Typography>
-                          <Box sx={{ display: 'flex', alignItems: 'center', my: 1 }}>
-                            <Box sx={{ width: '100%', mr: 1 }}>
-                              <LinearProgress 
-                                variant="determinate" 
-                                value={'progress' in skill ? (skill.progress as number) * 100 : 0} 
-                                sx={{ height: 8, borderRadius: 4 }} 
-                              />
-                            </Box>
-                            <Box sx={{ minWidth: 35 }}>
-                              <Typography variant="body2" color="textSecondary">
-                                {`${Math.round('progress' in skill ? (skill.progress as number) * 100 : 0)}%`}
-                              </Typography>
-                            </Box>
-                          </Box>
-                          <Typography variant="caption" color="textSecondary">{skill.description}</Typography>
-                        </GlassCard>
-                      ]}
-                    </StaggeredList>
-                  </Grid>
-                ))}
-              </Grid>
-            </TabPanel>
-
-            <TabPanel value={tabValue} index={3}>
               {/* Profile Content */}
               <FadeIn>
                 <Box sx={{ 
