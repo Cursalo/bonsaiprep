@@ -720,7 +720,7 @@ const Dashboard: React.FC = () => {
                           background: 'none', 
                           backgroundImage: `url('/altar3.png')`,
                           backgroundSize: 'cover',
-                          backgroundPosition: 'calc(60% + 15px) bottom',
+                          backgroundPosition: '60% bottom',
                           backgroundRepeat: 'no-repeat',
                           display: 'flex',
                           justifyContent: 'center',
