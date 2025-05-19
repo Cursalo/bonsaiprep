@@ -297,20 +297,6 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({
         }}
       >
         <Box sx={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <Typography 
-          variant="h5" 
-          gutterBottom 
-          align="center" 
-          sx={{ 
-            fontWeight: 'bold', 
-              color: '#2C1810',
-              textShadow: '0 2px 4px rgba(0,0,0,0.1)',
-            mb: 3
-          }}
-          >
-            Your Learning Bonsai
-          </Typography>
-          
           <Box sx={{
             flexGrow: 1,
             display: 'flex',

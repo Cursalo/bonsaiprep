@@ -439,7 +439,23 @@ const Dashboard: React.FC = () => {
             >
               <MenuIcon />
             </IconButton>
-            <img src="/bonsaiwhitenobg.png" alt="Bonsai Prep Logo" style={{ height: '40px', flexGrow: 1 }} />
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              flexGrow: 1,
+              justifyContent: 'center'
+            }}>
+              <img 
+                src="/bonsaiwhitenobg.png" 
+                alt="Bonsai Prep Logo" 
+                style={{ 
+                  height: '40px',
+                  width: 'auto',
+                  objectFit: 'contain',
+                  maxWidth: '200px'
+                }} 
+              />
+            </Box>
             <Avatar sx={{ 
               bgcolor: 'primary.main',
               boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)'
@@ -468,8 +484,22 @@ const Dashboard: React.FC = () => {
             },
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', p: 2 }}>
-            <img src="/bonsaiwhitenobg.png" alt="Bonsai Prep Logo" style={{ height: '30px', flexGrow: 1, marginRight: '8px' }} />
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            p: 2,
+            justifyContent: 'space-between'
+          }}>
+            <img 
+              src="/bonsaiwhitenobg.png" 
+              alt="Bonsai Prep Logo" 
+              style={{ 
+                height: '30px',
+                width: 'auto',
+                objectFit: 'contain',
+                maxWidth: '160px'
+              }} 
+            />
             <IconButton onClick={handleDrawerToggle} sx={{ color: '#f8f9fa' }}>
               <ChevronRightIcon />
             </IconButton>
@@ -749,10 +779,13 @@ const Dashboard: React.FC = () => {
                              
                       {/* Bonsai Tree Visualization */}
                       <Box sx={{ mt: 3, mb: 4 }}>
-                        <Typography variant="h6" gutterBottom sx={{ 
+                        <Typography variant="h5" gutterBottom sx={{ 
                           fontWeight: 'bold', 
                           color: 'rgba(255, 255, 255, 0.87)',
-                          textShadow: '0 1px 2px rgba(0,0,0,0.2)'
+                          textShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                          textAlign: 'center',
+                          mb: 4,
+                          fontSize: '2rem'
                         }}>
                           Your Learning Bonsai
                         </Typography>
