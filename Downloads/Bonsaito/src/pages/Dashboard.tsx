@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
@@ -45,7 +45,7 @@ import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import { supabase } from '../supabaseClient';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
-import { getUserProgress, calculateCorrectAnswersFromDatabase } from '../services/userProgressService';
+import { getUserProgress, calculateCorrectAnswersFromDatabase, recordCompletedTest, incrementCorrectAnswersCount } from '../services/userProgressService';
 
 // Import our components
 import BonsaiTree from '../components/BonsaiTree';
@@ -302,7 +302,7 @@ const getBackgroundStyle = () => {
 };
 
 const Dashboard: React.FC = () => {
-  const { skills, totalSkills, masteredSkillsCount /*, updateSkillProgress */ } = useSkills(); // Commented out updateSkillProgress
+  const { skills, totalSkills, masteredSkillsCount } = useSkills();
   const [drawerOpen, setDrawerOpen] = useState<boolean>(false);
   const [tabValue, setTabValue] = useState<number>(0);
   const [showQuiz, setShowQuiz] = useState<boolean>(false);
@@ -314,6 +314,24 @@ const Dashboard: React.FC = () => {
   const [correctAnswersCount, setCorrectAnswersCount] = useState<number>(0);
   const navigate = useNavigate();
   const location = useLocation();
+
+  const fetchCorrectAnswersCount = useCallback(async () => {
+    try {
+      const userProgress = await getUserProgress();
+      if (userProgress && userProgress.correctAnswersCount !== undefined) {
+        console.log('Dashboard - Fetched correct answers from user_progress table:', userProgress.correctAnswersCount);
+        setCorrectAnswersCount(userProgress.correctAnswersCount);
+      } else {
+        console.warn('Dashboard - Could not get user progress or count from user_progress table. Attempting to initialize or default.');
+        // getUserProgress should handle initialization returning 0 if new
+        // If it returns null (error), or object without count, default to 0.
+        setCorrectAnswersCount(userProgress?.correctAnswersCount || 0);
+      }
+    } catch (error) {
+      console.error('Dashboard - Error in fetchCorrectAnswersCount:', error);
+      setCorrectAnswersCount(0); // Default to 0 on error
+    }
+  }, []); // Empty dependency array as getUserProgress doesn't depend on component state here
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -328,7 +346,6 @@ const Dashboard: React.FC = () => {
 
           if (error) {
             console.error("Error fetching user onboarding data:", error);
-            // Handle error (e.g., show a notification to the user)
           } else if (onboardingData) {
             setUserData({
               firstName: onboardingData.first_name,
@@ -351,56 +368,22 @@ const Dashboard: React.FC = () => {
     };
 
     fetchUserData();
-  }, []);
-
-  // Fetch the correct answers count for BonsaiTree
-  useEffect(() => {
-    const fetchCorrectAnswersCount = async () => {
-      try {
-        // First, try to get from user_progress table (faster)
-        const userProgress = await getUserProgress();
-        
-        if (userProgress) {
-          console.log('Dashboard - Correct answers from user_progress:', userProgress.correctAnswersCount);
-          setCorrectAnswersCount(userProgress.correctAnswersCount);
-        } else {
-          // Fallback to calculating from practice_questions if user_progress is not available
-          const correctAnswers = await calculateCorrectAnswersFromDatabase();
-          console.log('Dashboard - Correct answers recalculated from database:', correctAnswers);
-          setCorrectAnswersCount(correctAnswers);
-        }
-      } catch (error) {
-        console.error('Error fetching correct answers count:', error);
-      }
-    };
-
     fetchCorrectAnswersCount();
-  }, []);
+  }, [fetchCorrectAnswersCount]); // Added fetchCorrectAnswersCount to dependency array
 
-  // Update the existing useEffect to also update correctAnswersCount based on location state
   useEffect(() => {
-    // If we're coming from upload page, show animation
     if (location.state?.fromUpload && location.state?.correctAnswers !== undefined) {
       console.log('Dashboard - Received correctAnswers from navigation:', location.state.correctAnswers);
       setShowTreeAnimation(true);
-      setCorrectAnswersCount(location.state.correctAnswers);
-      
-      // Clear the location state after processing to prevent re-triggering
-      // and to allow DB fetch to take over on subsequent non-upload navigations/refreshes.
+      setCorrectAnswersCount(location.state.correctAnswers); // Directly set from navigation state
       navigate(location.pathname, { replace: true, state: {} });
-
-      // Reset animation after a delay
-      const timer = setTimeout(() => {
-        setShowTreeAnimation(false);
-      }, 2500);
-      
+      const timer = setTimeout(() => setShowTreeAnimation(false), 2500);
       return () => clearTimeout(timer);
     }
-  }, [location, navigate]); // Added navigate to dependency array
+  }, [location, navigate]);
 
-  // Add a new effect to ensure correctAnswersCount is preserved if we re-navigate
   useEffect(() => {
-    console.log('Dashboard - Current correctAnswersCount:', correctAnswersCount);
+    console.log('Dashboard - Current correctAnswersCount state for BonsaiTree:', correctAnswersCount);
   }, [correctAnswersCount]);
 
   const handleDrawerToggle = () => {
@@ -411,18 +394,35 @@ const Dashboard: React.FC = () => {
     setTabValue(newValue);
   };
 
-  const handleQuizComplete = (results: {skillId: string; score: number}[]) => {
+  const handleQuizComplete = async (results: {skillId: string; score: number}[]) => {
     setQuizResults(results);
     setShowQuiz(false);
     setSnackbarOpen(true);
+
+    // Count how many results have a positive score (indicating a correct answer)
+    const newlyCorrectAnswersInThisQuiz = results.filter(r => r.score > 0).length;
+
+    if (newlyCorrectAnswersInThisQuiz > 0) {
+      console.log(`Recording ${newlyCorrectAnswersInThisQuiz} newly correct answers from quiz.`);
+      try {
+        // recordCompletedTest adds the count to the existing total and increments completed_tests
+        await recordCompletedTest(newlyCorrectAnswersInThisQuiz);
+        
+        // Refresh our count from the database after recording
+        await fetchCorrectAnswersCount();
+      } catch (error) {
+        console.error('Error updating progress after quiz:', error);
+      }
+    } else {
+      console.log('No new correct answers to record from this quiz.');
+    }
   };
 
   const handleCloseSnackbar = () => {
     setSnackbarOpen(false);
   };
 
-  // Calculate progress percentage
-  const progressPercentage = Math.round((masteredSkillsCount / totalSkills) * 100);
+  const progressPercentage = totalSkills > 0 ? Math.round((masteredSkillsCount / totalSkills) * 100) : 0;
 
   return (
     <ThemeProvider theme={darkTheme}>
@@ -794,17 +794,18 @@ const Dashboard: React.FC = () => {
                           position: 'relative', 
                           width: '100%', 
                           aspectRatio: '16/9', 
-                          maxHeight: '500px', 
+                          // No maxHeight constraint to let aspect ratio control dimensions
                           backgroundColor: 'transparent', 
-                          background: 'none', 
                           backgroundImage: `url('/altar4.png')`,
                           backgroundSize: 'cover',
-                          backgroundPosition: '60% bottom',
+                          backgroundPosition: 'center bottom',
                           backgroundRepeat: 'no-repeat',
                           display: 'flex',
                           justifyContent: 'center',
                           alignItems: 'center',
-                          transition: 'all 0.5s ease-in-out'
+                          transition: 'all 0.5s ease-in-out',
+                          borderRadius: '20px',
+                          overflow: 'hidden'
                         }}>
                           <BonsaiTree 
                             skills={skills} 
