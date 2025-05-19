@@ -809,14 +809,16 @@ const Dashboard: React.FC = () => {
                           borderRadius: '20px',
                           overflow: 'hidden'
                         }}>
-                          <BonsaiTree 
-                            skills={skills} 
-                            totalSkills={totalSkills} 
-                            correctAnswersCount={correctAnswersCount} 
-                            maxCorrectAnswers={10}
-                            showProgressText={false}
-                            key={`bonsai-tree-${correctAnswersCount}`}
-                          />
+                          <Box style={{ transform: 'translateY(-5px)' }}> {/* Wrapper Box for styling */}
+                            <BonsaiTree 
+                              skills={skills} 
+                              totalSkills={totalSkills} 
+                              correctAnswersCount={correctAnswersCount} 
+                              maxCorrectAnswers={10}
+                              showProgressText={false}
+                              key={`bonsai-tree-${correctAnswersCount}`}
+                            />
+                          </Box>
                         </Box>
                         
                         <Box sx={{ mt: 3, display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'center' }}>

@@ -1531,12 +1531,14 @@ const UploadReport: React.FC = () => {
                     overflow: 'hidden', // Ensure content respects border radius
                     margin: '20px auto' // Add some margin for spacing within the card
                   }}>
-                    <BonsaiTree 
-                      skills={skills} 
-                      totalSkills={totalSkills} 
-                      correctAnswersCount={correctAnswers.length} 
-                      maxCorrectAnswers={10} 
-                    />
+                    <Box style={{ transform: 'translateY(7px)' }}> {/* Wrapper Box for styling */}
+                      <BonsaiTree 
+                        skills={skills} 
+                        totalSkills={totalSkills} 
+                        correctAnswersCount={correctAnswers.length} 
+                        maxCorrectAnswers={10} 
+                      />
+                    </Box>
                   </Box>
                   
                   <Typography variant="body2" sx={{ mt: 3, color: 'rgba(255, 255, 255, 0.6)', fontStyle: 'italic' }}>
