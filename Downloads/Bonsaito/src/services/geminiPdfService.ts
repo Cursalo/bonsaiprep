@@ -312,9 +312,10 @@ const callContentAPI = async (prompt: string, file?: File): Promise<string> => {
   };
 
   if (file) {
-    if (!ANALYSIS_API_URL.includes("gemini-2.5") && !ANALYSIS_API_URL.includes("gemini-pro-vision")) {
-        console.warn(`The configured API URL (${ANALYSIS_API_URL}) might not be optimal for file uploads. Consider using Gemini 2.5 Flash or another multimodal model.`);
-    }
+    // Commenting out the warning as gemini-1.5-flash-latest is multimodal
+    // if (!ANALYSIS_API_URL.includes("gemini-2.5") && !ANALYSIS_API_URL.includes("gemini-pro-vision")) {
+    //     console.warn(`The configured API URL (${ANALYSIS_API_URL}) might not be optimal for file uploads. Consider using Gemini 2.5 Flash or another multimodal model.`);
+    // }
     const filePart = await fileToGenerativePart(file);
     // For multimodal requests, the structure is typically contents: [{ parts: [ {text: "prompt"}, {inlineData: ...} ] }]
     requestBody.contents = [{ parts: [{ text: prompt }, filePart] }];
@@ -371,28 +372,73 @@ const extractQuestionsFromResponse = (response: string): GeneratedQuestion[] => 
   cleanedResponse = cleanedResponse.trim();
 
   try {
-    let parsedJson = JSON.parse(cleanedResponse);
+    // Try parsing without modifications first
+    let parsedJson;
+    try {
+      parsedJson = JSON.parse(cleanedResponse);
+    } catch (initialError) {
+      // If parsing fails, manually fix common issues with LaTeX-style math notation
+      console.log("Initial JSON parse failed, trying simple fixes");
+      
+      // Manual string replacements for common LaTeX delimiters
+      let fixedJson = cleanedResponse;
+      fixedJson = fixedJson.replace(/\\\(/g, "\\\\(");
+      fixedJson = fixedJson.replace(/\\\)/g, "\\\\)");
+      fixedJson = fixedJson.replace(/\\\[/g, "\\\\[");
+      fixedJson = fixedJson.replace(/\\\]/g, "\\\\]");
+      
+      parsedJson = JSON.parse(fixedJson);
+    }
+    
     if (!Array.isArray(parsedJson) && typeof parsedJson === 'object' && parsedJson !== null) {
-        const keys = Object.keys(parsedJson);
-        if (keys.length === 1 && Array.isArray(parsedJson[keys[0]])) {
-            parsedJson = parsedJson[keys[0]];
-        }
+      const keys = Object.keys(parsedJson);
+      if (keys.length === 1 && Array.isArray(parsedJson[keys[0]])) {
+        parsedJson = parsedJson[keys[0]];
+      }
     }
 
     if (!Array.isArray(parsedJson)) {
       console.error("Parsed response is not an array:", parsedJson);
       return [];
     }
+
     const questions: GeneratedQuestion[] = parsedJson;
-    return questions.map((q, index) => ({
-      id: q.id || `gen_q_${Date.now()}_${index}`,
-      text: q.text || "Question text missing",
-      topic: q.topic || "Topic missing",
-      difficulty: q.difficulty || "Medium",
-      options: Array.isArray(q.options) && q.options.length > 0 ? q.options : ["Option A", "Option B", "Option C", "Option D"],
-      answer: q.answer || "Answer missing",
-      explanation: q.explanation || "Explanation missing",
-    })).filter(q => q.text !== "Question text missing" && q.topic !== "Topic missing");
+    return questions.map((q, index) => {
+      // Extract answer as single letter (A, B, C, D)
+      let finalAnswer = "A"; // Default to 'A' if missing
+      
+      if (q.answer && typeof q.answer === 'string') {
+        const answerText = q.answer.trim();
+        
+        // Look for patterns like "A", "A)", "A." at start of string
+        const letterMatch = answerText.match(/^([A-D])[.):,]?/i);
+        
+        if (letterMatch && letterMatch[1]) {
+          finalAnswer = letterMatch[1].toUpperCase();
+        } else if (answerText.length === 1 && /^[A-D]$/i.test(answerText)) {
+          // Single letter answer
+          finalAnswer = answerText.toUpperCase();
+        } else {
+          // Look for any letter A-D mention in the answer
+          const anyLetterMatch = answerText.match(/\b([A-D])\b/i);
+          if (anyLetterMatch && anyLetterMatch[1]) {
+            finalAnswer = anyLetterMatch[1].toUpperCase();
+          }
+        }
+      }
+      
+      return {
+        id: q.id || `gen_q_${Date.now()}_${index}`,
+        text: q.text || "Question text missing",
+        topic: q.topic || "Topic missing",
+        difficulty: q.difficulty || "Medium",
+        options: Array.isArray(q.options) && q.options.length > 0 
+          ? q.options.map(opt => (typeof opt === 'string' ? opt.trim() : "Invalid Option"))
+          : ["Option A", "Option B", "Option C", "Option D"],
+        answer: finalAnswer,
+        explanation: q.explanation || "Explanation missing",
+      };
+    }).filter(q => q.text !== "Question text missing" && q.topic !== "Topic missing");
   } catch (error) {
     console.error("Error parsing JSON response from Content API:", error);
     console.error("Problematic response string (first 500 chars):", cleanedResponse.substring(0, 500));

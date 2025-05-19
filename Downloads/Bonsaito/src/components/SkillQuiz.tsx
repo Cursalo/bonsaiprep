@@ -19,6 +19,7 @@ interface Question {
   options: { id: string; text: string }[];
   skillId: string;
   skillName: string;
+  answer: string;
 }
 
 interface QuizResponse {
@@ -65,7 +66,8 @@ const SkillQuiz: React.FC<SkillQuizProps> = ({ onComplete, onClose }) => {
             { id: 'D', text: 'Sample answer option D' }
           ],
           skillId: skill.id,
-          skillName: skill.name
+          skillName: skill.name,
+          answer: 'A' // Assuming a default answer for each question
         });
       }
     });
@@ -87,7 +89,7 @@ const SkillQuiz: React.FC<SkillQuizProps> = ({ onComplete, onClose }) => {
 
     // Record response
     const currentQuestion = quizQuestions[currentQuestionIndex];
-    const isCorrect = selectedOption === currentQuestion.options[0].id; // Assume first option 'A' is correct
+    const isCorrect = selectedOption === currentQuestion.answer;
     
     setResponses([
       ...responses, 
