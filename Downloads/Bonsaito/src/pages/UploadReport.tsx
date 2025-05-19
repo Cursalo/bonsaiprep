@@ -418,7 +418,7 @@ const UploadReport: React.FC = () => {
           setActiveStep(3);
         } else {
           // For PDF files, now process directly with Gemini 1.5 Flash
-          setLoadingMessage('Processing PDF with Gemini 1.5 Flash...');
+          setLoadingMessage('Processing PDF content...');
           
           // We'll upload the file to Supabase for tracking/storage purposes
           const { storagePath } = await uploadFileToSupabase(file, 'score-reports', { publicAccess: false });
@@ -586,8 +586,14 @@ const UploadReport: React.FC = () => {
   };
 
   // Function to determine if a student's answer is correct
-  const isAnswerCorrect = (question: GeneratedQuestion, studentAnswer: string) => {
-    return studentAnswer === question.answer;
+  const isAnswerCorrect = (question: GeneratedQuestion, studentAnswer: string): boolean => {
+    // Ensure both studentAnswer and question.answer are valid strings before trimming and comparing.
+    if (typeof studentAnswer !== 'string' || typeof question.answer !== 'string') {
+      // This scenario indicates an issue with data or types, log for debugging.
+      console.error('Invalid data for answer comparison:', { questionId: question?.id, studentAnswer, questionAnswer: question?.answer });
+      return false;
+    }
+    return studentAnswer.trim() === question.answer.trim();
   };
 
   // Handle navigate to dashboard to see tree growth
