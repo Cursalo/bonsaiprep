@@ -274,7 +274,8 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
                 opacity: isImageLoaded ? 1 : 0,
                 animation: 'floatBonsai 3.5s ease-in-out infinite',
                 transform: 'scale(0.35)',
-                filter: 'contrast(130%)'
+                filter: 'contrast(130%)',
+                marginLeft: '4px'
               }}
               onLoad={() => setIsImageLoaded(true)}
               onError={handleImageError}
