@@ -384,11 +384,15 @@ const Dashboard: React.FC = () => {
   // Update the existing useEffect to also update correctAnswersCount based on location state
   useEffect(() => {
     // If we're coming from upload page, show animation
-    if (location.state?.fromUpload && location.state?.correctAnswers > 0) {
+    if (location.state?.fromUpload && location.state?.correctAnswers !== undefined) {
       console.log('Dashboard - Received correctAnswers from navigation:', location.state.correctAnswers);
       setShowTreeAnimation(true);
       setCorrectAnswersCount(location.state.correctAnswers);
       
+      // Clear the location state after processing to prevent re-triggering
+      // and to allow DB fetch to take over on subsequent non-upload navigations/refreshes.
+      navigate(location.pathname, { replace: true, state: {} });
+
       // Reset animation after a delay
       const timer = setTimeout(() => {
         setShowTreeAnimation(false);
@@ -396,7 +400,7 @@ const Dashboard: React.FC = () => {
       
       return () => clearTimeout(timer);
     }
-  }, [location]);
+  }, [location, navigate]); // Added navigate to dependency array
 
   // Add a new effect to ensure correctAnswersCount is preserved if we re-navigate
   useEffect(() => {
@@ -804,11 +808,7 @@ const Dashboard: React.FC = () => {
                           display: 'flex',
                           justifyContent: 'center',
                           alignItems: 'center',
-                          transition: 'all 0.5s ease-in-out',
-                          '&:hover': {
-                            transform: 'scale(1.02)',
-                            boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
-                          }
+                          transition: 'all 0.5s ease-in-out'
                         }}>
                           <BonsaiTree 
                             skills={skills} 

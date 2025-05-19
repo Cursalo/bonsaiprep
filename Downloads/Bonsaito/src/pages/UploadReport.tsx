@@ -1446,13 +1446,22 @@ const UploadReport: React.FC = () => {
                   </Typography>
                   
                   <Box sx={{ 
-                    maxWidth: '400px', 
-                    margin: '0 auto', 
-                    background: 'rgba(18, 18, 18, 0.5)',
-                    borderRadius: '12px',
-                    padding: '1rem',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    boxShadow: 'inset 0 0 20px rgba(0, 0, 0, 0.2)'
+                    // Use styling similar to Dashboard for the Bonsai Tree container
+                    position: 'relative', 
+                    width: '100%', // Take full width of its parent GlassCard
+                    aspectRatio: '16/9', 
+                    maxHeight: '500px', // Match dashboard's height
+                    backgroundColor: 'transparent', 
+                    backgroundImage: `url('/altar4.png')`, // Use the same altar image
+                    backgroundSize: 'cover',
+                    backgroundPosition: '60% bottom',
+                    backgroundRepeat: 'no-repeat',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    borderRadius: '12px', // Keep existing card's border radius for the container
+                    overflow: 'hidden', // Ensure content respects border radius
+                    margin: '20px auto' // Add some margin for spacing within the card
                   }}>
                     <BonsaiTree 
                       skills={skills} 

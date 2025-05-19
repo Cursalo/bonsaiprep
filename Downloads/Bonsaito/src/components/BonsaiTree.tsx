@@ -307,13 +307,10 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({
             aspectRatio: '16/9',
             maxHeight: '600px',
             mt: '-20%', // Move the bonsai 20% higher
-            borderRadius: '20px',
-            overflow: 'hidden',
             '& img': {
               maxWidth: '100%',
               maxHeight: '100%',
               objectFit: 'contain',
-              borderRadius: '20px',
               transition: 'transform 0.3s ease-in-out',
               '&:hover': {
                 transform: 'scale(1.02)'
@@ -331,8 +328,7 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({
                   : 'floatBonsai 3.5s ease-in-out infinite',
                 transform: 'scale(0.35)',
                 filter: 'contrast(130%)',
-                marginLeft: '4px',
-                borderRadius: '20px'
+                marginLeft: '4px'
               }}
               onLoad={() => setIsImageLoaded(true)}
               onError={handleImageError}
@@ -345,7 +341,14 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({
             color: '#2C1810',
             textShadow: '0 1px 2px rgba(0,0,0,0.1)'
           }}>
-            {/* Removed Questions Mastered text and progress message */}
+            <Typography variant="h6">
+              {correctAnswersCount} Questions Mastered
+            </Typography>
+            <Typography variant="body2" sx={{ mt: 1, opacity: 0.8 }}>
+              {correctAnswersCount >= maxCorrectAnswers
+                ? 'Congratulations! Your bonsai is fully grown!'
+                : `Progress: ${progressPercentage.toFixed(0)}% - Answer ${maxCorrectAnswers - correctAnswersCount} more questions to fully grow your bonsai!`}
+            </Typography>
           </Box>
         </Box>
       </Paper>
