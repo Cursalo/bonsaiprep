@@ -718,7 +718,7 @@ const Dashboard: React.FC = () => {
                           border: 'none',
                           boxShadow: 'none',
                           background: 'none', 
-                          backgroundImage: `url('/altar3.png')`,
+                          backgroundImage: `url('/altar4.png')`,
                           backgroundSize: 'cover',
                           backgroundPosition: '60% bottom',
                           backgroundRepeat: 'no-repeat',
