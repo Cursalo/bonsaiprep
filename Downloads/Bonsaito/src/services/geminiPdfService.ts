@@ -377,19 +377,75 @@ const extractQuestionsFromResponse = (response: string): GeneratedQuestion[] => 
     try {
       parsedJson = JSON.parse(cleanedResponse);
     } catch (initialError) {
-      // If parsing fails, manually fix common issues with LaTeX-style math notation
+      // If parsing fails, try advanced repairs on the JSON
       console.log("Initial JSON parse failed, trying simple fixes");
       
-      // Manual string replacements for common LaTeX delimiters
       let fixedJson = cleanedResponse;
+      
+      // 1. Fix common LaTeX notation issues
       fixedJson = fixedJson.replace(/\\\(/g, "\\\\(");
       fixedJson = fixedJson.replace(/\\\)/g, "\\\\)");
       fixedJson = fixedJson.replace(/\\\[/g, "\\\\[");
       fixedJson = fixedJson.replace(/\\\]/g, "\\\\]");
       
-      parsedJson = JSON.parse(fixedJson);
+      // 2. Try to locate and fix the problematic position if we can
+      try {
+        parsedJson = JSON.parse(fixedJson);
+      } catch (secondError) {
+        if (secondError instanceof SyntaxError && secondError.message.includes("position")) {
+          // Extract position from error message using regex
+          const posMatch = secondError.message.match(/position (\d+)/);
+          const errorPos = posMatch ? parseInt(posMatch[1]) : -1;
+          
+          if (errorPos > 0) {
+            console.log(`JSON parse error at position ${errorPos}, attempting targeted fix`);
+            
+            // Look at a window around the error position
+            const errorContext = fixedJson.substring(
+              Math.max(0, errorPos - 20),
+              Math.min(fixedJson.length, errorPos + 20)
+            );
+            console.log(`Error context: "${errorContext}"`);
+            
+            // 3. Additional common error patterns
+            // - Fix single quotes around property names
+            fixedJson = fixedJson.replace(/'([^']+)':/g, '"$1":');
+            
+            // - Fix unquoted property names
+            fixedJson = fixedJson.replace(/([{,]\s*)([a-zA-Z0-9_]+)(\s*:)/g, '$1"$2"$3');
+            
+            // - Fix trailing commas in arrays/objects
+            fixedJson = fixedJson.replace(/,(\s*[\]}])/g, '$1');
+            
+            // - Add quotes around values that should be strings
+            fixedJson = fixedJson.replace(/:(\s*)(true|false|null|undefined)(\s*[,}])/g, ':"$2"$3');
+          }
+        }
+        
+        // One final attempt after advanced fixes
+        try {
+          parsedJson = JSON.parse(fixedJson);
+        } catch (finalError) {
+          console.error("Advanced JSON fixes failed:", finalError);
+          
+          // If all else fails, try to extract any valid array portion using regex
+          // Using [\s\S] instead of dot with /s flag for cross-browser compatibility
+          const arrayMatch = cleanedResponse.match(/\[\s*\{[\s\S]*\}\s*\]/);
+          if (arrayMatch && arrayMatch[0]) {
+            try {
+              parsedJson = JSON.parse(arrayMatch[0]);
+            } catch (e) {
+              console.error("Failed to extract valid JSON array portion:", e);
+              throw finalError; // Re-throw the error if we can't recover
+            }
+          } else {
+            throw finalError; // Re-throw the error if we can't recover
+          }
+        }
+      }
     }
     
+    // Process and validate the parsed JSON
     if (!Array.isArray(parsedJson) && typeof parsedJson === 'object' && parsedJson !== null) {
       const keys = Object.keys(parsedJson);
       if (keys.length === 1 && Array.isArray(parsedJson[keys[0]])) {
@@ -404,25 +460,53 @@ const extractQuestionsFromResponse = (response: string): GeneratedQuestion[] => 
 
     const questions: GeneratedQuestion[] = parsedJson;
     return questions.map((q, index) => {
-      // Extract answer as single letter (A, B, C, D)
+      // Extract answer as single letter (A, B, C, D) - highly robust implementation
       let finalAnswer = "A"; // Default to 'A' if missing
       
       if (q.answer && typeof q.answer === 'string') {
         const answerText = q.answer.trim();
         
-        // Look for patterns like "A", "A)", "A." at start of string
-        const letterMatch = answerText.match(/^([A-D])[.):,]?/i);
-        
-        if (letterMatch && letterMatch[1]) {
-          finalAnswer = letterMatch[1].toUpperCase();
-        } else if (answerText.length === 1 && /^[A-D]$/i.test(answerText)) {
-          // Single letter answer
+        // Method 1: Look for letter followed by closing parenthesis or period (e.g., "A)" or "A.")
+        const letterParenMatch = answerText.match(/^([A-D])[.):,]/i);
+        if (letterParenMatch && letterParenMatch[1]) {
+          finalAnswer = letterParenMatch[1].toUpperCase();
+        } 
+        // Method 2: Check if answer is just a single letter A-D
+        else if (answerText.length === 1 && /^[A-D]$/i.test(answerText)) {
           finalAnswer = answerText.toUpperCase();
-        } else {
-          // Look for any letter A-D mention in the answer
-          const anyLetterMatch = answerText.match(/\b([A-D])\b/i);
-          if (anyLetterMatch && anyLetterMatch[1]) {
-            finalAnswer = anyLetterMatch[1].toUpperCase();
+        }
+        // Method 3: Look for answer format "Letter) Text" anywhere in the answer string
+        else {
+          const formatMatch = answerText.match(/([A-D])\s*[\):.]\s*\w+/i);
+          if (formatMatch && formatMatch[1]) {
+            finalAnswer = formatMatch[1].toUpperCase();
+          }
+          // Method 4: Check if the answer text contains one of the option strings and determine which one
+          else if (Array.isArray(q.options) && q.options.length > 0) {
+            for (let i = 0; i < q.options.length; i++) {
+              const optionText = typeof q.options[i] === 'string' ? q.options[i] : '';
+              // Get the letter from the option's position (A, B, C, D)
+              const optionLetter = String.fromCharCode(65 + i);
+              
+              // If option has the format "A) text" or "A. text", extract just the text part
+              const optionTextOnly = optionText.replace(/^[A-D][.):]\s*/i, '').trim().toLowerCase();
+              
+              // If the answer matches this option text (ignoring the letter prefix)
+              if (optionTextOnly && answerText.toLowerCase().includes(optionTextOnly)) {
+                finalAnswer = optionLetter;
+                break;
+              }
+            }
+          }
+        }
+
+        // Final fallback: Any letter A-D mentioned in the answer
+        if (finalAnswer === "A" && !/^[A]$/i.test(answerText)) {
+          for (const letter of ['B', 'C', 'D']) {
+            if (answerText.toUpperCase().includes(letter)) {
+              finalAnswer = letter;
+              break;
+            }
           }
         }
       }

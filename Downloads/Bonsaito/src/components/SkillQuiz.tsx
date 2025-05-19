@@ -89,6 +89,7 @@ const SkillQuiz: React.FC<SkillQuizProps> = ({ onComplete, onClose }) => {
 
     // Record response
     const currentQuestion = quizQuestions[currentQuestionIndex];
+    // Compare selected option letter (A, B, C, D) directly with the question's answer
     const isCorrect = selectedOption === currentQuestion.answer;
     
     setResponses([
