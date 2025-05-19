@@ -53,19 +53,18 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onSelectPlan }) =
 
   const freeAnimProps = useSpring({
     transform: hoveredPlan === 'free' ? 'scale(1.03)' : 'scale(1)',
-    boxShadow: hoveredPlan === 'free' 
-      ? '0 16px 70px -12px rgba(0,0,0,0.3)' 
-      : '0 8px 40px -12px rgba(0,0,0,0.2)',
     config: { tension: 300, friction: 20 }
   });
 
   const proAnimProps = useSpring({
     transform: hoveredPlan === 'pro' ? 'scale(1.05)' : 'scale(1.02)',
-    boxShadow: hoveredPlan === 'pro' 
-      ? '0 20px 80px -12px rgba(0,0,0,0.4)' 
-      : '0 12px 60px -12px rgba(0,0,0,0.3)',
     config: { tension: 300, friction: 20 }
   });
+
+  const staticFreeBoxShadow = '0 8px 40px -12px rgba(0,0,0,0.2)';
+  const staticProBoxShadow = '0 12px 60px -12px rgba(0,0,0,0.3)';
+  const hoveredProBoxShadow = '0 20px 80px -12px rgba(0,0,0,0.4)';
+  const hoveredFreeBoxShadow = '0 16px 70px -12px rgba(0,0,0,0.3)';
 
   return (
     <Container maxWidth="lg" sx={{ py: 8 }}>
@@ -95,7 +94,11 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onSelectPlan }) =
       <Grid container spacing={4} justifyContent="center">
         <Grid item xs={12} md={5}>
           <animated.div
-            style={freeAnimProps}
+            style={{
+              ...freeAnimProps,
+              boxShadow: hoveredPlan === 'free' ? hoveredFreeBoxShadow : staticFreeBoxShadow,
+              willChange: 'transform',
+            }}
             onMouseEnter={() => setHoveredPlan('free')}
             onMouseLeave={() => setHoveredPlan(null)}
           >
@@ -165,7 +168,11 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onSelectPlan }) =
 
         <Grid item xs={12} md={5}>
           <animated.div
-            style={proAnimProps}
+            style={{
+              ...proAnimProps,
+              boxShadow: hoveredPlan === 'pro' ? hoveredProBoxShadow : staticProBoxShadow,
+              willChange: 'transform',
+            }}
             onMouseEnter={() => setHoveredPlan('pro')}
             onMouseLeave={() => setHoveredPlan(null)}
           >

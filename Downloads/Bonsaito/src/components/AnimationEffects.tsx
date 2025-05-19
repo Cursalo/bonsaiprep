@@ -33,30 +33,30 @@ export const ScaleIn: React.FC<{
   return <animated.div style={props}>{children}</animated.div>;
 };
 
-// Hover effect component
+// Hover effect component - Converted to CSS
 export const HoverEffect: React.FC<{
   children: ReactNode;
 }> = ({ children }) => {
-  const [props, set] = useSpring(() => ({
+  const hoverStyle: React.CSSProperties = {
+    transition: 'transform 0.3s ease-out',
     transform: 'translateY(0) scale(1)',
-    boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.2)',
-    config: config.wobbly,
-  }));
+    willChange: 'transform',
+  };
+
+  const [isHovered, setIsHovered] = React.useState(false);
+
+  const currentStyle: React.CSSProperties = isHovered ? 
+    { ...hoverStyle, transform: 'translateY(-8px) scale(1.02)' } : 
+    hoverStyle;
 
   return (
-    <animated.div
-      style={props}
-      onMouseEnter={() => set({ 
-        transform: 'translateY(-8px) scale(1.02)',
-        boxShadow: '0 16px 48px 0 rgba(0, 0, 0, 0.3)'
-      })}
-      onMouseLeave={() => set({ 
-        transform: 'translateY(0) scale(1)',
-        boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.2)'
-      })}
+    <div
+      style={currentStyle}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
       {children}
-    </animated.div>
+    </div>
   );
 };
 
