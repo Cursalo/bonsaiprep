@@ -711,11 +711,6 @@ const Dashboard: React.FC = () => {
                         <Box sx={{ 
                           position: 'relative',
                           height: 380,
-                          backgroundImage: 'url(/altar2.png)',
-                          backgroundSize: 'cover',
-                          backgroundRepeat: 'no-repeat',
-                          backgroundPosition: '60% bottom',
-                          backdropFilter: 'blur(0px)',
                           borderRadius: 4,
                           mt: 2,
                           mb: 1,
