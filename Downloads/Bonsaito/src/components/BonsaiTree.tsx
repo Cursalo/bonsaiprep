@@ -70,13 +70,17 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({
 
   // Determine which bonsai image to show (2.png to 11.png)
   const getBonsaiImageNumber = () => {
+    console.log('Calculating image number for correctAnswersCount:', correctAnswersCount);
+    
     // If no correct answers, show first image (1.png)
     if (correctAnswersCount <= 0) return 1;
     
     // Map the number of correct answers to the appropriate image
     // 1-10 correct answers maps to images 2-11
     // clamp to ensure we don't exceed 11.png
-    return Math.min(correctAnswersCount + 1, 11);
+    const imageNumber = Math.min(correctAnswersCount + 1, 11);
+    console.log('Selected bonsai image number:', imageNumber);
+    return imageNumber;
   };
 
   const bonsaiImageNumber = getBonsaiImageNumber();
@@ -85,8 +89,14 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({
   const bonsaiImagePath = `/bonsaipng/${bonsaiImageNumber}.png`;
   const altarImagePath = '/altar2.png';
 
-  // Log the image path for debugging
-  console.log('Loading bonsai image:', bonsaiImagePath, 'for', correctAnswersCount, 'correct answers');
+  // Enhanced logging for debugging
+  console.log('BonsaiTree - Props:', { 
+    externalCorrectAnswersCount, 
+    internalCorrectAnswersCount, 
+    finalCount: correctAnswersCount,
+    bonsaiImageNumber,
+    bonsaiImagePath
+  });
 
   // Animations - updated to use the recommended API
   const [containerProps, containerApi] = useSpring(() => ({ 
@@ -116,10 +126,31 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({
     }
   }, [correctAnswersCount]);
 
+  // Force refresh when correctAnswersCount changes
+  useEffect(() => {
+    console.log('correctAnswersCount changed to:', correctAnswersCount);
+    // Trigger a refresh of the image when count changes
+    setIsImageLoaded(false);
+    setIsLoading(true);
+    
+    // This will cause the image to reload with the new path
+    const img = new Image();
+    img.src = bonsaiImagePath;
+    img.onload = () => {
+      setIsImageLoaded(true);
+      setIsLoading(false);
+      setImageError(false);
+    };
+    img.onerror = () => {
+      console.error('Failed to load image on count change:', bonsaiImagePath);
+      setImageError(true);
+      setIsLoading(false);
+    };
+  }, [correctAnswersCount, bonsaiImagePath]);
+
   // Preload both bonsai and altar images
   useEffect(() => {
     const preloadImages = async () => {
-      setIsLoading(true);
       try {
         await Promise.all([
           new Promise((resolve, reject) => {
@@ -135,13 +166,8 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({
             altarImg.onerror = reject;
           })
         ]);
-        setIsImageLoaded(true);
-        setImageError(false);
       } catch (error) {
-        console.error('Failed to load images:', error);
-        setImageError(true);
-      } finally {
-        setIsLoading(false);
+        console.error('Failed to preload images:', error);
       }
     };
 

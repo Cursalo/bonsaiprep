@@ -385,6 +385,7 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     // If we're coming from upload page, show animation
     if (location.state?.fromUpload && location.state?.correctAnswers > 0) {
+      console.log('Dashboard - Received correctAnswers from navigation:', location.state.correctAnswers);
       setShowTreeAnimation(true);
       setCorrectAnswersCount(location.state.correctAnswers);
       
@@ -396,6 +397,11 @@ const Dashboard: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [location]);
+
+  // Add a new effect to ensure correctAnswersCount is preserved if we re-navigate
+  useEffect(() => {
+    console.log('Dashboard - Current correctAnswersCount:', correctAnswersCount);
+  }, [correctAnswersCount]);
 
   const handleDrawerToggle = () => {
     setDrawerOpen(!drawerOpen);
@@ -776,6 +782,7 @@ const Dashboard: React.FC = () => {
                             totalSkills={totalSkills} 
                             correctAnswersCount={correctAnswersCount} 
                             maxCorrectAnswers={10}
+                            key={`bonsai-tree-${correctAnswersCount}`}
                           />
                         </Box>
                         
