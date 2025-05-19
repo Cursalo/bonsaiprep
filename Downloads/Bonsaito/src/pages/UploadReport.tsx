@@ -58,6 +58,8 @@ import GlassCard from '../components/GlassCard';
 import GradientButton from '../components/GradientButton';
 import { FadeIn, ScaleIn, FloatAnimation, SlideIn } from '../components/AnimationEffects';
 import BonsaiTree from '../components/BonsaiTree';
+import { updateCorrectAnswersCount, getUserProgress } from '../services/userProgressService';
+import TestHistoryList from '../components/TestHistoryList';
 
 // Define an interface for user answers
 interface StudentAnswers {
@@ -532,7 +534,7 @@ const UploadReport: React.FC = () => {
   };
 
   // Check if an answer is correct and reveal explanation
-  const checkAnswer = (questionId: string) => {
+  const checkAnswer = async (questionId: string) => {
     setShowExplanations(prev => ({
       ...prev,
       [questionId]: true
@@ -542,7 +544,17 @@ const UploadReport: React.FC = () => {
     if (question && isAnswerCorrect(question, studentAnswers[questionId])) {
       // If correct and not already in correctAnswers, add it
       if (!correctAnswers.includes(questionId)) {
-        setCorrectAnswers(prev => [...prev, questionId]);
+        // Update local state
+        setCorrectAnswers(prev => {
+          const newCorrectAnswers = [...prev, questionId];
+          
+          // Update user progress in database (don't await to avoid blocking UI)
+          updateCorrectAnswersCount(newCorrectAnswers.length).catch(error => {
+            console.error('Error updating correct answers count:', error);
+          });
+          
+          return newCorrectAnswers;
+        });
         
         // Show the tree growth effect
         setTreeGrowthTriggered(true);
@@ -562,6 +574,26 @@ const UploadReport: React.FC = () => {
             updateSkillProgress(skillId, newProgress);
             console.log(`Skill ${skillId} updated: ${skill.masteryLevel} -> ${newProgress}`);
             
+            // Record the practice question in the database
+            try {
+              const { data: { user } } = await supabase.auth.getUser();
+              if (user) {
+                // Store the question attempt
+                await supabase
+                  .from('practice_questions')
+                  .insert({
+                    user_id: user.id,
+                    question_data: question,
+                    completed: true,
+                    correct: true,
+                    selected_option: studentAnswers[questionId],
+                    source: 'upload'
+                  });
+              }
+            } catch (error) {
+              console.error('Error recording question attempt:', error);
+            }
+            
             // Show growth badge and increment counter
             setShowTreeGrowthBadge(true);
             setTreeBadgeCount(prev => prev + 1);
@@ -572,6 +604,26 @@ const UploadReport: React.FC = () => {
             }, 3000);
           }
         }
+      }
+    } else if (question) {
+      // If incorrect, still record the attempt
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          // Store the incorrect question attempt
+          await supabase
+            .from('practice_questions')
+            .insert({
+              user_id: user.id,
+              question_data: question,
+              completed: true,
+              correct: false,
+              selected_option: studentAnswers[questionId],
+              source: 'upload'
+            });
+        }
+      } catch (error) {
+        console.error('Error recording incorrect question attempt:', error);
       }
     }
   };
@@ -605,13 +657,30 @@ const UploadReport: React.FC = () => {
   };
 
   // Handle navigate to dashboard to see tree growth
-  const handleViewTreeGrowth = () => {
-    navigate('/dashboard', { 
-      state: { 
-        fromUpload: true, 
-        correctAnswers: correctAnswers.length 
-      } 
-    });
+  const handleViewTreeGrowth = async () => {
+    try {
+      // Update correct answers count in the database before navigating
+      await updateCorrectAnswersCount(correctAnswers.length);
+      console.log('Updated correct answers count in database:', correctAnswers.length);
+      
+      // Navigate to dashboard with state
+      navigate('/dashboard', { 
+        state: { 
+          fromUpload: true, 
+          correctAnswers: correctAnswers.length 
+        } 
+      });
+    } catch (error) {
+      console.error('Error updating correct answers count:', error);
+      
+      // Still navigate even if there was an error
+      navigate('/dashboard', { 
+        state: { 
+          fromUpload: true, 
+          correctAnswers: correctAnswers.length 
+        } 
+      });
+    }
   };
 
   // Background style with animation to match onboarding

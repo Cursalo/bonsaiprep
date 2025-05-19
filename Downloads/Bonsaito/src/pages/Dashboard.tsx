@@ -45,6 +45,7 @@ import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import { supabase } from '../supabaseClient';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
+import { getUserProgress, calculateCorrectAnswersFromDatabase } from '../services/userProgressService';
 
 // Import our components
 import BonsaiTree from '../components/BonsaiTree';
@@ -53,6 +54,7 @@ import { useSkills } from '../components/SkillsProvider';
 import GlassCard from '../components/GlassCard';
 import GradientButton from '../components/GradientButton';
 import { FadeIn, ScaleIn, FloatAnimation, SlideIn, ProgressAnimation, StaggeredList } from '../components/AnimationEffects';
+import TestHistoryList from '../components/TestHistoryList';
 
 // Mock data for the dashboard
 const mockUserData = {
@@ -355,22 +357,16 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     const fetchCorrectAnswersCount = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          // Get the completed questions for the user
-          const { data, error } = await supabase
-            .from('practice_questions')
-            .select('*')
-            .eq('user_id', user.id)
-            .eq('completed', true);
-
-          if (error) {
-            throw error;
-          }
-
-          // Calculate how many questions were answered correctly
-          const correctAnswers = data ? data.filter(q => q.correct === true).length : 0;
-          console.log('Dashboard - Correct answers from database:', correctAnswers);
+        // First, try to get from user_progress table (faster)
+        const userProgress = await getUserProgress();
+        
+        if (userProgress) {
+          console.log('Dashboard - Correct answers from user_progress:', userProgress.correctAnswersCount);
+          setCorrectAnswersCount(userProgress.correctAnswersCount);
+        } else {
+          // Fallback to calculating from practice_questions if user_progress is not available
+          const correctAnswers = await calculateCorrectAnswersFromDatabase();
+          console.log('Dashboard - Correct answers recalculated from database:', correctAnswers);
           setCorrectAnswersCount(correctAnswers);
         }
       } catch (error) {
@@ -914,6 +910,11 @@ const Dashboard: React.FC = () => {
                       }}>
                         "Practice consistently, even if it's just for 15-30 minutes each day. Consistency builds momentum!"
                       </Typography>
+                      
+                      {/* Show test history */}
+                      <Box sx={{ mt: 3 }}>
+                        <TestHistoryList maxItems={3} />
+                      </Box>
                       
                       {userData && userData.motivation && (
                         <Box sx={{ mt: 3 }}>
