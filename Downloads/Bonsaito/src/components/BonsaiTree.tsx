@@ -19,6 +19,8 @@ interface Skill {
 interface BonsaiTreeProps {
   skills: Skill[];
   totalSkills: number;
+  correctAnswersCount?: number; // Add optional prop to allow direct control of correct answers
+  maxCorrectAnswers?: number; // Maximum number of correct answers to reach the final tree stage
 }
 
 interface Point {
@@ -48,20 +50,32 @@ const FOLIAGE_HIGHLIGHT_COLOR = '#A1D490';
 const FOLIAGE_SHADE_COLOR = '#7CAC6C'; 
 const POT_COLOR = '#8D7B6F';
 
-const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
+const BonsaiTree: React.FC<BonsaiTreeProps> = ({ 
+  skills, 
+  totalSkills, 
+  correctAnswersCount: externalCorrectAnswersCount, 
+  maxCorrectAnswers = 10 // Default to 10 max correct answers
+}) => {
   const theme = useTheme();
-  const [correctAnswersCount, setCorrectAnswersCount] = useState(0);
+  const [internalCorrectAnswersCount, setInternalCorrectAnswersCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
+  const [treeGrowthAnimation, setTreeGrowthAnimation] = useState(false);
 
-  // Determine which bonsai image to show (1.png to 11.png)
+  // Use external count if provided, otherwise use internal count from DB
+  const correctAnswersCount = externalCorrectAnswersCount !== undefined 
+    ? externalCorrectAnswersCount 
+    : internalCorrectAnswersCount;
+
+  // Determine which bonsai image to show (2.png to 11.png)
   const getBonsaiImageNumber = () => {
-    // Default to image 1 (empty bonsai)
-    if (correctAnswersCount === 0) return 1;
+    // If no correct answers, show first image (1.png)
+    if (correctAnswersCount <= 0) return 1;
     
     // Map the number of correct answers to the appropriate image
     // 1-10 correct answers maps to images 2-11
+    // clamp to ensure we don't exceed 11.png
     return Math.min(correctAnswersCount + 1, 11);
   };
 
@@ -72,7 +86,7 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
   const altarImagePath = '/altar2.png';
 
   // Log the image path for debugging
-  console.log('Loading bonsai image:', bonsaiImagePath);
+  console.log('Loading bonsai image:', bonsaiImagePath, 'for', correctAnswersCount, 'correct answers');
 
   // Animations - updated to use the recommended API
   const [containerProps, containerApi] = useSpring(() => ({ 
@@ -92,6 +106,15 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
   useEffect(() => {
     imageApi.start({ transform: 'translateY(0px)' });
   }, [imageApi]);
+
+  // Trigger growth animation when correctAnswersCount changes
+  useEffect(() => {
+    if (correctAnswersCount > 0) {
+      setTreeGrowthAnimation(true);
+      const timer = setTimeout(() => setTreeGrowthAnimation(false), 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [correctAnswersCount]);
 
   // Preload both bonsai and altar images
   useEffect(() => {
@@ -126,7 +149,13 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
   }, [bonsaiImagePath, altarImagePath]);
 
   // Fetch the user's question data to determine how many questions were answered correctly
+  // Only run this if externalCorrectAnswersCount is not provided
   useEffect(() => {
+    if (externalCorrectAnswersCount !== undefined) {
+      setIsLoading(false);
+      return; // Skip fetching if external count is provided
+    }
+
     const fetchUserProgress = async () => {
       setIsLoading(true);
       try {
@@ -152,8 +181,8 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
 
         // Calculate how many questions were answered correctly
         const correctAnswers = data ? data.filter(q => q.correct === true).length : 0;
-        console.log('Correct answers:', correctAnswers);
-        setCorrectAnswersCount(correctAnswers);
+        console.log('Correct answers from database:', correctAnswers);
+        setInternalCorrectAnswersCount(correctAnswers);
       } catch (error) {
         console.error('Error fetching user progress:', error);
       } finally {
@@ -162,21 +191,28 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
     };
 
     fetchUserProgress();
-  }, []);
+  }, [externalCorrectAnswersCount]);
 
   const handleImageError = () => {
     console.error(`Failed to load image: ${bonsaiImagePath}`);
     setImageError(true);
   };
 
-  // Add global keyframes for floating animation
+  // Add global keyframes for floating and growth animations
   useEffect(() => {
     const style = document.createElement('style');
-    style.innerHTML = `@keyframes floatBonsai {
-      0% { transform: translateY(10px) scale(0.35); filter: contrast(130%); }
-      50% { transform: translateY(0px) scale(0.35); filter: contrast(130%); }
-      100% { transform: translateY(10px) scale(0.35); filter: contrast(130%); }
-    }`;
+    style.innerHTML = `
+      @keyframes floatBonsai {
+        0% { transform: translateY(10px) scale(0.35); filter: contrast(130%); }
+        50% { transform: translateY(0px) scale(0.35); filter: contrast(130%); }
+        100% { transform: translateY(10px) scale(0.35); filter: contrast(130%); }
+      }
+      @keyframes growBonsai {
+        0% { transform: translateY(10px) scale(0.33); filter: contrast(130%); }
+        50% { transform: translateY(5px) scale(0.37); filter: contrast(140%); }
+        100% { transform: translateY(10px) scale(0.35); filter: contrast(130%); }
+      }
+    `;
     document.head.appendChild(style);
     return () => { document.head.removeChild(style); };
   }, []);
@@ -209,6 +245,9 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
       </Box>
     );
   }
+
+  // Calculate progress percentage
+  const progressPercentage = Math.min(100, (correctAnswersCount / maxCorrectAnswers) * 100);
 
   return (
     <animated.div style={containerProps}>
@@ -272,7 +311,9 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
               style={{
                 ...imageProps,
                 opacity: isImageLoaded ? 1 : 0,
-                animation: 'floatBonsai 3.5s ease-in-out infinite',
+                animation: treeGrowthAnimation 
+                  ? 'growBonsai 1.5s ease-in-out' 
+                  : 'floatBonsai 3.5s ease-in-out infinite',
                 transform: 'scale(0.35)',
                 filter: 'contrast(130%)',
                 marginLeft: '4px'
@@ -292,7 +333,9 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({ skills, totalSkills }) => {
               {correctAnswersCount} Questions Mastered
             </Typography>
             <Typography variant="body2" sx={{ mt: 1, opacity: 0.8 }}>
-              Keep practicing to grow your bonsai!
+              {correctAnswersCount >= maxCorrectAnswers
+                ? 'Congratulations! Your bonsai is fully grown!'
+                : `Progress: ${progressPercentage.toFixed(0)}% - Answer ${maxCorrectAnswers - correctAnswersCount} more questions to fully grow your bonsai!`}
             </Typography>
           </Box>
         </Box>

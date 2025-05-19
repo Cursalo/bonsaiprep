@@ -309,6 +309,7 @@ const Dashboard: React.FC = () => {
   const [showTreeAnimation, setShowTreeAnimation] = useState<boolean>(false);
   const [userData, setUserData] = useState<UserOnboardingData | null>(null);
   const [loadingUserData, setLoadingUserData] = useState<boolean>(true);
+  const [correctAnswersCount, setCorrectAnswersCount] = useState<number>(0);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -350,11 +351,42 @@ const Dashboard: React.FC = () => {
     fetchUserData();
   }, []);
 
-  // Check if we're coming from the upload page to show animation
+  // Fetch the correct answers count for BonsaiTree
+  useEffect(() => {
+    const fetchCorrectAnswersCount = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          // Get the completed questions for the user
+          const { data, error } = await supabase
+            .from('practice_questions')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('completed', true);
+
+          if (error) {
+            throw error;
+          }
+
+          // Calculate how many questions were answered correctly
+          const correctAnswers = data ? data.filter(q => q.correct === true).length : 0;
+          console.log('Dashboard - Correct answers from database:', correctAnswers);
+          setCorrectAnswersCount(correctAnswers);
+        }
+      } catch (error) {
+        console.error('Error fetching correct answers count:', error);
+      }
+    };
+
+    fetchCorrectAnswersCount();
+  }, []);
+
+  // Update the existing useEffect to also update correctAnswersCount based on location state
   useEffect(() => {
     // If we're coming from upload page, show animation
     if (location.state?.fromUpload && location.state?.correctAnswers > 0) {
       setShowTreeAnimation(true);
+      setCorrectAnswersCount(location.state.correctAnswers);
       
       // Reset animation after a delay
       const timer = setTimeout(() => {
@@ -720,14 +752,11 @@ const Dashboard: React.FC = () => {
                         </Typography>
                         
                         <Box sx={{ 
-                          position: 'relative',
-                          height: 380,
-                          borderRadius: 4,
-                          mt: 2,
-                          mb: 1,
-                          overflow: 'hidden',
-                          border: 'none',
-                          boxShadow: 'none',
+                          position: 'relative', 
+                          width: '100%', 
+                          aspectRatio: '16/9', 
+                          maxHeight: '500px', 
+                          backgroundColor: 'transparent', 
                           background: 'none', 
                           backgroundImage: `url('/altar4.png')`,
                           backgroundSize: 'cover',
@@ -742,7 +771,12 @@ const Dashboard: React.FC = () => {
                             boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
                           }
                         }}>
-                          <BonsaiTree skills={skills} totalSkills={totalSkills} />
+                          <BonsaiTree 
+                            skills={skills} 
+                            totalSkills={totalSkills} 
+                            correctAnswersCount={correctAnswersCount} 
+                            maxCorrectAnswers={10}
+                          />
                         </Box>
                         
                         <Box sx={{ 

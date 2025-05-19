@@ -12,6 +12,7 @@ import {
   Alert
 } from '@mui/material';
 import { useSkills } from './SkillsProvider';
+import { supabase } from '../supabaseClient';
 
 interface Question {
   id: string;
@@ -112,7 +113,7 @@ const SkillQuiz: React.FC<SkillQuizProps> = ({ onComplete, onClose }) => {
     }
   };
 
-  const completeQuiz = () => {
+  const completeQuiz = async () => {
     setQuizCompleted(true);
     
     // Calculate scores by skill
@@ -144,6 +145,37 @@ const SkillQuiz: React.FC<SkillQuizProps> = ({ onComplete, onClose }) => {
       
       return { skillId, score };
     });
+    
+    // Save results to database for BonsaiTree tracking
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        // Store each question attempt in practice_questions table
+        const practiceQuestions = responses.map((response, index) => ({
+          user_id: user.id,
+          question_data: quizQuestions[index],
+          completed: true,
+          correct: response.isCorrect,
+          selected_option: response.selectedOption,
+          source: 'skill_quiz'
+        }));
+        
+        if (practiceQuestions.length > 0) {
+          const { error } = await supabase
+            .from('practice_questions')
+            .insert(practiceQuestions);
+            
+          if (error) {
+            console.error('Error saving quiz results:', error);
+          } else {
+            console.log('Quiz results saved to database');
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error during quiz completion:', error);
+    }
     
     // Call the onComplete callback with results
     onComplete(results);

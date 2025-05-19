@@ -57,6 +57,7 @@ import LoadingAnimation from '../components/LoadingAnimation';
 import GlassCard from '../components/GlassCard';
 import GradientButton from '../components/GradientButton';
 import { FadeIn, ScaleIn, FloatAnimation, SlideIn } from '../components/AnimationEffects';
+import BonsaiTree from '../components/BonsaiTree';
 
 // Define an interface for user answers
 interface StudentAnswers {
@@ -255,7 +256,7 @@ const UploadReport: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const navigate = useNavigate();
-  const { skills, updateSkillProgress } = useSkills();
+  const { skills, updateSkillProgress, totalSkills } = useSkills();
   
   const [drawerOpen, setDrawerOpen] = useState<boolean>(false); 
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -278,6 +279,9 @@ const UploadReport: React.FC = () => {
   const [treeBadgeCount, setTreeBadgeCount] = useState<number>(0);
   const [userData, setUserData] = useState<{firstName?: string, lastName?: string} | null>(null);
   const [loadingUserData, setLoadingUserData] = useState<boolean>(true);
+  const [processingComplete, setProcessingComplete] = useState(false);
+  const [showBonsaiTree, setShowBonsaiTree] = useState<boolean>(false);
+  const [treeGrowthTriggered, setTreeGrowthTriggered] = useState<boolean>(false);
   
   // Group questions by topic for better organization
   const questionsByTopic = React.useMemo(() => {
@@ -539,6 +543,10 @@ const UploadReport: React.FC = () => {
       // If correct and not already in correctAnswers, add it
       if (!correctAnswers.includes(questionId)) {
         setCorrectAnswers(prev => [...prev, questionId]);
+        
+        // Show the tree growth effect
+        setTreeGrowthTriggered(true);
+        setTimeout(() => setTreeGrowthTriggered(false), 2000);
         
         // Update the associated skill's progress
         const skillId = questionSkillMap[questionId];
@@ -1412,6 +1420,55 @@ const UploadReport: React.FC = () => {
                   </GradientButton>
                 </Box>
               </Box>
+            )}
+
+            {generatedQuestions.length > 0 && correctAnswers.length > 0 && (
+              <FadeIn>
+                <GlassCard sx={{ 
+                  p: 3, 
+                  mt: 4, 
+                  mb: 4, 
+                  borderRadius: 2, 
+                  backdropFilter: 'blur(10px)',
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+                  border: '1px solid rgba(136, 212, 152, 0.2)',
+                  textAlign: 'center'
+                }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, justifyContent: 'center' }}>
+                    <EmojiNatureIcon sx={{ fontSize: 32, color: '#88d498', mr: 1.5, filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }} />
+                    <Typography variant="h5" sx={{ color: 'rgba(255, 255, 255, 0.87)', fontWeight: 'bold' }}>
+                      Your Bonsai Tree Growth
+                    </Typography>
+                  </Box>
+                  
+                  <Typography variant="body1" paragraph sx={{ color: 'rgba(255, 255, 255, 0.7)', mb: 4 }}>
+                    Watch your bonsai tree grow as you answer questions correctly! You've answered {correctAnswers.length} question{correctAnswers.length !== 1 ? 's' : ''} correctly.
+                  </Typography>
+                  
+                  <Box sx={{ 
+                    maxWidth: '400px', 
+                    margin: '0 auto', 
+                    background: 'rgba(18, 18, 18, 0.5)',
+                    borderRadius: '12px',
+                    padding: '1rem',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    boxShadow: 'inset 0 0 20px rgba(0, 0, 0, 0.2)'
+                  }}>
+                    <BonsaiTree 
+                      skills={skills} 
+                      totalSkills={totalSkills} 
+                      correctAnswersCount={correctAnswers.length} 
+                      maxCorrectAnswers={10} 
+                    />
+                  </Box>
+                  
+                  <Typography variant="body2" sx={{ mt: 3, color: 'rgba(255, 255, 255, 0.6)', fontStyle: 'italic' }}>
+                    {correctAnswers.length < 10 
+                      ? `Answer ${10 - correctAnswers.length} more questions correctly to fully grow your bonsai!` 
+                      : "Congratulations! Your bonsai tree is fully grown!"}
+                  </Typography>
+                </GlassCard>
+              </FadeIn>
             )}
 
           </GlassCard>
