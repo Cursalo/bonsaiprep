@@ -274,9 +274,6 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({
     );
   }
 
-  // Calculate progress percentage
-  const progressPercentage = Math.min(100, (correctAnswersCount / maxCorrectAnswers) * 100);
-
   return (
     <animated.div style={containerProps}>
       <Paper 
@@ -337,23 +334,7 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({
             />
           </Box>
           
-          {showProgressText && (
-            <Box sx={{ 
-              mt: 3, 
-              textAlign: 'center',
-              color: '#2C1810',
-              textShadow: '0 1px 2px rgba(0,0,0,0.1)'
-            }}>
-              <Typography variant="h6">
-                {correctAnswersCount} Questions Mastered
-              </Typography>
-              <Typography variant="body2" sx={{ mt: 1, opacity: 0.8 }}>
-                {correctAnswersCount >= maxCorrectAnswers
-                  ? 'Congratulations! Your bonsai is fully grown!'
-                  : `Progress: ${progressPercentage.toFixed(0)}% - Answer ${maxCorrectAnswers - correctAnswersCount} more questions to fully grow your bonsai!`}
-              </Typography>
-            </Box>
-          )}
+
         </Box>
       </Paper>
     </animated.div>
