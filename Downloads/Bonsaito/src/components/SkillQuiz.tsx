@@ -87,7 +87,7 @@ const SkillQuiz: React.FC<SkillQuizProps> = ({ onComplete, onClose }) => {
 
     // Record response
     const currentQuestion = quizQuestions[currentQuestionIndex];
-    const isCorrect = Math.random() < 0.5; // Randomly determine if correct (mock behavior)
+    const isCorrect = selectedOption === currentQuestion.options[0].id; // Assume first option 'A' is correct
     
     setResponses([
       ...responses, 

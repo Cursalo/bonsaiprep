@@ -412,7 +412,7 @@ const UploadReport: React.FC = () => {
           setActiveStep(2);
           
           setLoadingMessage('Analyzing report and generating personalized questions...');
-          await addProcessingDelay(15000);
+          await addProcessingDelay(10000);
           const questions = await generateQuestionsFromMistakes(text);
           setGeneratedQuestions(questions);
           setActiveStep(3);
@@ -432,7 +432,7 @@ const UploadReport: React.FC = () => {
           setLoadingMessage('Analyzing PDF and generating personalized questions...');
           
           // Generate questions directly from the PDF file using Gemini 2.0 Flash
-          await addProcessingDelay(15000);
+          await addProcessingDelay(10000);
           const questions = await generateQuestionsFromMistakes(file);
           setGeneratedQuestions(questions);
           setActiveStep(3);
@@ -475,7 +475,7 @@ const UploadReport: React.FC = () => {
       
       setLoadingMessage('Analyzing report data and creating personalized questions...');
       // Add realistic processing delay - increased to 15 seconds
-      await addProcessingDelay(15000);
+      await addProcessingDelay(10000);
       const questions = await generateQuestionsFromMistakes(pastedText);
       setGeneratedQuestions(questions);
       setActiveStep(3);
@@ -593,7 +593,7 @@ const UploadReport: React.FC = () => {
       console.error('Invalid data for answer comparison:', { questionId: question?.id, studentAnswer, questionAnswer: question?.answer });
       return false;
     }
-    return studentAnswer.trim() === question.answer.trim();
+    return studentAnswer.trim().toUpperCase() === question.answer.trim().toUpperCase(); // Compare in uppercase
   };
 
   // Handle navigate to dashboard to see tree growth
