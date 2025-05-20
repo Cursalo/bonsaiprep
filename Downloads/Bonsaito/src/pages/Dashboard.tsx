@@ -424,8 +424,6 @@ const Dashboard: React.FC = () => {
     setSnackbarOpen(false);
   };
 
-  const progressPercentage = totalSkills > 0 ? Math.round((masteredSkillsCount / totalSkills) * 100) : 0;
-
   return (
     <ThemeProvider theme={darkTheme}>
       <Box sx={getBackgroundStyle()}>
@@ -796,7 +794,6 @@ const Dashboard: React.FC = () => {
                           position: 'relative', 
                           width: '100%', 
                           aspectRatio: '16/9', 
-                          // No maxHeight constraint to let aspect ratio control dimensions
                           backgroundColor: 'transparent', 
                           backgroundImage: `url('/altar4.png')`,
                           backgroundSize: 'cover',
@@ -809,7 +806,7 @@ const Dashboard: React.FC = () => {
                           borderRadius: '20px',
                           overflow: 'hidden'
                         }}>
-                          <Box style={{ transform: 'translateY(-5px)' }}> {/* Wrapper Box for styling */}
+                          <Box style={{ transform: 'translateY(-5px)' }}>
                             <BonsaiTree 
                               skills={skills} 
                               totalSkills={totalSkills} 

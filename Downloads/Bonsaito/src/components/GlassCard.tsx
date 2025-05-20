@@ -2,7 +2,6 @@ import React, { ReactNode } from 'react';
 import { Card, CardContent, Box, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useSpring, animated } from 'react-spring';
-import { HoverEffect } from '../components/AnimationEffects';
 
 // Styled components
 const StyledCard = styled(Card)(({ theme }) => ({
@@ -12,9 +11,9 @@ const StyledCard = styled(Card)(({ theme }) => ({
   border: '1px solid rgba(255, 255, 255, 0.08)',
   borderRadius: 8,
   padding: theme.spacing(2),
+  transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
   overflow: 'hidden',
   position: 'relative',
-  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
 }));
 
 const AnimatedCard = animated(StyledCard);
@@ -62,16 +61,51 @@ const GlassCard: React.FC<GlassCardProps> = ({
   className,
   ...props
 }) => {
+  // Animation properties for hover effect
+  const [animProps, set] = useSpring(() => ({
+    transform: 'translateY(0) scale(1)',
+    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+    borderColor: borderColor,
+    config: { mass: 1, tension: 280, friction: 60 },
+  }));
+
   // Generate a glow effect position
   const glowPosition = {
     top: Math.random() * 100 - 50,
     right: Math.random() * 100 - 50,
   };
 
-  const CardContentWrapper = (
+  const handleMouseEnter = () => {
+    if (withHoverEffect) {
+      set({
+        transform: 'translateY(-8px) scale(1.02)',
+        boxShadow: '0 16px 48px rgba(0, 0, 0, 0.3)',
+        borderColor: 'rgba(255, 255, 255, 0.15)',
+      });
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (withHoverEffect) {
+      set({
+        transform: 'translateY(0) scale(1)',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+        borderColor: borderColor,
+      });
+    }
+  };
+
+  return (
     <AnimatedCard
       className={className}
       sx={sx}
+      style={{
+        transform: withHoverEffect ? animProps.transform : 'translateY(0) scale(1)',
+        boxShadow: withHoverEffect ? animProps.boxShadow : '0 8px 32px rgba(0, 0, 0, 0.2)',
+        borderColor: withHoverEffect ? animProps.borderColor : borderColor,
+      }}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       {withGlow && (
         <GlowEffect
@@ -110,8 +144,6 @@ const GlassCard: React.FC<GlassCardProps> = ({
       </CardContent>
     </AnimatedCard>
   );
-
-  return withHoverEffect ? <HoverEffect>{CardContentWrapper}</HoverEffect> : CardContentWrapper;
 };
 
 export default GlassCard; 

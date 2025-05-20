@@ -117,6 +117,7 @@ const GradientButton = forwardRef<HTMLButtonElement, GradientButtonProps>((props
     setHover({
       transform: 'scale(1.05) translateY(-3px)',
       background: hoverGradients[gradient],
+      boxShadow: elevated ? '0 8px 16px rgba(0, 0, 0, 0.3)' : 'none',
     });
   };
 
@@ -124,6 +125,7 @@ const GradientButton = forwardRef<HTMLButtonElement, GradientButtonProps>((props
     setHover({
       transform: 'scale(1) translateY(0px)',
       background: gradients[gradient],
+      boxShadow: elevated ? '0 4px 12px rgba(0, 0, 0, 0.2)' : 'none',
     });
   };
 
@@ -149,9 +151,9 @@ const GradientButton = forwardRef<HTMLButtonElement, GradientButtonProps>((props
         height: '100%',
         background: hoverProps.background,
         transform: hoverProps.transform,
+        boxShadow: hoverProps.boxShadow,
         borderRadius: 'inherit',
         zIndex: 0,
-        willChange: 'transform, background',
       }} />
       <span style={{ position: 'relative', zIndex: 1 }}>
         {children}
