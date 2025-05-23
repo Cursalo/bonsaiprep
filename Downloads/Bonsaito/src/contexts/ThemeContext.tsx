@@ -123,9 +123,10 @@ const createDarkTheme = () => createTheme({
     MuiAppBar: {
       styleOverrides: {
         root: {
-          background: 'rgba(12, 59, 46, 0.8)',
-          backdropFilter: 'blur(10px)',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
+          background: 'rgba(18, 18, 18, 0.95)',
+          backdropFilter: 'blur(20px)',
+          boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3)',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
         },
       },
     },
@@ -223,8 +224,9 @@ const createLightTheme = () => createTheme({
     MuiAppBar: {
       styleOverrides: {
         root: {
-          background: 'linear-gradient(45deg, #1a936f, #114b5f)',
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+          background: '#ffffff',
+          boxShadow: '0 2px 10px rgba(0, 0, 0, 0.08)',
+          borderBottom: '1px solid rgba(0, 0, 0, 0.08)',
         },
       },
     },

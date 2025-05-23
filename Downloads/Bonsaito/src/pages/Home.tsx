@@ -51,23 +51,16 @@ const Home: React.FC = () => {
   const getBackgroundStyle = () => {
     if (themeMode === 'light') {
       return {
-        background: 'linear-gradient(135deg, #fafafa 0%, #f0f4f0 100%)',
+        backgroundColor: '#fafafa',
         minHeight: '100vh',
-        transition: 'background 0.5s ease-in-out',
+        transition: 'background-color 0.3s ease',
       };
     }
     
     return {
-      background: 'linear-gradient(135deg, #0c3b2e 0%, #18514a 100%)',
+      backgroundColor: '#121212',
       minHeight: '100vh',
-      backgroundSize: '200% 200%',
-      animation: 'gradient 15s ease infinite',
-      transition: 'background 0.5s ease-in-out',
-      '@keyframes gradient': {
-        '0%': { backgroundPosition: '0% 50%' },
-        '50%': { backgroundPosition: '100% 50%' },
-        '100%': { backgroundPosition: '0% 50%' }
-      }
+      transition: 'background-color 0.3s ease',
     };
   };
 
@@ -81,13 +74,16 @@ const Home: React.FC = () => {
             alignItems: 'center', 
             flexGrow: 1
           }}>
-            <EmojiNatureIcon sx={{ fontSize: 32, color: theme.palette.primary.light, mr: 1 }} />
-            <Typography variant="h5" component="div" sx={{ 
-              fontWeight: 'bold',
-              color: theme.palette.text.primary
-            }}>
-              Bonsai Prep
-            </Typography>
+            <img 
+              src={themeMode === 'light' ? '/bonsaiblack.png' : '/bonsaiwhitenobg.png'}
+              alt="Bonsai Prep Logo" 
+              style={{ 
+                height: '40px',
+                width: 'auto',
+                objectFit: 'contain',
+                maxWidth: '200px'
+              }} 
+            />
           </Box>
           
           {/* Theme Toggle */}

@@ -330,7 +330,7 @@ const Dashboard: React.FC = () => {
 
   return (
     <Box sx={getBackgroundStyle()}>
-      {/* App Bar */}
+        {/* App Bar */}
       <AppBar 
         position="fixed" 
         elevation={0}
@@ -342,82 +342,82 @@ const Dashboard: React.FC = () => {
           borderBottom: `1px solid ${themeMode === 'light' ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.08)'}`,
         }}
       >
-        <Toolbar>
-          <IconButton
-            color="inherit"
-            aria-label="open drawer"
-            edge="start"
-            onClick={handleDrawerToggle}
+          <Toolbar>
+            <IconButton
+              color="inherit"
+              aria-label="open drawer"
+              edge="start"
+              onClick={handleDrawerToggle}
             sx={{ 
               mr: 2,
               color: getTextColor('primary')
             }}
-          >
-            <MenuIcon />
-          </IconButton>
-          <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            flexGrow: 1,
-            justifyContent: 'center'
-          }}>
-            <img 
+            >
+              <MenuIcon />
+            </IconButton>
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              flexGrow: 1,
+              justifyContent: 'center'
+            }}>
+              <img 
               src={themeMode === 'light' ? '/bonsaiblack.png' : '/bonsaiwhitenobg.png'}
-              alt="Bonsai Prep Logo" 
-              style={{ 
-                height: '40px',
-                width: 'auto',
-                objectFit: 'contain',
-                maxWidth: '200px'
-              }} 
-            />
-          </Box>
-          
-          <ThemeToggle showBackgroundSelector={true} />
-          
-          <Avatar sx={{ 
+                alt="Bonsai Prep Logo" 
+                style={{ 
+                  height: '40px',
+                  width: 'auto',
+                  objectFit: 'contain',
+                  maxWidth: '200px'
+                }} 
+              />
+            </Box>
+            
+            <ThemeToggle showBackgroundSelector={true} />
+            
+            <Avatar sx={{ 
             bgcolor: theme.palette.primary.main,
             ml: 1,
             fontWeight: 'bold'
-          }}>
-            {loadingUserData ? '' : userData?.firstName?.charAt(0) || 'U'}
-          </Avatar>
-        </Toolbar>
-      </AppBar>
+            }}>
+              {loadingUserData ? '' : userData?.firstName?.charAt(0) || 'U'}
+            </Avatar>
+          </Toolbar>
+        </AppBar>
 
-      {/* Drawer */}
-      <Drawer
-        variant={isMobile ? 'temporary' : 'persistent'}
-        anchor="left"
-        open={drawerOpen}
-        onClose={handleDrawerToggle}
-        sx={{
-          '& .MuiDrawer-paper': {
-            width: isMobile ? 280 : 300,
+        {/* Drawer */}
+        <Drawer
+          variant={isMobile ? 'temporary' : 'persistent'}
+          anchor="left"
+          open={drawerOpen}
+          onClose={handleDrawerToggle}
+          sx={{
+            '& .MuiDrawer-paper': {
+              width: isMobile ? 280 : 300,
             backgroundColor: themeMode === 'light' 
               ? 'rgba(255, 255, 255, 0.98)' 
               : 'rgba(18, 18, 18, 0.98)',
             backdropFilter: 'blur(20px)',
             borderRight: `1px solid ${themeMode === 'light' ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.08)'}`,
-          },
-        }}
-      >
-        <Box sx={{ 
+            },
+          }}
+        >
+          <Box sx={{ 
           pt: 10, 
-          pb: 2,
+            pb: 2,
           px: 2
-        }}>
-          <Typography variant="h6" sx={{ 
-            textAlign: 'center', 
-            fontWeight: 'bold',
-            color: getTextColor('primary'),
-            mb: 2
           }}>
-            Navigation
-          </Typography>
-        </Box>
-        
-        <List>
+            <Typography variant="h6" sx={{ 
+              textAlign: 'center', 
+              fontWeight: 'bold',
+            color: getTextColor('primary'),
+              mb: 2
+            }}>
+              Navigation
+            </Typography>
+          </Box>
+          
+          <List>
           {[
             { path: '/dashboard', icon: <HomeIcon />, label: 'Dashboard' },
             { path: '/upload', icon: <UploadIcon />, label: 'Upload Score Report' },
@@ -457,44 +457,44 @@ const Dashboard: React.FC = () => {
             </ListItem>
           ))}
           
-          <ListItem
-            button
-            onClick={() => setShowQuiz(true)}
-            sx={{
-              mx: 1,
-              borderRadius: 2,
-              mb: 0.5,
-              '&:hover': {
-                backgroundColor: `${theme.palette.primary.main}10`,
-              },
-            }}
-          >
-            <ListItemIcon sx={{ color: theme.palette.primary.main }}>
-              <QuizIcon />
-            </ListItemIcon>
-            <ListItemText 
-              primary="Take Skill Quiz"
+            <ListItem
+              button
+              onClick={() => setShowQuiz(true)}
               sx={{
-                '& .MuiListItemText-primary': {
-                  color: getTextColor('primary')
-                }
+                mx: 1,
+                borderRadius: 2,
+                mb: 0.5,
+                '&:hover': {
+                backgroundColor: `${theme.palette.primary.main}10`,
+                },
               }}
-            />
-          </ListItem>
-        </List>
-      </Drawer>
+            >
+              <ListItemIcon sx={{ color: theme.palette.primary.main }}>
+                <QuizIcon />
+              </ListItemIcon>
+              <ListItemText 
+                primary="Take Skill Quiz"
+                sx={{ 
+                  '& .MuiListItemText-primary': {
+                  color: getTextColor('primary')
+                  }
+                }}
+              />
+            </ListItem>
+          </List>
+        </Drawer>
 
       {/* Main Content */}
-      <Container 
+        <Container 
         maxWidth="xl" 
-        sx={{ 
+          sx={{ 
           pt: isMobile ? 12 : 16, 
-          pb: 4,
-          px: isMobile ? 2 : 3,
-          ml: !isMobile && drawerOpen ? '300px' : 0,
-          transition: 'margin 0.3s ease',
-        }}
-      >
+            pb: 4,
+            px: isMobile ? 2 : 3,
+            ml: !isMobile && drawerOpen ? '300px' : 0,
+            transition: 'margin 0.3s ease',
+          }}
+        >
         {/* Welcome Header */}
         <Box sx={{ mb: 6 }}>
           <Typography variant={isMobile ? 'h4' : 'h3'} sx={{ 
@@ -617,7 +617,7 @@ const Dashboard: React.FC = () => {
                   Skills Mastered
                 </Typography>
                 <Typography variant="body2" sx={{ 
-                  fontWeight: 'bold',
+                  fontWeight: 'bold', 
                   color: getTextColor('primary')
                 }}>
                   {masteredSkillsCount}/{totalSkills}
@@ -721,12 +721,12 @@ const Dashboard: React.FC = () => {
                 <EmojiNatureIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
                 Your Learning Bonsai
               </Typography>
-              <BonsaiTree 
-                skills={skills} 
-                totalSkills={totalSkills}
-                correctAnswersCount={correctAnswersCount}
-                showProgressText={false}
-              />
+                <BonsaiTree 
+                  skills={skills} 
+                  totalSkills={totalSkills}
+                  correctAnswersCount={correctAnswersCount}
+                  showProgressText={false}
+                />
             </Paper>
           </Grid>
 
@@ -856,26 +856,26 @@ const Dashboard: React.FC = () => {
                 ))}
               </Grid>
             </Paper>
+            </Grid>
           </Grid>
-        </Grid>
-      </Container>
+        </Container>
 
       {/* SkillQuiz Dialog */}
-      {showQuiz && (
-        <SkillQuiz 
-          onComplete={handleQuizComplete} 
-          onClose={() => setShowQuiz(false)} 
-        />
-      )}
+        {showQuiz && (
+          <SkillQuiz 
+            onComplete={handleQuizComplete} 
+            onClose={() => setShowQuiz(false)} 
+          />
+        )}
 
-      {/* Snackbar for quiz results */}
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={6000}
+        {/* Snackbar for quiz results */}
+        <Snackbar
+          open={snackbarOpen}
+          autoHideDuration={6000}
         onClose={() => setSnackbarOpen(false)}
-        message="Quiz Completed! Your skills have been updated."
-      />
-    </Box>
+          message="Quiz Completed! Your skills have been updated."
+        />
+      </Box>
   );
 };
 

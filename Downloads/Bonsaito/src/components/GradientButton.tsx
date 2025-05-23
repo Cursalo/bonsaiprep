@@ -1,78 +1,38 @@
 import React, { forwardRef } from 'react';
 import { Button, ButtonProps } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import { useSpring, animated } from 'react-spring';
+import { useThemeContext } from '../contexts/ThemeContext';
 
-// Define gradient types
-type GradientType = 
+// Define button variant types for minimal design
+type MinimalVariant = 
   | 'primary' 
   | 'secondary' 
   | 'success' 
   | 'info' 
   | 'warning' 
-  | 'danger'
-  | 'phthalo';
+  | 'danger';
 
-// Define gradient styles
-const gradients = {
-  primary: 'linear-gradient(45deg, #1a936f, #114b5f)',
-  secondary: 'linear-gradient(45deg, #f3e9d2, #e3d9c2)',
-  success: 'linear-gradient(45deg, #88d498, #1a936f)',
-  info: 'linear-gradient(45deg, #3d5a80, #98c1d9)',
-  warning: 'linear-gradient(45deg, #ffcb77, #f3e9d2)',
-  danger: 'linear-gradient(45deg, #e76f51, #f4a261)',
-  phthalo: 'linear-gradient(45deg, #0c3b2e, #18514a)',
-};
-
-// Hover gradients (inverted)
-const hoverGradients = {
-  primary: 'linear-gradient(45deg, #114b5f, #1a936f)',
-  secondary: 'linear-gradient(45deg, #e3d9c2, #f3e9d2)',
-  success: 'linear-gradient(45deg, #1a936f, #88d498)',
-  info: 'linear-gradient(45deg, #98c1d9, #3d5a80)',
-  warning: 'linear-gradient(45deg, #f3e9d2, #ffcb77)',
-  danger: 'linear-gradient(45deg, #f4a261, #e76f51)',
-  phthalo: 'linear-gradient(45deg, #18514a, #0c3b2e)',
-};
-
-// Text colors for each gradient
-const textColors = {
-  primary: '#ffffff',
-  secondary: '#114b5f',
-  success: '#ffffff',
-  info: '#ffffff',
-  warning: '#114b5f',
-  danger: '#ffffff',
-  phthalo: '#ffffff',
-};
-
-// Styled component for the Button
-const StyledButton = styled(Button)({
+// Styled component for the Button with minimal design
+const StyledButton = styled(Button)(({ theme }) => ({
   borderRadius: 8,
   textTransform: 'none',
   fontWeight: 600,
-  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
   fontSize: '1rem',
   padding: '10px 20px',
   position: 'relative',
-  overflow: 'hidden',
-  transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-});
-
-// Animated div for the shimmer effect
-const AnimatedDiv = animated(styled('div')({
-  position: 'absolute',
-  top: 0,
-  left: 0,
-  width: '100%',
-  height: '100%',
-  background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent)',
-  transform: 'translateX(-100%)',
-  zIndex: 0,
+  transition: 'all 0.2s ease-in-out',
+  boxShadow: 'none',
+  '&:hover': {
+    boxShadow: 'none',
+    transform: 'translateY(-1px)',
+  },
+  '&:active': {
+    transform: 'translateY(0px)',
+  },
 }));
 
 export interface GradientButtonProps extends ButtonProps {
-  gradient?: GradientType;
+  gradient?: MinimalVariant;
   withShimmer?: boolean;
   withRipple?: boolean;
   rounded?: boolean;
@@ -83,83 +43,172 @@ export interface GradientButtonProps extends ButtonProps {
 const GradientButton = forwardRef<HTMLButtonElement, GradientButtonProps>((props, ref) => {
   const {
     gradient = 'primary',
-    withShimmer = true,
+    withShimmer = false,
     withRipple = true,
     rounded = false,
-    elevated = true,
+    elevated = false,
     children,
+    variant = 'contained',
     sx,
     ...rest
   } = props;
 
-  // Animation for shimmer effect
-  const shimmerProps = useSpring({
-    to: async (next) => {
-      if (withShimmer) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        await next({ transform: 'translateX(100%)', config: { duration: 1000 } });
-        await next({ transform: 'translateX(-100%)', config: { duration: 0 } });
+  const { themeMode } = useThemeContext();
+
+  // Get colors based on the variant and theme mode
+  const getButtonColors = (): {
+    background: string;
+    color: string;
+    hoverBackground: string;
+    border?: string;
+  } => {
+    const isLight = themeMode === 'light';
+    
+    const colors = {
+      primary: {
+        contained: {
+          background: isLight ? '#1a936f' : '#88d498',
+          color: isLight ? '#ffffff' : '#000000',
+          hoverBackground: isLight ? '#114b5f' : '#a6e3b0',
+        },
+        outlined: {
+          background: 'transparent',
+          color: isLight ? '#1a936f' : '#88d498',
+          border: isLight ? '#1a936f' : '#88d498',
+          hoverBackground: isLight ? 'rgba(26, 147, 111, 0.08)' : 'rgba(136, 212, 152, 0.08)',
+        },
+        text: {
+          background: 'transparent',
+          color: isLight ? '#1a936f' : '#88d498',
+          hoverBackground: isLight ? 'rgba(26, 147, 111, 0.08)' : 'rgba(136, 212, 152, 0.08)',
+        }
+      },
+      secondary: {
+        contained: {
+          background: isLight ? '#6c757d' : '#adb5bd',
+          color: '#ffffff',
+          hoverBackground: isLight ? '#5a6268' : '#95a0a8',
+        },
+        outlined: {
+          background: 'transparent',
+          color: isLight ? '#6c757d' : '#adb5bd',
+          border: isLight ? '#6c757d' : '#adb5bd',
+          hoverBackground: isLight ? 'rgba(108, 117, 125, 0.08)' : 'rgba(173, 181, 189, 0.08)',
+        },
+        text: {
+          background: 'transparent',
+          color: isLight ? '#6c757d' : '#adb5bd',
+          hoverBackground: isLight ? 'rgba(108, 117, 125, 0.08)' : 'rgba(173, 181, 189, 0.08)',
+        }
+      },
+      success: {
+        contained: {
+          background: isLight ? '#28a745' : '#6bbb7b',
+          color: '#ffffff',
+          hoverBackground: isLight ? '#218838' : '#5aa069',
+        },
+        outlined: {
+          background: 'transparent',
+          color: isLight ? '#28a745' : '#6bbb7b',
+          border: isLight ? '#28a745' : '#6bbb7b',
+          hoverBackground: isLight ? 'rgba(40, 167, 69, 0.08)' : 'rgba(107, 187, 123, 0.08)',
+        },
+        text: {
+          background: 'transparent',
+          color: isLight ? '#28a745' : '#6bbb7b',
+          hoverBackground: isLight ? 'rgba(40, 167, 69, 0.08)' : 'rgba(107, 187, 123, 0.08)',
+        }
+      },
+      info: {
+        contained: {
+          background: isLight ? '#17a2b8' : '#98c1d9',
+          color: '#ffffff',
+          hoverBackground: isLight ? '#138496' : '#7fb3d4',
+        },
+        outlined: {
+          background: 'transparent',
+          color: isLight ? '#17a2b8' : '#98c1d9',
+          border: isLight ? '#17a2b8' : '#98c1d9',
+          hoverBackground: isLight ? 'rgba(23, 162, 184, 0.08)' : 'rgba(152, 193, 217, 0.08)',
+        },
+        text: {
+          background: 'transparent',
+          color: isLight ? '#17a2b8' : '#98c1d9',
+          hoverBackground: isLight ? 'rgba(23, 162, 184, 0.08)' : 'rgba(152, 193, 217, 0.08)',
+        }
+      },
+      warning: {
+        contained: {
+          background: isLight ? '#ffc107' : '#ffcb77',
+          color: isLight ? '#000000' : '#000000',
+          hoverBackground: isLight ? '#e0a800' : '#ffb84d',
+        },
+        outlined: {
+          background: 'transparent',
+          color: isLight ? '#ffc107' : '#ffcb77',
+          border: isLight ? '#ffc107' : '#ffcb77',
+          hoverBackground: isLight ? 'rgba(255, 193, 7, 0.08)' : 'rgba(255, 203, 119, 0.08)',
+        },
+        text: {
+          background: 'transparent',
+          color: isLight ? '#ffc107' : '#ffcb77',
+          hoverBackground: isLight ? 'rgba(255, 193, 7, 0.08)' : 'rgba(255, 203, 119, 0.08)',
+        }
+      },
+      danger: {
+        contained: {
+          background: isLight ? '#dc3545' : '#e76f51',
+          color: '#ffffff',
+          hoverBackground: isLight ? '#c82333' : '#d4593e',
+        },
+        outlined: {
+          background: 'transparent',
+          color: isLight ? '#dc3545' : '#e76f51',
+          border: isLight ? '#dc3545' : '#e76f51',
+          hoverBackground: isLight ? 'rgba(220, 53, 69, 0.08)' : 'rgba(231, 111, 81, 0.08)',
+        },
+        text: {
+          background: 'transparent',
+          color: isLight ? '#dc3545' : '#e76f51',
+          hoverBackground: isLight ? 'rgba(220, 53, 69, 0.08)' : 'rgba(231, 111, 81, 0.08)',
+        }
       }
-    },
-    from: { transform: 'translateX(-100%)' },
-    loop: withShimmer,
-    reset: true,
-  });
+    };
 
-  // Hover animation
-  const [hoverProps, setHover] = useSpring(() => ({
-    transform: 'scale(1) translateY(0px)',
-    background: gradients[gradient],
-    boxShadow: elevated ? '0 4px 12px rgba(0, 0, 0, 0.2)' : 'none',
-    config: { mass: 1, tension: 280, friction: 20 },
-  }));
-
-  const handleMouseEnter = () => {
-    setHover({
-      transform: 'scale(1.05) translateY(-3px)',
-      background: hoverGradients[gradient],
-      boxShadow: elevated ? '0 8px 16px rgba(0, 0, 0, 0.3)' : 'none',
-    });
+    return colors[gradient][variant as keyof typeof colors[typeof gradient]];
   };
 
-  const handleMouseLeave = () => {
-    setHover({
-      transform: 'scale(1) translateY(0px)',
-      background: gradients[gradient],
-      boxShadow: elevated ? '0 4px 12px rgba(0, 0, 0, 0.2)' : 'none',
-    });
-  };
+  const buttonColors = getButtonColors();
 
   return (
     <StyledButton
       ref={ref}
+      variant={variant}
       disableRipple={!withRipple}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
       sx={{
         ...sx,
         borderRadius: rounded ? '50px' : 8,
-        color: textColors[gradient],
-        position: 'relative',
+        backgroundColor: buttonColors.background,
+        color: buttonColors.color,
+        borderColor: variant === 'outlined' ? buttonColors.border : undefined,
+        '&:hover': {
+          backgroundColor: buttonColors.hoverBackground,
+          borderColor: variant === 'outlined' ? buttonColors.border : undefined,
+          transform: 'translateY(-1px)',
+          boxShadow: elevated && variant === 'contained' 
+            ? (themeMode === 'light' 
+                ? '0 4px 12px rgba(0, 0, 0, 0.1)' 
+                : '0 4px 12px rgba(0, 0, 0, 0.3)') 
+            : 'none',
+        },
+        '&:active': {
+          transform: 'translateY(0px)',
+          boxShadow: 'none',
+        },
       }}
       {...rest}
     >
-      <animated.div style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        background: hoverProps.background,
-        transform: hoverProps.transform,
-        boxShadow: hoverProps.boxShadow,
-        borderRadius: 'inherit',
-        zIndex: 0,
-      }} />
-      <span style={{ position: 'relative', zIndex: 1 }}>
-        {children}
-      </span>
-      {withShimmer && <AnimatedDiv style={shimmerProps} />}
+      {children}
     </StyledButton>
   );
 });
