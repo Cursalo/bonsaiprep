@@ -75,7 +75,7 @@ import GlassCard from '../components/GlassCard';
 import GradientButton from '../components/GradientButton';
 import { FadeIn, ScaleIn, FloatAnimation, SlideIn } from '../components/AnimationEffects';
 import BonsaiTree from '../components/BonsaiTree';
-import { updateCorrectAnswersCount, getUserProgress } from '../services/userProgressService';
+import { updateCorrectAnswersCount, getUserProgress, incrementCorrectAnswersCount } from '../services/userProgressService';
 import TestHistoryList from '../components/TestHistoryList';
 import ThemeToggle from '../components/ThemeToggle';
 
@@ -399,11 +399,10 @@ const UploadReport: React.FC = () => {
         }
 
         try {
-          // Save progress to database - simplified for now
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user) {
-            console.log(`User ${user.id} answered question correctly: ${questionId}`);
-            // Note: This would need proper implementation when user progress service is ready
+          // Save progress to database using the user progress service
+          const updatedProgress = await incrementCorrectAnswersCount(1);
+          if (updatedProgress) {
+            console.log(`User answered question correctly: ${questionId}. Total correct answers: ${updatedProgress.correctAnswersCount}`);
           }
         } catch (error) {
           console.error('Error updating user progress:', error);
@@ -412,7 +411,23 @@ const UploadReport: React.FC = () => {
     }
   };
 
-  const resetQuestion = (questionId: string) => {
+  const resetQuestion = async (questionId: string) => {
+    // If this question was previously answered correctly, we need to decrement the count
+    if (correctAnswers.includes(questionId)) {
+      try {
+        const currentProgress = await getUserProgress();
+        if (currentProgress && currentProgress.correctAnswersCount > 0) {
+          await updateCorrectAnswersCount(currentProgress.correctAnswersCount - 1);
+          console.log(`Question ${questionId} reset - decremented correct answers count`);
+        }
+      } catch (error) {
+        console.error('Error updating user progress on reset:', error);
+      }
+      
+      // Remove from local correct answers array
+      setCorrectAnswers(prev => prev.filter(id => id !== questionId));
+    }
+    
     setStudentAnswers(prev => {
       const updated = { ...prev };
       delete updated[questionId];

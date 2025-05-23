@@ -757,10 +757,10 @@ const Dashboard: React.FC = () => {
                           color: theme.palette.success.main,
                           mb: 0.5
                         }}>
-                          3
+                          {correctAnswersCount}
                         </Typography>
                         <Typography variant="body2" sx={{ color: getTextColor('secondary') }}>
-                          Quizzes Completed
+                          Questions Completed
                         </Typography>
                       </Box>
                     </Grid>
