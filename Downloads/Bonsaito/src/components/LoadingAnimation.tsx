@@ -1,6 +1,7 @@
 import React from 'react';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import { Box, Typography } from '@mui/material';
+import { useThemeContext } from '../contexts/ThemeContext';
 
 interface LoadingAnimationProps {
   message?: string;
@@ -13,6 +14,14 @@ const LoadingAnimation: React.FC<LoadingAnimationProps> = ({
   width = 280, 
   height = 280 
 }) => {
+  const { themeMode } = useThemeContext();
+
+  const getTextStyles = (themeMode: 'light' | 'dark') => ({
+    heading: {
+      color: themeMode === 'light' ? 'rgba(0, 0, 0, 0.87)' : 'rgba(255, 255, 255, 0.87)',
+    }
+  });
+
   return (
     <Box
       sx={{
@@ -30,7 +39,7 @@ const LoadingAnimation: React.FC<LoadingAnimationProps> = ({
         style={{ width, height }}
       />
       {message && (
-        <Typography variant="h6" mt={2} align="center">
+        <Typography variant="h6" mt={2} align="center" sx={getTextStyles(themeMode).heading}>
           {message}
         </Typography>
       )}
