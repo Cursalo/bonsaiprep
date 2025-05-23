@@ -47,9 +47,7 @@ import { getUserProgress, calculateCorrectAnswersFromDatabase, recordCompletedTe
 import { useSkills } from '../components/SkillsProvider';
 import BonsaiTree from '../components/BonsaiTree';
 import SkillQuiz from '../components/SkillQuiz';
-import GlassCard from '../components/GlassCard';
 import GradientButton from '../components/GradientButton';
-import { FadeIn, ScaleIn } from '../components/AnimationEffects';
 import ThemeToggle from '../components/ThemeToggle';
 import { useThemeContext } from '../contexts/ThemeContext';
 
@@ -285,28 +283,49 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  // Background style that adapts to theme
+  // Clean background style that adapts to theme
   const getBackgroundStyle = () => {
     if (themeMode === 'light') {
       return {
-        background: 'linear-gradient(135deg, #fafafa 0%, #f0f4f0 100%)',
+        backgroundColor: '#fafafa',
         minHeight: '100vh',
-        transition: 'background 0.5s ease-in-out',
+        transition: 'background-color 0.3s ease',
       };
     }
     
     return {
-      background: 'linear-gradient(135deg, #0c3b2e 0%, #18514a 100%)',
+      backgroundColor: '#121212',
       minHeight: '100vh',
-      backgroundSize: '200% 200%',
-      animation: 'gradient 15s ease infinite',
-      transition: 'background 0.5s ease-in-out',
-      '@keyframes gradient': {
-        '0%': { backgroundPosition: '0% 50%' },
-        '50%': { backgroundPosition: '100% 50%' },
-        '100%': { backgroundPosition: '0% 50%' }
-      }
+      transition: 'background-color 0.3s ease',
     };
+  };
+
+  // Improved card styling for better visibility
+  const getCardStyle = () => ({
+    backgroundColor: themeMode === 'light' 
+      ? 'rgba(255, 255, 255, 0.95)' 
+      : 'rgba(30, 30, 30, 0.95)',
+    border: `1px solid ${themeMode === 'light' ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.08)'}`,
+    borderRadius: '16px',
+    backdropFilter: 'blur(10px)',
+    boxShadow: themeMode === 'light' 
+      ? '0 4px 20px rgba(0, 0, 0, 0.08)' 
+      : '0 4px 20px rgba(0, 0, 0, 0.4)',
+    transition: 'all 0.2s ease',
+    '&:hover': {
+      transform: 'translateY(-2px)',
+      boxShadow: themeMode === 'light' 
+        ? '0 8px 30px rgba(0, 0, 0, 0.12)' 
+        : '0 8px 30px rgba(0, 0, 0, 0.6)',
+    }
+  });
+
+  // Improved text colors for better readability
+  const getTextColor = (variant: 'primary' | 'secondary') => {
+    if (themeMode === 'light') {
+      return variant === 'primary' ? 'rgba(0, 0, 0, 0.87)' : 'rgba(0, 0, 0, 0.6)';
+    }
+    return variant === 'primary' ? 'rgba(255, 255, 255, 0.95)' : 'rgba(255, 255, 255, 0.7)';
   };
 
   return (
@@ -317,10 +336,10 @@ const Dashboard: React.FC = () => {
         elevation={0}
         sx={{ 
           backgroundColor: themeMode === 'light' 
-            ? 'rgba(255, 255, 255, 0.95)' 
-            : 'rgba(12, 59, 46, 0.95)',
-          backdropFilter: 'blur(10px)',
-          borderBottom: `1px solid ${theme.palette.divider}`,
+            ? 'rgba(255, 255, 255, 0.98)' 
+            : 'rgba(18, 18, 18, 0.98)',
+          backdropFilter: 'blur(20px)',
+          borderBottom: `1px solid ${themeMode === 'light' ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.08)'}`,
         }}
       >
         <Toolbar>
@@ -329,7 +348,10 @@ const Dashboard: React.FC = () => {
             aria-label="open drawer"
             edge="start"
             onClick={handleDrawerToggle}
-            sx={{ mr: 2 }}
+            sx={{ 
+              mr: 2,
+              color: getTextColor('primary')
+            }}
           >
             <MenuIcon />
           </IconButton>
@@ -339,21 +361,24 @@ const Dashboard: React.FC = () => {
             flexGrow: 1,
             justifyContent: 'center'
           }}>
-            <EmojiNatureIcon sx={{ fontSize: 32, color: theme.palette.primary.main, mr: 1 }} />
-            <Typography variant="h5" component="div" sx={{ 
-              fontWeight: 'bold',
-              color: theme.palette.text.primary
-            }}>
-              Bonsai Prep
-            </Typography>
+            <img 
+              src={themeMode === 'light' ? '/bonsaiblack.png' : '/bonsaiwhitenobg.png'}
+              alt="Bonsai Prep Logo" 
+              style={{ 
+                height: '40px',
+                width: 'auto',
+                objectFit: 'contain',
+                maxWidth: '200px'
+              }} 
+            />
           </Box>
           
           <ThemeToggle showBackgroundSelector={true} />
           
           <Avatar sx={{ 
             bgcolor: theme.palette.primary.main,
-            boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
-            ml: 1
+            ml: 1,
+            fontWeight: 'bold'
           }}>
             {loadingUserData ? '' : userData?.firstName?.charAt(0) || 'U'}
           </Avatar>
@@ -369,25 +394,23 @@ const Dashboard: React.FC = () => {
         sx={{
           '& .MuiDrawer-paper': {
             width: isMobile ? 280 : 300,
-            background: themeMode === 'light' 
-              ? 'rgba(255, 255, 255, 0.95)' 
-              : 'rgba(30, 30, 30, 0.95)',
-            backdropFilter: 'blur(10px)',
-            borderRight: `1px solid ${theme.palette.divider}`,
+            backgroundColor: themeMode === 'light' 
+              ? 'rgba(255, 255, 255, 0.98)' 
+              : 'rgba(18, 18, 18, 0.98)',
+            backdropFilter: 'blur(20px)',
+            borderRight: `1px solid ${themeMode === 'light' ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.08)'}`,
           },
         }}
       >
         <Box sx={{ 
-          pt: 8, 
+          pt: 10, 
           pb: 2,
-          background: themeMode === 'light'
-            ? 'linear-gradient(135deg, rgba(26, 147, 111, 0.1), rgba(17, 75, 95, 0.1))'
-            : 'linear-gradient(135deg, rgba(136, 212, 152, 0.1), rgba(17, 75, 95, 0.1))',
+          px: 2
         }}>
           <Typography variant="h6" sx={{ 
             textAlign: 'center', 
             fontWeight: 'bold',
-            color: theme.palette.primary.main,
+            color: getTextColor('primary'),
             mb: 2
           }}>
             Navigation
@@ -412,10 +435,10 @@ const Dashboard: React.FC = () => {
                 borderRadius: 2,
                 mb: 0.5,
                 backgroundColor: location.pathname === item.path 
-                  ? theme.palette.primary.main + '20' 
+                  ? `${theme.palette.primary.main}20` 
                   : 'transparent',
                 '&:hover': {
-                  backgroundColor: theme.palette.primary.main + '10',
+                  backgroundColor: `${theme.palette.primary.main}10`,
                 },
               }}
             >
@@ -426,7 +449,8 @@ const Dashboard: React.FC = () => {
                 primary={item.label}
                 sx={{ 
                   '& .MuiListItemText-primary': {
-                    fontWeight: location.pathname === item.path ? 600 : 400
+                    fontWeight: location.pathname === item.path ? 600 : 400,
+                    color: getTextColor('primary')
                   }
                 }}
               />
@@ -441,14 +465,21 @@ const Dashboard: React.FC = () => {
               borderRadius: 2,
               mb: 0.5,
               '&:hover': {
-                backgroundColor: theme.palette.primary.main + '10',
+                backgroundColor: `${theme.palette.primary.main}10`,
               },
             }}
           >
             <ListItemIcon sx={{ color: theme.palette.primary.main }}>
               <QuizIcon />
             </ListItemIcon>
-            <ListItemText primary="Take Skill Quiz" />
+            <ListItemText 
+              primary="Take Skill Quiz"
+              sx={{
+                '& .MuiListItemText-primary': {
+                  color: getTextColor('primary')
+                }
+              }}
+            />
           </ListItem>
         </List>
       </Drawer>
@@ -465,339 +496,366 @@ const Dashboard: React.FC = () => {
         }}
       >
         {/* Welcome Header */}
-        <FadeIn duration={800}>
-          <Box sx={{ mb: 4 }}>
-            <Typography variant={isMobile ? 'h4' : 'h3'} sx={{ 
-              fontWeight: 'bold',
-              color: theme.palette.text.primary,
-              mb: 1
-            }}>
-              {getGreeting()}, {userData?.firstName || 'Student'}! 👋
-            </Typography>
-            <Typography variant="body1" sx={{ 
-              color: theme.palette.text.secondary,
-              fontSize: '1.1rem'
-            }}>
-              Ready to grow your SAT score today? Let's see your progress.
-            </Typography>
-          </Box>
-        </FadeIn>
+        <Box sx={{ mb: 4 }}>
+          <Typography variant={isMobile ? 'h4' : 'h3'} sx={{ 
+            fontWeight: 'bold',
+            color: getTextColor('primary'),
+            mb: 1
+          }}>
+            {getGreeting()}, {userData?.firstName || 'Student'}! 👋
+          </Typography>
+          <Typography variant="body1" sx={{ 
+            color: getTextColor('secondary'),
+            fontSize: '1.1rem'
+          }}>
+            Ready to grow your SAT score today? Let's see your progress.
+          </Typography>
+        </Box>
 
         <Grid container spacing={3}>
           {/* Quick Actions */}
           <Grid item xs={12} md={4}>
-            <ScaleIn delay={100}>
-              <GlassCard sx={{ p: 3, height: '100%' }}>
-                <Typography variant="h6" sx={{ 
-                  fontWeight: 'bold', 
-                  mb: 3,
-                  color: theme.palette.text.primary,
-                  display: 'flex',
-                  alignItems: 'center'
-                }}>
-                  <SpeedIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
-                  Quick Actions
-                </Typography>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <GradientButton
-                    variant="contained"
-                    gradient="primary"
-                    onClick={() => setShowQuiz(true)}
-                    startIcon={<QuizIcon />}
-                    fullWidth
-                  >
-                    Take Practice Quiz
-                  </GradientButton>
-                  <GradientButton
-                    variant="outlined"
-                    gradient="secondary"
-                    component={Link}
-                    to="/upload"
-                    startIcon={<UploadIcon />}
-                    fullWidth
-                  >
-                    Upload Score Report
-                  </GradientButton>
-                  <GradientButton
-                    variant="outlined"
-                    gradient="info"
-                    component={Link}
-                    to="/lessons"
-                    startIcon={<PlayArrowIcon />}
-                    fullWidth
-                  >
-                    Continue Lessons
-                  </GradientButton>
-                </Box>
-              </GlassCard>
-            </ScaleIn>
+            <Paper sx={{ ...getCardStyle(), p: 3, height: '100%' }}>
+              <Typography variant="h6" sx={{ 
+                fontWeight: 'bold', 
+                mb: 3,
+                color: getTextColor('primary'),
+                display: 'flex',
+                alignItems: 'center'
+              }}>
+                <SpeedIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
+                Quick Actions
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <GradientButton
+                  variant="contained"
+                  gradient="primary"
+                  onClick={() => setShowQuiz(true)}
+                  startIcon={<QuizIcon />}
+                  fullWidth
+                  sx={{ borderRadius: '12px' }}
+                >
+                  Take Practice Quiz
+                </GradientButton>
+                <GradientButton
+                  variant="outlined"
+                  gradient="secondary"
+                  component={Link}
+                  to="/upload"
+                  startIcon={<UploadIcon />}
+                  fullWidth
+                  sx={{ borderRadius: '12px' }}
+                >
+                  Upload Score Report
+                </GradientButton>
+                <GradientButton
+                  variant="outlined"
+                  gradient="info"
+                  component={Link}
+                  to="/lessons"
+                  startIcon={<PlayArrowIcon />}
+                  fullWidth
+                  sx={{ borderRadius: '12px' }}
+                >
+                  Continue Lessons
+                </GradientButton>
+              </Box>
+            </Paper>
           </Grid>
 
           {/* Progress Overview */}
           <Grid item xs={12} md={4}>
-            <ScaleIn delay={200}>
-              <GlassCard sx={{ p: 3, height: '100%' }}>
-                <Typography variant="h6" sx={{ 
-                  fontWeight: 'bold', 
-                  mb: 3,
-                  color: theme.palette.text.primary,
-                  display: 'flex',
-                  alignItems: 'center'
-                }}>
-                  <TrendingUpIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
-                  Progress Overview
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                  <Box sx={{ position: 'relative', display: 'inline-flex', mr: 3 }}>
-                    <CircularProgress
-                      variant="determinate"
-                      value={getProgressPercentage()}
-                      size={80}
-                      thickness={6}
-                      sx={{ color: theme.palette.primary.main }}
-                    />
-                    <Box sx={{
-                      top: 0,
-                      left: 0,
-                      bottom: 0,
-                      right: 0,
-                      position: 'absolute',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
+            <Paper sx={{ ...getCardStyle(), p: 3, height: '100%' }}>
+              <Typography variant="h6" sx={{ 
+                fontWeight: 'bold', 
+                mb: 3,
+                color: getTextColor('primary'),
+                display: 'flex',
+                alignItems: 'center'
+              }}>
+                <TrendingUpIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
+                Progress Overview
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                <Box sx={{ position: 'relative', display: 'inline-flex', mr: 3 }}>
+                  <CircularProgress
+                    variant="determinate"
+                    value={getProgressPercentage()}
+                    size={80}
+                    thickness={6}
+                    sx={{ color: theme.palette.primary.main }}
+                  />
+                  <Box sx={{
+                    top: 0,
+                    left: 0,
+                    bottom: 0,
+                    right: 0,
+                    position: 'absolute',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}>
+                    <Typography variant="h6" component="div" sx={{ 
+                      fontWeight: 'bold',
+                      color: getTextColor('primary')
                     }}>
-                      <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
-                        {Math.round(getProgressPercentage())}%
-                      </Typography>
-                    </Box>
-                  </Box>
-                  <Box>
-                    <Typography variant="body2" color="textSecondary">
-                      Current: {userData?.satScore || 'Not set'}
-                    </Typography>
-                    <Typography variant="body2" color="textSecondary">
-                      Target: {userData?.targetSatScore || 'Not set'}
+                      {Math.round(getProgressPercentage())}%
                     </Typography>
                   </Box>
                 </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2" color="textSecondary">
-                    Skills Mastered
+                <Box>
+                  <Typography variant="body2" sx={{ color: getTextColor('secondary') }}>
+                    Current: {userData?.satScore || 'Not set'}
                   </Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                    {masteredSkillsCount}/{totalSkills}
+                  <Typography variant="body2" sx={{ color: getTextColor('secondary') }}>
+                    Target: {userData?.targetSatScore || 'Not set'}
                   </Typography>
                 </Box>
-                <LinearProgress 
-                  variant="determinate" 
-                  value={(masteredSkillsCount / totalSkills) * 100} 
-                  sx={{ 
-                    height: 8, 
-                    borderRadius: 4,
-                    backgroundColor: theme.palette.mode === 'light' ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)'
-                  }}
-                />
-              </GlassCard>
-            </ScaleIn>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                <Typography variant="body2" sx={{ color: getTextColor('secondary') }}>
+                  Skills Mastered
+                </Typography>
+                <Typography variant="body2" sx={{ 
+                  fontWeight: 'bold',
+                  color: getTextColor('primary')
+                }}>
+                  {masteredSkillsCount}/{totalSkills}
+                </Typography>
+              </Box>
+              <LinearProgress 
+                variant="determinate" 
+                value={(masteredSkillsCount / totalSkills) * 100} 
+                sx={{ 
+                  height: 8, 
+                  borderRadius: 4,
+                  backgroundColor: themeMode === 'light' ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)',
+                  '& .MuiLinearProgress-bar': {
+                    backgroundColor: theme.palette.primary.main
+                  }
+                }}
+              />
+            </Paper>
           </Grid>
 
           {/* Study Statistics */}
           <Grid item xs={12} md={4}>
-            <ScaleIn delay={300}>
-              <GlassCard sx={{ p: 3, height: '100%' }}>
-                <Typography variant="h6" sx={{ 
-                  fontWeight: 'bold', 
-                  mb: 3,
-                  color: theme.palette.text.primary,
-                  display: 'flex',
-                  alignItems: 'center'
-                }}>
-                  <InsightsIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
-                  Study Stats
-                </Typography>
-                <Grid container spacing={2}>
-                  <Grid item xs={6}>
-                    <Box sx={{ textAlign: 'center' }}>
-                      <Typography variant="h4" sx={{ fontWeight: 'bold', color: theme.palette.primary.main }}>
-                        {studyStats.dailyStreak}
-                      </Typography>
-                      <Typography variant="body2" color="textSecondary">
-                        Day Streak
-                      </Typography>
-                    </Box>
-                  </Grid>
-                  <Grid item xs={6}>
-                    <Box sx={{ textAlign: 'center' }}>
-                      <Typography variant="h4" sx={{ fontWeight: 'bold', color: theme.palette.secondary.main }}>
-                        {studyStats.accuracyRate}%
-                      </Typography>
-                      <Typography variant="body2" color="textSecondary">
-                        Accuracy
-                      </Typography>
-                    </Box>
-                  </Grid>
-                  <Grid item xs={6}>
-                    <Box sx={{ textAlign: 'center' }}>
-                      <Typography variant="h4" sx={{ fontWeight: 'bold', color: theme.palette.success.main }}>
-                        {studyStats.questionsAnswered}
-                      </Typography>
-                      <Typography variant="body2" color="textSecondary">
-                        Questions
-                      </Typography>
-                    </Box>
-                  </Grid>
-                  <Grid item xs={6}>
-                    <Box sx={{ textAlign: 'center' }}>
-                      <Typography variant="h4" sx={{ fontWeight: 'bold', color: theme.palette.warning.main }}>
-                        {studyStats.completedTests}
-                      </Typography>
-                      <Typography variant="body2" color="textSecondary">
-                        Tests
-                      </Typography>
-                    </Box>
-                  </Grid>
+            <Paper sx={{ ...getCardStyle(), p: 3, height: '100%' }}>
+              <Typography variant="h6" sx={{ 
+                fontWeight: 'bold', 
+                mb: 3,
+                color: getTextColor('primary'),
+                display: 'flex',
+                alignItems: 'center'
+              }}>
+                <InsightsIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
+                Study Stats
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={6}>
+                  <Box sx={{ textAlign: 'center' }}>
+                    <Typography variant="h4" sx={{ 
+                      fontWeight: 'bold', 
+                      color: theme.palette.primary.main 
+                    }}>
+                      {studyStats.dailyStreak}
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: getTextColor('secondary') }}>
+                      Day Streak
+                    </Typography>
+                  </Box>
                 </Grid>
-              </GlassCard>
-            </ScaleIn>
+                <Grid item xs={6}>
+                  <Box sx={{ textAlign: 'center' }}>
+                    <Typography variant="h4" sx={{ 
+                      fontWeight: 'bold', 
+                      color: theme.palette.secondary.main 
+                    }}>
+                      {studyStats.accuracyRate}%
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: getTextColor('secondary') }}>
+                      Accuracy
+                    </Typography>
+                  </Box>
+                </Grid>
+                <Grid item xs={6}>
+                  <Box sx={{ textAlign: 'center' }}>
+                    <Typography variant="h4" sx={{ 
+                      fontWeight: 'bold', 
+                      color: theme.palette.success.main 
+                    }}>
+                      {studyStats.questionsAnswered}
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: getTextColor('secondary') }}>
+                      Questions
+                    </Typography>
+                  </Box>
+                </Grid>
+                <Grid item xs={6}>
+                  <Box sx={{ textAlign: 'center' }}>
+                    <Typography variant="h4" sx={{ 
+                      fontWeight: 'bold', 
+                      color: theme.palette.warning.main 
+                    }}>
+                      {studyStats.completedTests}
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: getTextColor('secondary') }}>
+                      Tests
+                    </Typography>
+                  </Box>
+                </Grid>
+              </Grid>
+            </Paper>
           </Grid>
 
           {/* Bonsai Tree */}
           <Grid item xs={12} md={8}>
-            <FadeIn delay={400}>
-              <GlassCard sx={{ p: 3 }}>
-                <Typography variant="h6" sx={{ 
-                  fontWeight: 'bold', 
-                  mb: 3,
-                  color: theme.palette.text.primary,
-                  display: 'flex',
-                  alignItems: 'center'
-                }}>
-                  <EmojiNatureIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
-                  Your Learning Bonsai
-                </Typography>
-                <BonsaiTree 
-                  skills={skills} 
-                  totalSkills={totalSkills}
-                  correctAnswersCount={correctAnswersCount}
-                  showProgressText={false}
-                />
-              </GlassCard>
-            </FadeIn>
+            <Paper sx={{ ...getCardStyle(), p: 3 }}>
+              <Typography variant="h6" sx={{ 
+                fontWeight: 'bold', 
+                mb: 3,
+                color: getTextColor('primary'),
+                display: 'flex',
+                alignItems: 'center'
+              }}>
+                <EmojiNatureIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
+                Your Learning Bonsai
+              </Typography>
+              <BonsaiTree 
+                skills={skills} 
+                totalSkills={totalSkills}
+                correctAnswersCount={correctAnswersCount}
+                showProgressText={false}
+              />
+            </Paper>
           </Grid>
 
           {/* Achievements */}
           <Grid item xs={12} md={4}>
-            <FadeIn delay={500}>
-              <GlassCard sx={{ p: 3 }}>
-                <Typography variant="h6" sx={{ 
-                  fontWeight: 'bold', 
-                  mb: 3,
-                  color: theme.palette.text.primary,
-                  display: 'flex',
-                  alignItems: 'center'
-                }}>
-                  <EmojiEventsIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
-                  Achievements
-                </Typography>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  {achievements.map((achievement) => (
-                    <Box
-                      key={achievement.id}
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        p: 2,
-                        borderRadius: 2,
-                        backgroundColor: achievement.unlocked 
-                          ? theme.palette.action.selected 
-                          : theme.palette.action.disabled,
-                        opacity: achievement.unlocked ? 1 : 0.6,
-                        border: `1px solid ${theme.palette.divider}`,
-                      }}
-                    >
-                      <Box sx={{ mr: 2 }}>
-                        {achievement.icon}
-                      </Box>
-                      <Box sx={{ flexGrow: 1 }}>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-                          {achievement.title}
+            <Paper sx={{ ...getCardStyle(), p: 3 }}>
+              <Typography variant="h6" sx={{ 
+                fontWeight: 'bold', 
+                mb: 3,
+                color: getTextColor('primary'),
+                display: 'flex',
+                alignItems: 'center'
+              }}>
+                <EmojiEventsIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
+                Achievements
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {achievements.map((achievement) => (
+                  <Box
+                    key={achievement.id}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      p: 2,
+                      borderRadius: 2,
+                      backgroundColor: achievement.unlocked 
+                        ? (themeMode === 'light' ? 'rgba(76, 175, 80, 0.1)' : 'rgba(76, 175, 80, 0.2)')
+                        : (themeMode === 'light' ? 'rgba(0, 0, 0, 0.04)' : 'rgba(255, 255, 255, 0.04)'),
+                      opacity: achievement.unlocked ? 1 : 0.6,
+                      border: `1px solid ${themeMode === 'light' ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.08)'}`,
+                    }}
+                  >
+                    <Box sx={{ mr: 2 }}>
+                      {achievement.icon}
+                    </Box>
+                    <Box sx={{ flexGrow: 1 }}>
+                      <Typography variant="subtitle2" sx={{ 
+                        fontWeight: 'bold',
+                        color: getTextColor('primary')
+                      }}>
+                        {achievement.title}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: getTextColor('secondary') }}>
+                        {achievement.description}
+                      </Typography>
+                      {achievement.date && (
+                        <Typography variant="caption" sx={{ 
+                          display: 'block', 
+                          mt: 0.5, 
+                          color: theme.palette.primary.main 
+                        }}>
+                          {achievement.date}
                         </Typography>
-                        <Typography variant="caption" color="textSecondary">
-                          {achievement.description}
-                        </Typography>
-                        {achievement.date && (
-                          <Typography variant="caption" sx={{ display: 'block', mt: 0.5, color: theme.palette.primary.main }}>
-                            {achievement.date}
-                          </Typography>
-                        )}
-                      </Box>
-                      {achievement.unlocked && (
-                        <CheckCircleIcon sx={{ color: theme.palette.success.main }} />
                       )}
                     </Box>
-                  ))}
-                </Box>
-              </GlassCard>
-            </FadeIn>
+                    {achievement.unlocked && (
+                      <CheckCircleIcon sx={{ color: theme.palette.success.main }} />
+                    )}
+                  </Box>
+                ))}
+              </Box>
+            </Paper>
           </Grid>
 
           {/* Recent Activity */}
           <Grid item xs={12}>
-            <FadeIn delay={600}>
-              <GlassCard sx={{ p: 3 }}>
-                <Typography variant="h6" sx={{ 
-                  fontWeight: 'bold', 
-                  mb: 3,
-                  color: theme.palette.text.primary,
-                  display: 'flex',
-                  alignItems: 'center'
-                }}>
-                  <ScheduleIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
-                  Recent Activity
-                </Typography>
-                <Grid container spacing={2}>
-                  {recentActivity.map((activity) => (
-                    <Grid item xs={12} sm={6} md={3} key={activity.id}>
-                      <Paper
-                        elevation={0}
-                        sx={{
-                          p: 2,
-                          borderRadius: 2,
-                          backgroundColor: theme.palette.action.hover,
-                          border: `1px solid ${theme.palette.divider}`,
-                          height: '100%',
-                          display: 'flex',
-                          flexDirection: 'column',
-                        }}
-                      >
-                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                          {getActivityIcon(activity.type)}
-                          <Typography variant="subtitle2" sx={{ ml: 1, fontWeight: 'bold' }}>
-                            {activity.title}
-                          </Typography>
-                        </Box>
-                        <Typography variant="body2" color="textSecondary" sx={{ mb: 1, flexGrow: 1 }}>
-                          {activity.description}
+            <Paper sx={{ ...getCardStyle(), p: 3 }}>
+              <Typography variant="h6" sx={{ 
+                fontWeight: 'bold', 
+                mb: 3,
+                color: getTextColor('primary'),
+                display: 'flex',
+                alignItems: 'center'
+              }}>
+                <ScheduleIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
+                Recent Activity
+              </Typography>
+              <Grid container spacing={2}>
+                {recentActivity.map((activity) => (
+                  <Grid item xs={12} sm={6} md={3} key={activity.id}>
+                    <Paper
+                      elevation={0}
+                      sx={{
+                        p: 2,
+                        borderRadius: 2,
+                        backgroundColor: themeMode === 'light' 
+                          ? 'rgba(0, 0, 0, 0.02)' 
+                          : 'rgba(255, 255, 255, 0.02)',
+                        border: `1px solid ${themeMode === 'light' ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.08)'}`,
+                        height: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                        {getActivityIcon(activity.type)}
+                        <Typography variant="subtitle2" sx={{ 
+                          ml: 1, 
+                          fontWeight: 'bold',
+                          color: getTextColor('primary')
+                        }}>
+                          {activity.title}
                         </Typography>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <Typography variant="caption" color="textSecondary">
-                            {activity.timestamp}
-                          </Typography>
-                          {activity.score && (
-                            <Chip 
-                              label={`${activity.score}${activity.type === 'quiz' ? '%' : ''}`}
-                              size="small"
-                              color="primary"
-                              variant="outlined"
-                            />
-                          )}
-                        </Box>
-                      </Paper>
-                    </Grid>
-                  ))}
-                </Grid>
-              </GlassCard>
-            </FadeIn>
+                      </Box>
+                      <Typography variant="body2" sx={{ 
+                        mb: 1, 
+                        flexGrow: 1,
+                        color: getTextColor('secondary')
+                      }}>
+                        {activity.description}
+                      </Typography>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography variant="caption" sx={{ color: getTextColor('secondary') }}>
+                          {activity.timestamp}
+                        </Typography>
+                        {activity.score && (
+                          <Chip 
+                            label={`${activity.score}${activity.type === 'quiz' ? '%' : ''}`}
+                            size="small"
+                            color="primary"
+                            variant="outlined"
+                          />
+                        )}
+                      </Box>
+                    </Paper>
+                  </Grid>
+                ))}
+              </Grid>
+            </Paper>
           </Grid>
         </Grid>
       </Container>
