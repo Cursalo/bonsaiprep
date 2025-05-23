@@ -79,7 +79,17 @@ const Home: React.FC = () => {
     }
   ];
 
-  const pricingPlans = [
+  const pricingPlans: Array<{
+    name: string;
+    price: string;
+    originalPrice?: string;
+    period: string;
+    description: string;
+    features: string[];
+    buttonText: string;
+    popular: boolean;
+    isBeta?: boolean;
+  }> = [
     {
       name: "Free",
       price: "$0",
@@ -96,8 +106,9 @@ const Home: React.FC = () => {
     },
     {
       name: "Pro",
-      price: "$19",
-      period: "per month",
+      price: "Free",
+      originalPrice: "$50",
+      period: "during beta",
       description: "Everything you need to excel",
       features: [
         "Unlimited practice quizzes",
@@ -106,10 +117,12 @@ const Home: React.FC = () => {
         "Video lessons library",
         "Priority support",
         "Score prediction",
-        "Detailed progress reports"
+        "Detailed progress reports",
+        "Early access to new features"
       ],
-      buttonText: "Start Pro Trial",
-      popular: true
+      buttonText: "Join Beta Free",
+      popular: true,
+      isBeta: true
     }
   ];
 
@@ -349,10 +362,22 @@ const Home: React.FC = () => {
                     </Box>
 
                     <Box sx={{ textAlign: 'center', mb: 4 }}>
+                      {plan.isBeta && plan.originalPrice && (
+                        <Typography variant="h6" sx={{ 
+                          ...getTextStyles(themeMode).secondary,
+                          textDecoration: 'line-through',
+                          mb: 0.5
+                        }}>
+                          {plan.originalPrice}/month
+                        </Typography>
+                      )}
                       <Typography variant="h2" sx={{ 
                         ...getTextStyles(themeMode).heading,
                         fontWeight: 'bold',
-                        display: 'inline'
+                        display: 'inline',
+                        ...(plan.isBeta && {
+                          color: getTextStyles(themeMode).accent.color
+                        })
                       }}>
                         {plan.price}
                       </Typography>
@@ -363,6 +388,18 @@ const Home: React.FC = () => {
                       }}>
                         {plan.period}
                       </Typography>
+                      {plan.isBeta && (
+                        <Chip
+                          label="Beta Offer"
+                          size="small"
+                          sx={{
+                            ml: 1,
+                            bgcolor: getTextStyles(themeMode).accent.color,
+                            color: 'white',
+                            fontSize: '0.75rem'
+                          }}
+                        />
+                      )}
                     </Box>
 
                     <Box sx={{ mb: 4 }}>
