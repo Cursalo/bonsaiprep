@@ -1,4 +1,4 @@
-import React, { ElementType, forwardRef } from 'react';
+import React, { forwardRef } from 'react';
 import { Button, ButtonProps } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useSpring, animated } from 'react-spring';
@@ -77,6 +77,7 @@ export interface GradientButtonProps extends ButtonProps {
   withRipple?: boolean;
   rounded?: boolean;
   elevated?: boolean;
+  to?: string; // For router links
 }
 
 const GradientButton = forwardRef<HTMLButtonElement, GradientButtonProps>((props, ref) => {

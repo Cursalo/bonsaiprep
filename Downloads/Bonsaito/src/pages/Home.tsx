@@ -234,7 +234,7 @@ const Home: React.FC = () => {
                     </GlassCard>
                   </FadeIn>
                 ) : (
-                  <ScaleIn duration={800} delay={index * 200}>
+                  <ScaleIn delay={index * 200}>
                     <GlassCard
                       sx={{
                         p: 4,
@@ -276,7 +276,7 @@ const Home: React.FC = () => {
           py: { xs: 6, md: 10 },
           textAlign: 'center'
         }}>
-          <SlideIn direction="up">
+          <SlideIn direction="bottom">
             <Typography
               variant={isMobile ? 'h4' : 'h3'}
               component="h2"
