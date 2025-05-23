@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Typography, Paper, useTheme } from '@mui/material';
+import { Box, Typography, Paper, useTheme, useMediaQuery, CircularProgress } from '@mui/material';
 import { animated, useSpring } from 'react-spring';
 import { supabase } from '../supabaseClient';
+import { useThemeContext, treeBackgroundConfigs } from '../contexts/ThemeContext';
 
 // Helper functions
 const lerp = (a: number, b: number, t: number): number => a * (1 - t) + b * t;
@@ -59,6 +60,8 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({
   showProgressText = true // Default to showing progress text
 }) => {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const { treeBackground, themeMode } = useThemeContext();
   const [internalCorrectAnswersCount, setInternalCorrectAnswersCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
@@ -245,6 +248,47 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({
     return () => { document.head.removeChild(style); };
   }, []);
 
+  // Get background style based on theme and user preference
+  const getBackgroundStyle = () => {
+    const config = treeBackgroundConfigs[treeBackground];
+    
+    // Base style
+    const baseStyle = {
+      position: 'relative' as const,
+      width: '100%',
+      aspectRatio: '16/9',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      transition: 'all 0.5s ease-in-out',
+      borderRadius: '20px',
+      overflow: 'hidden',
+      backgroundColor: config.backgroundColor,
+    };
+
+    // Add background image if specified
+    if (config.backgroundImage && config.backgroundImage !== 'none') {
+      return {
+        ...baseStyle,
+        backgroundImage: `url('${config.backgroundImage}')`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center bottom',
+        backgroundRepeat: 'no-repeat',
+      };
+    }
+
+    // For plain backgrounds, adjust based on theme
+    if (treeBackground === 'plain') {
+      return {
+        ...baseStyle,
+        backgroundColor: themeMode === 'light' ? '#ffffff' : '#f8f9fa',
+        border: `1px solid ${theme.palette.divider}`,
+      };
+    }
+
+    return baseStyle;
+  };
+
   if (isLoading) {
     return (
       <Box sx={{ 
@@ -253,7 +297,20 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({
         alignItems: 'center', 
         height: '400px' 
       }}>
-        <Typography>Loading your bonsai...</Typography>
+        <Box sx={{ 
+          position: 'absolute', 
+          top: '50%', 
+          left: '50%', 
+          transform: 'translate(-50%, -50%)',
+          zIndex: 2,
+        }}>
+          <CircularProgress 
+            size={40} 
+            sx={{ 
+              color: themeMode === 'light' ? theme.palette.primary.main : theme.palette.primary.light 
+            }} 
+          />
+        </Box>
       </Box>
     );
   }
@@ -275,69 +332,91 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({
   }
 
   return (
-    <animated.div style={containerProps}>
-      <Paper 
-        elevation={0} 
-        sx={{ 
-          p: 3, 
-          mb: 4, 
-          borderRadius: '20px',
-          backgroundColor: 'transparent',
-          backdropFilter: 'none',
-          '&.MuiPaper-root': {
-            backgroundColor: 'transparent !important',
-            backdropFilter: 'none !important',
-            border: 'none !important',
-            boxShadow: 'none !important'
-          },
-          position: 'relative',
-          height: '100%',
-          overflow: 'hidden',
-        }}
-      >
-        <Box sx={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
-          <Box sx={{
-            flexGrow: 1,
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'flex-start',
-            position: 'relative',
-            width: '100%',
-            aspectRatio: '16/9',
-            maxHeight: '600px',
-            mt: '-20%', // Move the bonsai 20% higher
-            '& img': {
-              maxWidth: '100%',
-              maxHeight: '100%',
-              objectFit: 'contain',
-              transition: 'transform 0.3s ease-in-out',
-              '&:hover': {
-                transform: 'scale(1.02)'
-              }
-            }
+    <Box sx={{ width: '100%', maxWidth: 800, mx: 'auto' }}>
+      <Box sx={getBackgroundStyle()}>
+        {isLoading && (
+          <Box sx={{ 
+            position: 'absolute', 
+            top: '50%', 
+            left: '50%', 
+            transform: 'translate(-50%, -50%)',
+            zIndex: 2,
           }}>
-            <animated.img
-              src={bonsaiImagePath}
-              alt={`Bonsai tree progress - ${correctAnswersCount} questions correct`}
-              style={{
-                ...imageProps,
-                opacity: isImageLoaded ? 1 : 0,
-                animation: treeGrowthAnimation 
-                  ? 'growBonsai 1.5s ease-in-out' 
-                  : 'floatBonsai 3.5s ease-in-out infinite',
-                transform: 'scale(0.35)',
-                filter: 'contrast(130%)',
-                marginLeft: '4px'
-              }}
-              onLoad={() => setIsImageLoaded(true)}
-              onError={handleImageError}
+            <CircularProgress 
+              size={40} 
+              sx={{ 
+                color: themeMode === 'light' ? theme.palette.primary.main : theme.palette.primary.light 
+              }} 
             />
           </Box>
-          
+        )}
 
-        </Box>
-      </Paper>
-    </animated.div>
+        {imageError ? (
+          <Box sx={{ 
+            textAlign: 'center', 
+            p: 4,
+            color: theme.palette.text.secondary,
+          }}>
+            Unable to load bonsai tree. Please try refreshing the page.
+          </Box>
+        ) : (
+          <animated.img
+            src={bonsaiImagePath}
+            alt={`Bonsai tree showing ${correctAnswersCount} correct answers`}
+            style={{
+              ...imageProps,
+              maxWidth: isMobile ? '90%' : '70%',
+              maxHeight: '90%',
+              width: 'auto',
+              height: 'auto',
+              objectFit: 'contain',
+              filter: treeGrowthAnimation ? 'brightness(1.1) saturate(1.2)' : 'none',
+              transition: 'filter 0.5s ease',
+              opacity: isImageLoaded ? 1 : 0,
+            }}
+            onLoad={() => {
+              setIsImageLoaded(true);
+              setIsLoading(false);
+            }}
+            onError={() => {
+              console.error('Failed to load bonsai image:', bonsaiImagePath);
+              setImageError(true);
+              setIsLoading(false);
+            }}
+          />
+        )}
+
+        {/* Growth animation overlay */}
+        {treeGrowthAnimation && (
+          <Box
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'radial-gradient(circle, rgba(168, 218, 181, 0.3) 0%, transparent 70%)',
+              animation: 'growthPulse 1.5s ease-out',
+              borderRadius: '20px',
+              '@keyframes growthPulse': {
+                '0%': { 
+                  opacity: 0,
+                  transform: 'scale(0.8)',
+                },
+                '50%': { 
+                  opacity: 1,
+                  transform: 'scale(1.05)',
+                },
+                '100%': { 
+                  opacity: 0,
+                  transform: 'scale(1.2)',
+                },
+              },
+            }}
+          />
+        )}
+      </Box>
+    </Box>
   );
 };
 

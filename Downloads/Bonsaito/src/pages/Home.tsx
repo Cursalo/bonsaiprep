@@ -11,294 +11,312 @@ import LocalFloristIcon from '@mui/icons-material/LocalFlorist';
 import GradientButton from '../components/GradientButton';
 import GlassCard from '../components/GlassCard';
 import { FadeIn, ScaleIn, FloatAnimation, SlideIn } from '../components/AnimationEffects';
+import ThemeToggle from '../components/ThemeToggle';
+import { useThemeContext } from '../contexts/ThemeContext';
 
 const Home: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const { themeMode } = useThemeContext();
 
   // Features data
   const features = [
     {
       title: "Personalized Learning",
       description: "Our AI analyzes your practice test results to create personalized learning paths focused on your specific needs.",
-      icon: <SchoolIcon sx={{ fontSize: 48, color: '#88d498' }} />,
+      icon: <SchoolIcon sx={{ fontSize: 48, color: theme.palette.primary.main }} />,
       animation: "fade"
     },
     {
       title: "Visual Progress Tracking",
       description: "Watch your Bonsai tree grow as you master SAT skills, providing a satisfying visual representation of your progress.",
-      icon: <LocalFloristIcon sx={{ fontSize: 48, color: '#88d498' }} />,
+      icon: <LocalFloristIcon sx={{ fontSize: 48, color: theme.palette.primary.main }} />,
       animation: "scale"
     },
     {
       title: "Targeted Practice",
       description: "Focus on areas that need improvement with targeted practice problems and video lessons.",
-      icon: <MenuBookIcon sx={{ fontSize: 48, color: '#88d498' }} />,
+      icon: <MenuBookIcon sx={{ fontSize: 48, color: theme.palette.primary.main }} />,
       animation: "fade"
     },
     {
       title: "Detailed Analytics",
       description: "Get comprehensive insights into your strengths and weaknesses with detailed analytics and progress reports.",
-      icon: <InsightsIcon sx={{ fontSize: 48, color: '#88d498' }} />,
+      icon: <InsightsIcon sx={{ fontSize: 48, color: theme.palette.primary.main }} />,
       animation: "scale"
     }
   ];
 
-  return (
-    <Box sx={{ 
+  // Background style that adapts to theme
+  const getBackgroundStyle = () => {
+    if (themeMode === 'light') {
+      return {
+        background: 'linear-gradient(135deg, #fafafa 0%, #f0f4f0 100%)',
+        minHeight: '100vh',
+        transition: 'background 0.5s ease-in-out',
+      };
+    }
+    
+    return {
+      background: 'linear-gradient(135deg, #0c3b2e 0%, #18514a 100%)',
       minHeight: '100vh',
-      position: 'relative',
-      overflow: 'hidden'
-    }}>
-      {/* Glowing orbs background effect */}
-      <Box sx={{
-        position: 'absolute',
-        top: '-10%',
-        left: '-10%',
-        width: '40%',
-        height: '40%',
-        borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(26, 147, 111, 0.3) 0%, rgba(26, 147, 111, 0) 70%)',
-        filter: 'blur(40px)',
-        zIndex: 0
-      }} />
-      
-      <Box sx={{
-        position: 'absolute',
-        bottom: '-5%',
-        right: '-5%',
-        width: '30%',
-        height: '30%',
-        borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(17, 75, 95, 0.3) 0%, rgba(17, 75, 95, 0) 70%)',
-        filter: 'blur(40px)',
-        zIndex: 0
-      }} />
+      backgroundSize: '200% 200%',
+      animation: 'gradient 15s ease infinite',
+      transition: 'background 0.5s ease-in-out',
+      '@keyframes gradient': {
+        '0%': { backgroundPosition: '0% 50%' },
+        '50%': { backgroundPosition: '100% 50%' },
+        '100%': { backgroundPosition: '0% 50%' }
+      }
+    };
+  };
 
-      {/* Header */}
-      <AppBar 
-        position="static" 
-        elevation={0} 
-        sx={{ 
-          background: 'rgba(12, 59, 46, 0.8)',
-          backdropFilter: 'blur(10px)',
-          WebkitBackdropFilter: 'blur(10px)',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)'
-        }}
-      >
+  return (
+    <Box sx={getBackgroundStyle()}>
+      {/* Navigation */}
+      <AppBar position="fixed" elevation={0}>
         <Toolbar>
-          <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
-            <img src="/bonsaiwhitenobg.png" alt="Bonsai Prep Logo" style={{ height: '40px', marginRight: '16px' }} />
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            flexGrow: 1
+          }}>
+            <EmojiNatureIcon sx={{ fontSize: 32, color: theme.palette.primary.light, mr: 1 }} />
+            <Typography variant="h5" component="div" sx={{ 
+              fontWeight: 'bold',
+              color: theme.palette.text.primary
+            }}>
+              Bonsai Prep
+            </Typography>
           </Box>
           
-          <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
-            <RouterLink to="/login" style={{ textDecoration: 'none' }}>
-              <GradientButton
-                gradient="secondary"
-                rounded={true}
-                withShimmer={false}
-                sx={{ mr: 2 }}
-              >
-                Login
-              </GradientButton>
-            </RouterLink>
-            <RouterLink to="/login" style={{ textDecoration: 'none' }}>
-              <GradientButton
-                gradient="primary"
-                rounded={true}
-              >
-                Sign Up
-              </GradientButton>
-            </RouterLink>
-          </Box>
+          {/* Theme Toggle */}
+          <ThemeToggle />
+          
+          <GradientButton
+            variant="contained"
+            gradient="primary"
+            component={RouterLink}
+            to="/login"
+            sx={{ ml: 2 }}
+          >
+            Get Started
+          </GradientButton>
         </Toolbar>
       </AppBar>
 
       {/* Hero Section */}
-      <Container maxWidth="lg" sx={{ mt: isMobile ? 6 : 10, position: 'relative', zIndex: 1 }}>
-        <Grid container spacing={6} alignItems="center" justifyContent="center">
-          <Grid item xs={12} md={6}>
-            <FadeIn>
-              <Typography 
-                variant="h1" 
-                component="h1" 
-                sx={{ 
-                  fontWeight: 800,
-                  fontSize: { xs: '2.5rem', md: '3.5rem', lg: '4rem' },
-                  lineHeight: 1.2,
-                  letterSpacing: '-0.02em',
-                  mb: 2,
-                  textShadow: '0 2px 10px rgba(0, 0, 0, 0.2)'
-                }}
-              >
-                Grow Your SAT Skills With <span style={{ color: '#88d498' }}>Bonsai</span>
-              </Typography>
-              <Typography 
-                variant="h5" 
-                sx={{ 
-                  color: 'rgba(255, 255, 255, 0.8)',
-                  mb: 4,
-                  fontWeight: 400,
-                  lineHeight: 1.5
-                }}
-              >
-                Master the SAT step by step. Watch your skills and scores grow like a carefully tended bonsai tree.
-              </Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 4 }}>
-                <RouterLink to="/login" style={{ textDecoration: 'none' }}>
-                  <GradientButton
-                    gradient="primary"
-                    size="large"
-                    sx={{ fontSize: '1.1rem', py: 1.5 }}
-                  >
-                    Get Started Free
-                  </GradientButton>
-                </RouterLink>
-                <RouterLink to="/lessons" style={{ textDecoration: 'none' }}>
-                  <GradientButton
-                    gradient="secondary"
-                    size="large"
-                    sx={{ fontSize: '1.1rem', py: 1.5 }}
-                  >
-                    Explore Lessons
-                  </GradientButton>
-                </RouterLink>
+      <Container maxWidth="lg">
+        <Box sx={{ 
+          pt: { xs: 12, md: 16 }, 
+          pb: { xs: 6, md: 10 },
+          textAlign: 'center'
+        }}>
+          <FadeIn duration={1000}>
+            <Typography
+              variant={isMobile ? 'h3' : 'h1'}
+              component="h1"
+              gutterBottom
+              sx={{
+                fontWeight: 'bold',
+                color: theme.palette.text.primary,
+                textShadow: themeMode === 'dark' ? '0 2px 4px rgba(0,0,0,0.3)' : 'none',
+                mb: 3
+              }}
+            >
+              Grow Your SAT Score Like a{' '}
+              <Box component="span" sx={{ color: theme.palette.primary.main }}>
+                Bonsai Tree
               </Box>
-            </FadeIn>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <FloatAnimation>
-              <Box
-                component="img"
-                src="/bonsai1024.png" // Use path from public folder
-                alt="Bonsai Tree"
-                sx={{
-                  width: '100%',
-                  maxWidth: '500px',
-                  height: 'auto',
-                  display: 'block',
-                  margin: '0 auto',
-                  filter: 'drop-shadow(0 10px 20px rgba(0, 0, 0, 0.3))',
+            </Typography>
+          </FadeIn>
+
+          <FadeIn duration={1000} delay={200}>
+            <Typography
+              variant={isMobile ? 'h6' : 'h5'}
+              sx={{
+                color: theme.palette.text.secondary,
+                maxWidth: '600px',
+                mx: 'auto',
+                mb: 4,
+                lineHeight: 1.6
+              }}
+            >
+              Nurture your knowledge with personalized SAT prep that adapts to your strengths and grows with your progress.
+            </Typography>
+          </FadeIn>
+
+          <FadeIn duration={1000} delay={400}>
+            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <GradientButton
+                variant="contained"
+                gradient="primary"
+                size="large"
+                component={RouterLink}
+                to="/login"
+                sx={{ 
+                  px: 4, 
+                  py: 1.5,
+                  fontSize: '1.1rem'
                 }}
-              />
-            </FloatAnimation>
-          </Grid>
-        </Grid>
-      </Container>
-
-      {/* Features Section */}
-      <Container maxWidth="lg" sx={{ mt: isMobile ? 8 : 12, mb: 8, position: 'relative', zIndex: 1 }}>
-        <ScaleIn>
-          <Typography 
-            variant="h2" 
-            component="h2" 
-            align="center" 
-            sx={{ 
-              fontWeight: 700,
-              mb: 2,
-              letterSpacing: '-0.02em'
-            }}
-          >
-            Why Choose Bonsai?
-          </Typography>
-          <Typography 
-            variant="h6" 
-            align="center" 
-            sx={{ 
-              color: 'rgba(255, 255, 255, 0.8)',
-              mb: 6,
-              maxWidth: '800px',
-              mx: 'auto'
-            }}
-          >
-            Our innovative learning approach helps you master the SAT through personalized guidance and visual progress tracking.
-          </Typography>
-        </ScaleIn>
-
-        <Grid container spacing={4}>
-          {features.map((feature, index) => (
-            <Grid item xs={12} sm={6} md={3} key={index}>
-              {feature.animation === "fade" ? (
-                <FadeIn delay={index * 100}>
-                  <GlassCard
-                    cardTitle={feature.title}
-                    withGlow={true}
-                    withHoverEffect={true}
-                    sx={{ height: '100%' }}
-                    icon={feature.icon}
-                  >
-                    <Typography variant="body1" sx={{ mt: 2, opacity: 0.9 }}>
-                      {feature.description}
-                    </Typography>
-                  </GlassCard>
-                </FadeIn>
-              ) : (
-                <ScaleIn delay={index * 100}>
-                  <GlassCard
-                    cardTitle={feature.title}
-                    withGlow={true}
-                    withHoverEffect={true}
-                    sx={{ height: '100%' }}
-                    icon={feature.icon}
-                  >
-                    <Typography variant="body1" sx={{ mt: 2, opacity: 0.9 }}>
-                      {feature.description}
-                    </Typography>
-                  </GlassCard>
-                </ScaleIn>
-              )}
-            </Grid>
-          ))}
-        </Grid>
-      </Container>
-
-      {/* CTA Section */}
-      <Container maxWidth="md" sx={{ mb: 10, position: 'relative', zIndex: 1 }}>
-        <SlideIn>
-          <GlassCard
-            withGlow={true}
-            glowColor="rgba(17, 75, 95, 0.3)"
-            borderColor="rgba(255, 255, 255, 0.15)"
-          >
-            <Box sx={{ py: 3, px: isMobile ? 2 : 4, textAlign: 'center' }}>
-              <Typography variant="h3" component="h3" sx={{ fontWeight: 700, mb: 2 }}>
-                Ready to grow your SAT skills?
-              </Typography>
-              <Typography variant="h6" sx={{ color: 'rgba(255, 255, 255, 0.8)', mb: 4, maxWidth: '800px', mx: 'auto' }}>
-                Join thousands of students who have improved their SAT scores with Bonsai's unique learning approach.
-              </Typography>
-              <RouterLink to="/login" style={{ textDecoration: 'none' }}>
-                <GradientButton
-                  gradient="primary"
-                  size="large"
-                  sx={{ fontSize: '1.1rem', py: 1.5, px: 4 }}
-                >
-                  Start Your Journey
-                </GradientButton>
-              </RouterLink>
+              >
+                Start Your Journey
+              </GradientButton>
+              <GradientButton
+                variant="outlined"
+                gradient="secondary"
+                size="large"
+                sx={{ 
+                  px: 4, 
+                  py: 1.5,
+                  fontSize: '1.1rem',
+                  borderColor: theme.palette.primary.main,
+                  color: theme.palette.primary.main
+                }}
+              >
+                Learn More
+              </GradientButton>
             </Box>
-          </GlassCard>
-        </SlideIn>
-      </Container>
+          </FadeIn>
+        </Box>
 
-      {/* Footer */}
-      <Box 
-        component="footer" 
-        sx={{ 
-          py: 4, 
-          textAlign: 'center',
-          borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-          backdropFilter: 'blur(10px)',
-          WebkitBackdropFilter: 'blur(10px)',
-          background: 'rgba(12, 59, 46, 0.8)'
-        }}
-      >
-        <Container>
-          <Typography variant="body2" sx={{ opacity: 0.7 }}>
-            &copy; {new Date().getFullYear()} Bonsai. All rights reserved.
-          </Typography>
-        </Container>
-      </Box>
+        {/* Features Section */}
+        <Box sx={{ py: { xs: 6, md: 10 } }}>
+          <FadeIn duration={800}>
+            <Typography
+              variant={isMobile ? 'h4' : 'h3'}
+              component="h2"
+              align="center"
+              gutterBottom
+              sx={{
+                fontWeight: 'bold',
+                color: theme.palette.text.primary,
+                mb: 6
+              }}
+            >
+              Why Choose Bonsai Prep?
+            </Typography>
+          </FadeIn>
+
+          <Grid container spacing={4}>
+            {features.map((feature, index) => (
+              <Grid item xs={12} md={6} key={feature.title}>
+                {feature.animation === "fade" ? (
+                  <FadeIn duration={800} delay={index * 200}>
+                    <GlassCard
+                      sx={{
+                        p: 4,
+                        height: '100%',
+                        textAlign: 'center',
+                        border: `1px solid ${theme.palette.divider}`,
+                        backgroundColor: themeMode === 'light' 
+                          ? 'rgba(255, 255, 255, 0.8)' 
+                          : 'rgba(255, 255, 255, 0.1)',
+                      }}
+                    >
+                      <FloatAnimation>
+                        <Box sx={{ mb: 3 }}>
+                          {feature.icon}
+                        </Box>
+                      </FloatAnimation>
+                      <Typography variant="h5" component="h3" gutterBottom sx={{ 
+                        fontWeight: 'bold',
+                        color: theme.palette.text.primary
+                      }}>
+                        {feature.title}
+                      </Typography>
+                      <Typography variant="body1" sx={{ 
+                        color: theme.palette.text.secondary,
+                        lineHeight: 1.6
+                      }}>
+                        {feature.description}
+                      </Typography>
+                    </GlassCard>
+                  </FadeIn>
+                ) : (
+                  <ScaleIn duration={800} delay={index * 200}>
+                    <GlassCard
+                      sx={{
+                        p: 4,
+                        height: '100%',
+                        textAlign: 'center',
+                        border: `1px solid ${theme.palette.divider}`,
+                        backgroundColor: themeMode === 'light' 
+                          ? 'rgba(255, 255, 255, 0.8)' 
+                          : 'rgba(255, 255, 255, 0.1)',
+                      }}
+                    >
+                      <FloatAnimation>
+                        <Box sx={{ mb: 3 }}>
+                          {feature.icon}
+                        </Box>
+                      </FloatAnimation>
+                      <Typography variant="h5" component="h3" gutterBottom sx={{ 
+                        fontWeight: 'bold',
+                        color: theme.palette.text.primary
+                      }}>
+                        {feature.title}
+                      </Typography>
+                      <Typography variant="body1" sx={{ 
+                        color: theme.palette.text.secondary,
+                        lineHeight: 1.6
+                      }}>
+                        {feature.description}
+                      </Typography>
+                    </GlassCard>
+                  </ScaleIn>
+                )}
+              </Grid>
+            ))}
+          </Grid>
+        </Box>
+
+        {/* Call to Action */}
+        <Box sx={{ 
+          py: { xs: 6, md: 10 },
+          textAlign: 'center'
+        }}>
+          <SlideIn direction="up">
+            <Typography
+              variant={isMobile ? 'h4' : 'h3'}
+              component="h2"
+              gutterBottom
+              sx={{
+                fontWeight: 'bold',
+                color: theme.palette.text.primary,
+                mb: 3
+              }}
+            >
+              Ready to Start Growing?
+            </Typography>
+            <Typography
+              variant="h6"
+              sx={{
+                color: theme.palette.text.secondary,
+                mb: 4,
+                maxWidth: '500px',
+                mx: 'auto'
+              }}
+            >
+              Join thousands of students who are already improving their SAT scores with our personalized approach.
+            </Typography>
+            <GradientButton
+              variant="contained"
+              gradient="primary"
+              size="large"
+              component={RouterLink}
+              to="/login"
+              sx={{ 
+                px: 6, 
+                py: 2,
+                fontSize: '1.2rem'
+              }}
+            >
+              Get Started Today
+            </GradientButton>
+          </SlideIn>
+        </Box>
+      </Container>
     </Box>
   );
 };
