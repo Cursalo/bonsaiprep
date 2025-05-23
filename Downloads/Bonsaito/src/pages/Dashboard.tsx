@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import {
   Box,
   Container,
@@ -12,60 +12,46 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
-  Divider,
-  Card,
-  CardContent,
-  CardActions,
   Grid,
   Avatar,
-  Tab,
-  Tabs,
-  Alert,
-  Snackbar,
+  useTheme,
+  useMediaQuery,
   LinearProgress,
   CircularProgress,
-  useTheme,
-  useMediaQuery
+  Chip,
+  Snackbar,
+  Paper
 } from '@mui/material';
 import {
   Menu as MenuIcon,
-  ChevronRight as ChevronRightIcon,
   Home as HomeIcon,
   Upload as UploadIcon,
   PlayLesson as PlayLessonIcon,
   Insights as InsightsIcon,
-  AccountCircle as AccountCircleIcon,
-  Logout as LogoutIcon,
   Quiz as QuizIcon,
   EmojiNature as EmojiNatureIcon,
   LocalFlorist as LocalFloristIcon,
-  Person as PersonIcon,
+  TrendingUp as TrendingUpIcon,
+  Assignment as AssignmentIcon,
+  Schedule as ScheduleIcon,
   Star as StarIcon,
-  School as SchoolIcon,
-  Flag as FlagIcon,
-  Timer as TimerIcon,
+  CheckCircle as CheckCircleIcon,
+  PlayArrow as PlayArrowIcon,
   EmojiEvents as EmojiEventsIcon,
-  TrendingUp as TrendingUpIcon
+  School as SchoolIcon,
+  Speed as SpeedIcon,
+  GpsFixed as TargetIcon
 } from '@mui/icons-material';
 import { supabase } from '../supabaseClient';
-import { createTheme, ThemeProvider } from '@mui/material/styles';
-import { getUserProgress, calculateCorrectAnswersFromDatabase, recordCompletedTest, incrementCorrectAnswersCount } from '../services/userProgressService';
+import { getUserProgress, calculateCorrectAnswersFromDatabase, recordCompletedTest } from '../services/userProgressService';
 import { useSkills } from '../components/SkillsProvider';
 import BonsaiTree from '../components/BonsaiTree';
 import SkillQuiz from '../components/SkillQuiz';
 import GlassCard from '../components/GlassCard';
 import GradientButton from '../components/GradientButton';
-import { FadeIn, ScaleIn, FloatAnimation, SlideIn, ProgressAnimation, StaggeredList } from '../components/AnimationEffects';
-import TestHistoryList from '../components/TestHistoryList';
+import { FadeIn, ScaleIn } from '../components/AnimationEffects';
 import ThemeToggle from '../components/ThemeToggle';
 import { useThemeContext } from '../contexts/ThemeContext';
-
-// Mock data for the dashboard
-const mockUserData = {
-  name: 'Alex Johnson',
-  email: 'alex@example.com',
-  lastLogin: '2 days ago'
-};
 
 interface UserOnboardingData {
   firstName: string;
@@ -77,248 +63,34 @@ interface UserOnboardingData {
   targetSatScore: number;
   motivation: string;
   subscriptionPlan: string;
-  // Add other fields if necessary
 }
 
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
+interface StudyStats {
+  dailyStreak: number;
+  weeklyStudyTime: number;
+  questionsAnswered: number;
+  accuracyRate: number;
+  completedTests: number;
+  totalSkillsMastered: number;
 }
 
-const TabPanel = (props: TabPanelProps) => {
-  const { children, value, index, ...other } = props;
+interface Achievement {
+  id: string;
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  unlocked: boolean;
+  date?: string;
+}
 
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`dashboard-tabpanel-${index}`}
-      aria-labelledby={`dashboard-tab-${index}`}
-      {...other}
-    >
-      {value === index && (
-        <Box sx={{ p: 3 }}>
-          {children}
-        </Box>
-      )}
-    </div>
-  );
-};
-
-// Create a dark theme to match onboarding
-const darkTheme = createTheme({
-  palette: {
-    mode: 'dark',
-    primary: {
-      main: '#88d498',
-    },
-    secondary: {
-      main: '#88d498',
-    },
-    background: {
-      paper: 'rgba(33, 33, 33, 0.95)',
-      default: '#121212',
-    },
-    text: {
-      primary: 'rgba(255, 255, 255, 0.87)',
-      secondary: 'rgba(255, 255, 255, 0.6)',
-    },
-  },
-  typography: {
-    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
-    h4: {
-      fontWeight: 600,
-    },
-    h5: {
-      fontWeight: 500,
-    },
-    h6: {
-      fontWeight: 500,
-    }
-  },
-  components: {
-    MuiInputBase: {
-      styleOverrides: {
-        input: {
-          color: 'rgba(255, 255, 255, 0.87)',
-        },
-        root: {
-          backgroundColor: 'rgba(30, 30, 30, 0.4)',
-        }
-      },
-    },
-    MuiOutlinedInput: {
-      styleOverrides: {
-        root: {
-          '&:hover .MuiOutlinedInput-notchedOutline': {
-            borderColor: '#88d498',
-          },
-          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-            borderColor: '#88d498',
-          },
-        },
-        notchedOutline: {
-          borderColor: 'rgba(255, 255, 255, 0.23)',
-        },
-      },
-    },
-    MuiFormLabel: {
-      styleOverrides: {
-        root: {
-          color: 'rgba(255, 255, 255, 0.6)',
-          '&.Mui-focused': {
-            color: '#88d498',
-          },
-        },
-      },
-    },
-    MuiPaper: {
-      styleOverrides: {
-        root: {
-          backgroundImage: 'none',
-          backgroundColor: 'rgba(30, 30, 30, 0.6)',
-          backdropFilter: 'blur(10px)',
-          borderRadius: 12,
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-        },
-      },
-    },
-    MuiCard: {
-      styleOverrides: {
-        root: {
-          background: 'rgba(24, 24, 24, 0.8)',
-          backdropFilter: 'blur(10px)',
-          borderRadius: 12,
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-        },
-      },
-    },
-    MuiAppBar: {
-      styleOverrides: {
-        root: {
-          background: 'rgba(12, 59, 46, 0.8)',
-          backdropFilter: 'blur(10px)',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
-        },
-      },
-    },
-    MuiButton: {
-      styleOverrides: {
-        root: {
-          borderRadius: 8,
-          textTransform: 'none',
-          fontWeight: 500,
-        },
-        contained: {
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
-          backgroundColor: '#88d498',
-          '&:hover': {
-            backgroundColor: '#6bbb7b',
-          },
-        },
-        outlined: {
-          borderColor: '#88d498',
-          color: '#88d498',
-          '&:hover': {
-            borderColor: '#6bbb7b',
-            backgroundColor: 'rgba(136, 212, 152, 0.08)',
-          },
-        },
-      },
-    },
-    MuiTab: {
-      styleOverrides: {
-        root: {
-          textTransform: 'none',
-          fontWeight: 500,
-          '&.Mui-selected': {
-            color: '#88d498',
-          },
-        },
-      },
-    },
-    MuiTabs: {
-      styleOverrides: {
-        indicator: {
-          backgroundColor: '#88d498',
-        },
-      },
-    },
-    MuiStepIcon: {
-      styleOverrides: {
-        root: {
-          color: 'rgba(30, 30, 30, 0.8)',
-          '&.Mui-active': {
-            color: '#88d498',
-          },
-          '&.Mui-completed': {
-            color: '#6bbb7b',
-          },
-        },
-      },
-    },
-  },
-});
-
-// Custom styles for better text readability based on dark theme best practices
-const textStyles = {
-  heading: {
-    color: 'rgba(255, 255, 255, 0.87)', // High-emphasis text at 87% opacity
-    textShadow: '0 1px 2px rgba(0,0,0,0.2)'
-  },
-  subheading: {
-    color: 'rgba(255, 255, 255, 0.87)', // High-emphasis text at 87% opacity
-    opacity: 0.9
-  },
-  body: {
-    color: 'rgba(255, 255, 255, 0.7)' // Medium-emphasis text at 70% opacity
-  },
-  label: {
-    color: 'rgba(255, 255, 255, 0.87)',  // High-emphasis text at 87% opacity
-    fontWeight: 500
-  },
-  secondary: {
-    color: 'rgba(255, 255, 255, 0.6)' // Secondary text at 60% opacity
-  },
-  disabled: {
-    color: 'rgba(255, 255, 255, 0.38)' // Disabled text at 38% opacity
-  },
-  accent: {
-    color: 'rgba(136, 212, 152, 0.9)' // Desaturated accent color
-  }
-};
-
-// Background style function that adapts to theme
-const getBackgroundStyle = (themeMode: 'light' | 'dark') => {
-  if (themeMode === 'light') {
-    return {
-      background: 'linear-gradient(135deg, #fafafa 0%, #f0f4f0 100%)',
-      backgroundSize: '200% 200%',
-      animation: 'gradient 15s ease infinite',
-      minHeight: '100vh',
-      transition: 'background 0.5s ease-in-out',
-      '@keyframes gradient': {
-        '0%': { backgroundPosition: '0% 50%' },
-        '50%': { backgroundPosition: '100% 50%' },
-        '100%': { backgroundPosition: '0% 50%' }
-      }
-    } as React.CSSProperties;
-  }
-  
-  return {
-    background: 'linear-gradient(135deg, #121212 0%, #1e3a34 100%)',
-    backgroundSize: '200% 200%',
-    animation: 'gradient 15s ease infinite',
-    minHeight: '100vh',
-    transition: 'background 0.5s ease-in-out',
-    '@keyframes gradient': {
-      '0%': { backgroundPosition: '0% 50%' },
-      '50%': { backgroundPosition: '100% 50%' },
-      '100%': { backgroundPosition: '0% 50%' }
-    }
-  } as React.CSSProperties;
-};
+interface Activity {
+  id: string;
+  type: 'quiz' | 'test' | 'lesson' | 'achievement';
+  title: string;
+  description: string;
+  timestamp: string;
+  score?: number;
+}
 
 const Dashboard: React.FC = () => {
   const theme = useTheme();
@@ -326,36 +98,105 @@ const Dashboard: React.FC = () => {
   const { themeMode } = useThemeContext();
   const { skills, totalSkills, masteredSkillsCount } = useSkills();
   const [drawerOpen, setDrawerOpen] = useState<boolean>(false);
-  const [tabValue, setTabValue] = useState<number>(0);
   const [showQuiz, setShowQuiz] = useState<boolean>(false);
-  const [quizResults, setQuizResults] = useState<{skillId: string; score: number}[]>([]);
   const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
-  const [showTreeAnimation, setShowTreeAnimation] = useState<boolean>(false);
   const [userData, setUserData] = useState<UserOnboardingData | null>(null);
   const [loadingUserData, setLoadingUserData] = useState<boolean>(true);
   const [correctAnswersCount, setCorrectAnswersCount] = useState<number>(0);
-  const navigate = useNavigate();
+  const [studyStats, setStudyStats] = useState<StudyStats>({
+    dailyStreak: 7,
+    weeklyStudyTime: 12.5,
+    questionsAnswered: 145,
+    accuracyRate: 78,
+    completedTests: 3,
+    totalSkillsMastered: masteredSkillsCount
+  });
+  
   const location = useLocation();
+
+  // Mock data for achievements
+  const achievements: Achievement[] = [
+    {
+      id: '1',
+      title: 'First Steps',
+      description: 'Completed your first practice quiz',
+      icon: <StarIcon sx={{ color: '#FFD700' }} />,
+      unlocked: true,
+      date: '2024-01-15'
+    },
+    {
+      id: '2',
+      title: 'Week Warrior',
+      description: 'Maintained a 7-day study streak',
+      icon: <LocalFloristIcon sx={{ color: '#4CAF50' }} />,
+      unlocked: true,
+      date: '2024-01-20'
+    },
+    {
+      id: '3',
+      title: 'Century Club',
+      description: 'Answered 100 practice questions',
+      icon: <EmojiEventsIcon sx={{ color: '#FF9800' }} />,
+      unlocked: true,
+      date: '2024-01-22'
+    },
+    {
+      id: '4',
+      title: 'Accuracy Master',
+      description: 'Achieve 90% accuracy on a practice test',
+      icon: <TargetIcon sx={{ color: '#9C27B0' }} />,
+      unlocked: false
+    }
+  ];
+
+  // Mock recent activity
+  const recentActivity: Activity[] = [
+    {
+      id: '1',
+      type: 'quiz',
+      title: 'Algebra Skills Quiz',
+      description: 'Completed with 85% accuracy',
+      timestamp: '2 hours ago',
+      score: 85
+    },
+    {
+      id: '2',
+      type: 'lesson',
+      title: 'Quadratic Functions',
+      description: 'Watched video lesson',
+      timestamp: '1 day ago'
+    },
+    {
+      id: '3',
+      type: 'test',
+      title: 'Math Practice Test',
+      description: 'Uploaded score report',
+      timestamp: '2 days ago',
+      score: 680
+    },
+    {
+      id: '4',
+      type: 'achievement',
+      title: 'Week Warrior',
+      description: 'Unlocked new achievement',
+      timestamp: '3 days ago'
+    }
+  ];
 
   const fetchCorrectAnswersCount = useCallback(async () => {
     try {
-      // First try to get the count from user_progress table
       const userProgress = await getUserProgress();
       if (userProgress && userProgress.correctAnswersCount !== undefined) {
-        console.log('Dashboard - Fetched correct answers from user_progress table:', userProgress.correctAnswersCount);
         setCorrectAnswersCount(userProgress.correctAnswersCount);
       } else {
-        console.warn('Dashboard - Could not get user progress from user_progress table. Calculating from practice_questions.');
-        // Fall back to calculating from practice_questions and sync with user_progress
-        const calculatedCount = await calculateCorrectAnswersFromDatabase(true); // Sync with user_progress table
-        console.log('Dashboard - Calculated correct answers from database:', calculatedCount);
+        const calculatedCount = await calculateCorrectAnswersFromDatabase(true);
         setCorrectAnswersCount(calculatedCount);
       }
     } catch (error) {
-      console.error('Dashboard - Error in fetchCorrectAnswersCount:', error);
-      setCorrectAnswersCount(0); // Default to 0 on error
+      console.error('Dashboard - Error fetching correct answers:', error);
+      setCorrectAnswersCount(0);
     }
-  }, []); // Empty dependency array as these functions don't depend on component state
+  }, []);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -393,363 +234,590 @@ const Dashboard: React.FC = () => {
 
     fetchUserData();
     fetchCorrectAnswersCount();
-  }, [fetchCorrectAnswersCount]); // Added fetchCorrectAnswersCount to dependency array
+  }, [fetchCorrectAnswersCount]);
 
   useEffect(() => {
-    if (location.state?.fromUpload && location.state?.correctAnswers !== undefined) {
-      console.log('Dashboard - Received correctAnswers from navigation:', location.state.correctAnswers);
-      setShowTreeAnimation(true);
-      setCorrectAnswersCount(location.state.correctAnswers); // Directly set from navigation state
-      navigate(location.pathname, { replace: true, state: {} });
-      const timer = setTimeout(() => setShowTreeAnimation(false), 2500);
-      return () => clearTimeout(timer);
-    }
-  }, [location, navigate]);
-
-  useEffect(() => {
-    console.log('Dashboard - Current correctAnswersCount state for BonsaiTree:', correctAnswersCount);
-  }, [correctAnswersCount]);
+    setStudyStats(prev => ({
+      ...prev,
+      totalSkillsMastered: masteredSkillsCount
+    }));
+  }, [masteredSkillsCount]);
 
   const handleDrawerToggle = () => {
     setDrawerOpen(!drawerOpen);
   };
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue);
-  };
-
   const handleQuizComplete = async (results: {skillId: string; score: number}[]) => {
-    setQuizResults(results);
     setShowQuiz(false);
     setSnackbarOpen(true);
 
-    // Count how many results have a positive score (indicating a correct answer)
-    const newlyCorrectAnswersInThisQuiz = results.filter(r => r.score > 0).length;
-
-    if (newlyCorrectAnswersInThisQuiz > 0) {
-      console.log(`Recording ${newlyCorrectAnswersInThisQuiz} newly correct answers from quiz.`);
+    const newlyCorrectAnswers = results.filter(r => r.score > 0).length;
+    if (newlyCorrectAnswers > 0) {
       try {
-        // recordCompletedTest adds the count to the existing total and increments completed_tests
-        await recordCompletedTest(newlyCorrectAnswersInThisQuiz);
-        
-        // Refresh our count from the database after recording
+        await recordCompletedTest(newlyCorrectAnswers);
         await fetchCorrectAnswersCount();
       } catch (error) {
         console.error('Error updating progress after quiz:', error);
       }
-    } else {
-      console.log('No new correct answers to record from this quiz.');
     }
   };
 
-  const handleCloseSnackbar = () => {
-    setSnackbarOpen(false);
+  const getProgressPercentage = () => {
+    if (!userData?.targetSatScore || !userData?.satScore) return 0;
+    const progress = ((userData.satScore || 0) / userData.targetSatScore) * 100;
+    return Math.min(progress, 100);
+  };
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 18) return 'Good afternoon';
+    return 'Good evening';
+  };
+
+  const getActivityIcon = (type: Activity['type']) => {
+    switch (type) {
+      case 'quiz': return <QuizIcon sx={{ color: theme.palette.primary.main }} />;
+      case 'test': return <AssignmentIcon sx={{ color: theme.palette.secondary.main }} />;
+      case 'lesson': return <PlayLessonIcon sx={{ color: theme.palette.info.main }} />;
+      case 'achievement': return <EmojiEventsIcon sx={{ color: '#FFD700' }} />;
+      default: return <SchoolIcon />;
+    }
+  };
+
+  // Background style that adapts to theme
+  const getBackgroundStyle = () => {
+    if (themeMode === 'light') {
+      return {
+        background: 'linear-gradient(135deg, #fafafa 0%, #f0f4f0 100%)',
+        minHeight: '100vh',
+        transition: 'background 0.5s ease-in-out',
+      };
+    }
+    
+    return {
+      background: 'linear-gradient(135deg, #0c3b2e 0%, #18514a 100%)',
+      minHeight: '100vh',
+      backgroundSize: '200% 200%',
+      animation: 'gradient 15s ease infinite',
+      transition: 'background 0.5s ease-in-out',
+      '@keyframes gradient': {
+        '0%': { backgroundPosition: '0% 50%' },
+        '50%': { backgroundPosition: '100% 50%' },
+        '100%': { backgroundPosition: '0% 50%' }
+      }
+    };
   };
 
   return (
-    <ThemeProvider theme={darkTheme}>
-      <Box sx={getBackgroundStyle(themeMode)}>
-        {/* App Bar */}
-        <AppBar position="fixed">
-          <Toolbar>
-            <IconButton
-              color="inherit"
-              aria-label="open drawer"
-              edge="start"
-              onClick={handleDrawerToggle}
-              sx={{ mr: 2 }}
-            >
-              <MenuIcon />
-            </IconButton>
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              flexGrow: 1,
-              justifyContent: 'center'
-            }}>
-              <img 
-                src="/bonsaiwhitenobg.png" 
-                alt="Bonsai Prep Logo" 
-                style={{ 
-                  height: '40px',
-                  width: 'auto',
-                  objectFit: 'contain',
-                  maxWidth: '200px'
-                }} 
-              />
-            </Box>
-            
-            {/* Theme Toggle */}
-            <ThemeToggle showBackgroundSelector={true} />
-            
-            <Avatar sx={{ 
-              bgcolor: 'primary.main',
-              boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
-              ml: 1
-            }}>
-              {loadingUserData ? '' : userData?.firstName?.charAt(0) || 'U'}
-            </Avatar>
-          </Toolbar>
-        </AppBar>
-
-        {/* Drawer */}
-        <Drawer
-          variant={isMobile ? 'temporary' : 'persistent'}
-          anchor="left"
-          open={drawerOpen}
-          onClose={handleDrawerToggle}
-          sx={{
-            '& .MuiDrawer-paper': {
-              width: isMobile ? 280 : 300,
-              background: themeMode === 'light' 
-                ? 'rgba(255, 255, 255, 0.95)' 
-                : 'rgba(30, 30, 30, 0.95)',
-              backdropFilter: 'blur(10px)',
-              borderRight: `1px solid ${theme.palette.divider}`,
-            },
-          }}
-        >
+    <Box sx={getBackgroundStyle()}>
+      {/* App Bar */}
+      <AppBar 
+        position="fixed" 
+        elevation={0}
+        sx={{ 
+          backgroundColor: themeMode === 'light' 
+            ? 'rgba(255, 255, 255, 0.95)' 
+            : 'rgba(12, 59, 46, 0.95)',
+          backdropFilter: 'blur(10px)',
+          borderBottom: `1px solid ${theme.palette.divider}`,
+        }}
+      >
+        <Toolbar>
+          <IconButton
+            color="inherit"
+            aria-label="open drawer"
+            edge="start"
+            onClick={handleDrawerToggle}
+            sx={{ mr: 2 }}
+          >
+            <MenuIcon />
+          </IconButton>
           <Box sx={{ 
-            pt: 8, 
-            pb: 2,
-            background: themeMode === 'light'
-              ? 'linear-gradient(135deg, rgba(26, 147, 111, 0.1), rgba(17, 75, 95, 0.1))'
-              : 'linear-gradient(135deg, rgba(136, 212, 152, 0.1), rgba(17, 75, 95, 0.1))',
+            display: 'flex', 
+            alignItems: 'center', 
+            flexGrow: 1,
+            justifyContent: 'center'
           }}>
-            <Typography variant="h6" sx={{ 
-              textAlign: 'center', 
+            <EmojiNatureIcon sx={{ fontSize: 32, color: theme.palette.primary.main, mr: 1 }} />
+            <Typography variant="h5" component="div" sx={{ 
               fontWeight: 'bold',
-              color: theme.palette.primary.main,
-              mb: 2
+              color: theme.palette.text.primary
             }}>
-              Navigation
+              Bonsai Prep
             </Typography>
           </Box>
           
-          <List>
-            <ListItem
-              button
-              component={Link}
-              to="/dashboard"
-              sx={{
-                mx: 1,
-                borderRadius: 2,
-                mb: 0.5,
-                backgroundColor: location.pathname === '/dashboard' 
-                  ? theme.palette.primary.main + '20' 
-                  : 'transparent',
-                '&:hover': {
-                  backgroundColor: theme.palette.primary.main + '10',
-                },
-              }}
-            >
-              <ListItemIcon sx={{ color: theme.palette.primary.main }}>
-                <HomeIcon />
-              </ListItemIcon>
-              <ListItemText 
-                primary="Dashboard"
-                sx={{ 
-                  '& .MuiListItemText-primary': {
-                    fontWeight: location.pathname === '/dashboard' ? 600 : 400
-                  }
-                }}
-              />
-            </ListItem>
-            <ListItem
-              button
-              component={Link}
-              to="/upload"
-              sx={{
-                mx: 1,
-                borderRadius: 2,
-                mb: 0.5,
-                backgroundColor: location.pathname === '/upload' 
-                  ? theme.palette.primary.main + '20' 
-                  : 'transparent',
-                '&:hover': {
-                  backgroundColor: theme.palette.primary.main + '10',
-                },
-              }}
-            >
-              <ListItemIcon sx={{ color: theme.palette.primary.main }}>
-                <UploadIcon />
-              </ListItemIcon>
-              <ListItemText 
-                primary="Upload Score Report"
-                sx={{ 
-                  '& .MuiListItemText-primary': {
-                    fontWeight: location.pathname === '/upload' ? 600 : 400
-                  }
-                }}
-              />
-            </ListItem>
-            <ListItem
-              button
-              component={Link}
-              to="/lessons"
-              sx={{
-                mx: 1,
-                borderRadius: 2,
-                mb: 0.5,
-                backgroundColor: location.pathname === '/lessons' 
-                  ? theme.palette.primary.main + '20' 
-                  : 'transparent',
-                '&:hover': {
-                  backgroundColor: theme.palette.primary.main + '10',
-                },
-              }}
-            >
-              <ListItemIcon sx={{ color: theme.palette.primary.main }}>
-                <PlayLessonIcon />
-              </ListItemIcon>
-              <ListItemText 
-                primary="My Lessons"
-                sx={{ 
-                  '& .MuiListItemText-primary': {
-                    fontWeight: location.pathname === '/lessons' ? 600 : 400
-                  }
-                }}
-              />
-            </ListItem>
-            <ListItem
-              button
-              component={Link}
-              to="/video-lessons"
-              sx={{
-                mx: 1,
-                borderRadius: 2,
-                mb: 0.5,
-                backgroundColor: location.pathname === '/video-lessons' 
-                  ? theme.palette.primary.main + '20' 
-                  : 'transparent',
-                '&:hover': {
-                  backgroundColor: theme.palette.primary.main + '10',
-                },
-              }}
-            >
-              <ListItemIcon sx={{ color: theme.palette.primary.main }}>
-                <PlayLessonIcon />
-              </ListItemIcon>
-              <ListItemText 
-                primary="Video Lessons"
-                sx={{ 
-                  '& .MuiListItemText-primary': {
-                    fontWeight: location.pathname === '/video-lessons' ? 600 : 400
-                  }
-                }}
-              />
-            </ListItem>
-            <ListItem
-              button
-              onClick={() => setShowQuiz(true)}
-              sx={{
-                mx: 1,
-                borderRadius: 2,
-                mb: 0.5,
-                backgroundColor: location.pathname === '/quiz' 
-                  ? theme.palette.primary.main + '20' 
-                  : 'transparent',
-                '&:hover': {
-                  backgroundColor: theme.palette.primary.main + '10',
-                },
-              }}
-            >
-              <ListItemIcon sx={{ color: theme.palette.primary.main }}>
-                <QuizIcon />
-              </ListItemIcon>
-              <ListItemText 
-                primary="Take Skill Quiz"
-                sx={{ 
-                  '& .MuiListItemText-primary': {
-                    fontWeight: location.pathname === '/quiz' ? 600 : 400
-                  }
-                }}
-              />
-            </ListItem>
-            <ListItem
-              button
-              component={Link}
-              to="/progress"
-              sx={{
-                mx: 1,
-                borderRadius: 2,
-                mb: 0.5,
-                backgroundColor: location.pathname === '/progress' 
-                  ? theme.palette.primary.main + '20' 
-                  : 'transparent',
-                '&:hover': {
-                  backgroundColor: theme.palette.primary.main + '10',
-                },
-              }}
-            >
-              <ListItemIcon sx={{ color: theme.palette.primary.main }}>
-                <InsightsIcon />
-              </ListItemIcon>
-              <ListItemText 
-                primary="Progress"
-                sx={{ 
-                  '& .MuiListItemText-primary': {
-                    fontWeight: location.pathname === '/progress' ? 600 : 400
-                  }
-                }}
-              />
-            </ListItem>
-          </List>
-        </Drawer>
+          <ThemeToggle showBackgroundSelector={true} />
+          
+          <Avatar sx={{ 
+            bgcolor: theme.palette.primary.main,
+            boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
+            ml: 1
+          }}>
+            {loadingUserData ? '' : userData?.firstName?.charAt(0) || 'U'}
+          </Avatar>
+        </Toolbar>
+      </AppBar>
 
-        {/* Main content with better mobile spacing */}
-        <Container 
-          maxWidth="lg" 
-          sx={{ 
-            pt: isMobile ? 8 : 10, 
-            pb: 4,
-            px: isMobile ? 2 : 3,
-            ml: !isMobile && drawerOpen ? '300px' : 0,
-            transition: 'margin 0.3s ease',
-          }}
-        >
-          <Grid container spacing={isMobile ? 2 : 4}>
-            <Grid item xs={12}>
-              <Box sx={{ mt: isMobile ? 1 : 3, mb: isMobile ? 2 : 4 }}>
-                <Typography variant={isMobile ? 'h6' : 'h5'} gutterBottom sx={{ 
+      {/* Drawer */}
+      <Drawer
+        variant={isMobile ? 'temporary' : 'persistent'}
+        anchor="left"
+        open={drawerOpen}
+        onClose={handleDrawerToggle}
+        sx={{
+          '& .MuiDrawer-paper': {
+            width: isMobile ? 280 : 300,
+            background: themeMode === 'light' 
+              ? 'rgba(255, 255, 255, 0.95)' 
+              : 'rgba(30, 30, 30, 0.95)',
+            backdropFilter: 'blur(10px)',
+            borderRight: `1px solid ${theme.palette.divider}`,
+          },
+        }}
+      >
+        <Box sx={{ 
+          pt: 8, 
+          pb: 2,
+          background: themeMode === 'light'
+            ? 'linear-gradient(135deg, rgba(26, 147, 111, 0.1), rgba(17, 75, 95, 0.1))'
+            : 'linear-gradient(135deg, rgba(136, 212, 152, 0.1), rgba(17, 75, 95, 0.1))',
+        }}>
+          <Typography variant="h6" sx={{ 
+            textAlign: 'center', 
+            fontWeight: 'bold',
+            color: theme.palette.primary.main,
+            mb: 2
+          }}>
+            Navigation
+          </Typography>
+        </Box>
+        
+        <List>
+          {[
+            { path: '/dashboard', icon: <HomeIcon />, label: 'Dashboard' },
+            { path: '/upload', icon: <UploadIcon />, label: 'Upload Score Report' },
+            { path: '/lessons', icon: <PlayLessonIcon />, label: 'My Lessons' },
+            { path: '/video-lessons', icon: <PlayLessonIcon />, label: 'Video Lessons' },
+            { path: '/progress', icon: <InsightsIcon />, label: 'Progress' },
+          ].map((item) => (
+            <ListItem
+              key={item.path}
+              button
+              component={Link}
+              to={item.path}
+              sx={{
+                mx: 1,
+                borderRadius: 2,
+                mb: 0.5,
+                backgroundColor: location.pathname === item.path 
+                  ? theme.palette.primary.main + '20' 
+                  : 'transparent',
+                '&:hover': {
+                  backgroundColor: theme.palette.primary.main + '10',
+                },
+              }}
+            >
+              <ListItemIcon sx={{ color: theme.palette.primary.main }}>
+                {item.icon}
+              </ListItemIcon>
+              <ListItemText 
+                primary={item.label}
+                sx={{ 
+                  '& .MuiListItemText-primary': {
+                    fontWeight: location.pathname === item.path ? 600 : 400
+                  }
+                }}
+              />
+            </ListItem>
+          ))}
+          
+          <ListItem
+            button
+            onClick={() => setShowQuiz(true)}
+            sx={{
+              mx: 1,
+              borderRadius: 2,
+              mb: 0.5,
+              '&:hover': {
+                backgroundColor: theme.palette.primary.main + '10',
+              },
+            }}
+          >
+            <ListItemIcon sx={{ color: theme.palette.primary.main }}>
+              <QuizIcon />
+            </ListItemIcon>
+            <ListItemText primary="Take Skill Quiz" />
+          </ListItem>
+        </List>
+      </Drawer>
+
+      {/* Main Content */}
+      <Container 
+        maxWidth="xl" 
+        sx={{ 
+          pt: isMobile ? 10 : 12, 
+          pb: 4,
+          px: isMobile ? 2 : 3,
+          ml: !isMobile && drawerOpen ? '300px' : 0,
+          transition: 'margin 0.3s ease',
+        }}
+      >
+        {/* Welcome Header */}
+        <FadeIn duration={800}>
+          <Box sx={{ mb: 4 }}>
+            <Typography variant={isMobile ? 'h4' : 'h3'} sx={{ 
+              fontWeight: 'bold',
+              color: theme.palette.text.primary,
+              mb: 1
+            }}>
+              {getGreeting()}, {userData?.firstName || 'Student'}! 👋
+            </Typography>
+            <Typography variant="body1" sx={{ 
+              color: theme.palette.text.secondary,
+              fontSize: '1.1rem'
+            }}>
+              Ready to grow your SAT score today? Let's see your progress.
+            </Typography>
+          </Box>
+        </FadeIn>
+
+        <Grid container spacing={3}>
+          {/* Quick Actions */}
+          <Grid item xs={12} md={4}>
+            <ScaleIn delay={100}>
+              <GlassCard sx={{ p: 3, height: '100%' }}>
+                <Typography variant="h6" sx={{ 
                   fontWeight: 'bold', 
+                  mb: 3,
                   color: theme.palette.text.primary,
-                  textShadow: themeMode === 'dark' ? '0 2px 4px rgba(0,0,0,0.2)' : 'none',
-                  textAlign: 'center',
-                  mb: isMobile ? 2 : 4,
-                  fontSize: isMobile ? '1.5rem' : '2rem'
+                  display: 'flex',
+                  alignItems: 'center'
                 }}>
+                  <SpeedIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
+                  Quick Actions
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <GradientButton
+                    variant="contained"
+                    gradient="primary"
+                    onClick={() => setShowQuiz(true)}
+                    startIcon={<QuizIcon />}
+                    fullWidth
+                  >
+                    Take Practice Quiz
+                  </GradientButton>
+                  <GradientButton
+                    variant="outlined"
+                    gradient="secondary"
+                    component={Link}
+                    to="/upload"
+                    startIcon={<UploadIcon />}
+                    fullWidth
+                  >
+                    Upload Score Report
+                  </GradientButton>
+                  <GradientButton
+                    variant="outlined"
+                    gradient="info"
+                    component={Link}
+                    to="/lessons"
+                    startIcon={<PlayArrowIcon />}
+                    fullWidth
+                  >
+                    Continue Lessons
+                  </GradientButton>
+                </Box>
+              </GlassCard>
+            </ScaleIn>
+          </Grid>
+
+          {/* Progress Overview */}
+          <Grid item xs={12} md={4}>
+            <ScaleIn delay={200}>
+              <GlassCard sx={{ p: 3, height: '100%' }}>
+                <Typography variant="h6" sx={{ 
+                  fontWeight: 'bold', 
+                  mb: 3,
+                  color: theme.palette.text.primary,
+                  display: 'flex',
+                  alignItems: 'center'
+                }}>
+                  <TrendingUpIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
+                  Progress Overview
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                  <Box sx={{ position: 'relative', display: 'inline-flex', mr: 3 }}>
+                    <CircularProgress
+                      variant="determinate"
+                      value={getProgressPercentage()}
+                      size={80}
+                      thickness={6}
+                      sx={{ color: theme.palette.primary.main }}
+                    />
+                    <Box sx={{
+                      top: 0,
+                      left: 0,
+                      bottom: 0,
+                      right: 0,
+                      position: 'absolute',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                      <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
+                        {Math.round(getProgressPercentage())}%
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Box>
+                    <Typography variant="body2" color="textSecondary">
+                      Current: {userData?.satScore || 'Not set'}
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary">
+                      Target: {userData?.targetSatScore || 'Not set'}
+                    </Typography>
+                  </Box>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography variant="body2" color="textSecondary">
+                    Skills Mastered
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                    {masteredSkillsCount}/{totalSkills}
+                  </Typography>
+                </Box>
+                <LinearProgress 
+                  variant="determinate" 
+                  value={(masteredSkillsCount / totalSkills) * 100} 
+                  sx={{ 
+                    height: 8, 
+                    borderRadius: 4,
+                    backgroundColor: theme.palette.mode === 'light' ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)'
+                  }}
+                />
+              </GlassCard>
+            </ScaleIn>
+          </Grid>
+
+          {/* Study Statistics */}
+          <Grid item xs={12} md={4}>
+            <ScaleIn delay={300}>
+              <GlassCard sx={{ p: 3, height: '100%' }}>
+                <Typography variant="h6" sx={{ 
+                  fontWeight: 'bold', 
+                  mb: 3,
+                  color: theme.palette.text.primary,
+                  display: 'flex',
+                  alignItems: 'center'
+                }}>
+                  <InsightsIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
+                  Study Stats
+                </Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={6}>
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Typography variant="h4" sx={{ fontWeight: 'bold', color: theme.palette.primary.main }}>
+                        {studyStats.dailyStreak}
+                      </Typography>
+                      <Typography variant="body2" color="textSecondary">
+                        Day Streak
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Typography variant="h4" sx={{ fontWeight: 'bold', color: theme.palette.secondary.main }}>
+                        {studyStats.accuracyRate}%
+                      </Typography>
+                      <Typography variant="body2" color="textSecondary">
+                        Accuracy
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Typography variant="h4" sx={{ fontWeight: 'bold', color: theme.palette.success.main }}>
+                        {studyStats.questionsAnswered}
+                      </Typography>
+                      <Typography variant="body2" color="textSecondary">
+                        Questions
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Typography variant="h4" sx={{ fontWeight: 'bold', color: theme.palette.warning.main }}>
+                        {studyStats.completedTests}
+                      </Typography>
+                      <Typography variant="body2" color="textSecondary">
+                        Tests
+                      </Typography>
+                    </Box>
+                  </Grid>
+                </Grid>
+              </GlassCard>
+            </ScaleIn>
+          </Grid>
+
+          {/* Bonsai Tree */}
+          <Grid item xs={12} md={8}>
+            <FadeIn delay={400}>
+              <GlassCard sx={{ p: 3 }}>
+                <Typography variant="h6" sx={{ 
+                  fontWeight: 'bold', 
+                  mb: 3,
+                  color: theme.palette.text.primary,
+                  display: 'flex',
+                  alignItems: 'center'
+                }}>
+                  <EmojiNatureIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
                   Your Learning Bonsai
                 </Typography>
-                
                 <BonsaiTree 
                   skills={skills} 
                   totalSkills={totalSkills}
                   correctAnswersCount={correctAnswersCount}
                   showProgressText={false}
                 />
-              </Box>
-            </Grid>
+              </GlassCard>
+            </FadeIn>
           </Grid>
-        </Container>
 
-        {/* SkillQuiz dialog */}
-        {showQuiz && (
-          <SkillQuiz 
-            onComplete={handleQuizComplete} 
-            onClose={() => setShowQuiz(false)} 
-          />
-        )}
+          {/* Achievements */}
+          <Grid item xs={12} md={4}>
+            <FadeIn delay={500}>
+              <GlassCard sx={{ p: 3 }}>
+                <Typography variant="h6" sx={{ 
+                  fontWeight: 'bold', 
+                  mb: 3,
+                  color: theme.palette.text.primary,
+                  display: 'flex',
+                  alignItems: 'center'
+                }}>
+                  <EmojiEventsIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
+                  Achievements
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {achievements.map((achievement) => (
+                    <Box
+                      key={achievement.id}
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        p: 2,
+                        borderRadius: 2,
+                        backgroundColor: achievement.unlocked 
+                          ? theme.palette.action.selected 
+                          : theme.palette.action.disabled,
+                        opacity: achievement.unlocked ? 1 : 0.6,
+                        border: `1px solid ${theme.palette.divider}`,
+                      }}
+                    >
+                      <Box sx={{ mr: 2 }}>
+                        {achievement.icon}
+                      </Box>
+                      <Box sx={{ flexGrow: 1 }}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                          {achievement.title}
+                        </Typography>
+                        <Typography variant="caption" color="textSecondary">
+                          {achievement.description}
+                        </Typography>
+                        {achievement.date && (
+                          <Typography variant="caption" sx={{ display: 'block', mt: 0.5, color: theme.palette.primary.main }}>
+                            {achievement.date}
+                          </Typography>
+                        )}
+                      </Box>
+                      {achievement.unlocked && (
+                        <CheckCircleIcon sx={{ color: theme.palette.success.main }} />
+                      )}
+                    </Box>
+                  ))}
+                </Box>
+              </GlassCard>
+            </FadeIn>
+          </Grid>
 
-        {/* Snackbar for quiz results */}
-        <Snackbar
-          open={snackbarOpen}
-          autoHideDuration={6000}
-          onClose={handleCloseSnackbar}
-          message="Quiz Completed! Your skills have been updated."
+          {/* Recent Activity */}
+          <Grid item xs={12}>
+            <FadeIn delay={600}>
+              <GlassCard sx={{ p: 3 }}>
+                <Typography variant="h6" sx={{ 
+                  fontWeight: 'bold', 
+                  mb: 3,
+                  color: theme.palette.text.primary,
+                  display: 'flex',
+                  alignItems: 'center'
+                }}>
+                  <ScheduleIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
+                  Recent Activity
+                </Typography>
+                <Grid container spacing={2}>
+                  {recentActivity.map((activity) => (
+                    <Grid item xs={12} sm={6} md={3} key={activity.id}>
+                      <Paper
+                        elevation={0}
+                        sx={{
+                          p: 2,
+                          borderRadius: 2,
+                          backgroundColor: theme.palette.action.hover,
+                          border: `1px solid ${theme.palette.divider}`,
+                          height: '100%',
+                          display: 'flex',
+                          flexDirection: 'column',
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                          {getActivityIcon(activity.type)}
+                          <Typography variant="subtitle2" sx={{ ml: 1, fontWeight: 'bold' }}>
+                            {activity.title}
+                          </Typography>
+                        </Box>
+                        <Typography variant="body2" color="textSecondary" sx={{ mb: 1, flexGrow: 1 }}>
+                          {activity.description}
+                        </Typography>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Typography variant="caption" color="textSecondary">
+                            {activity.timestamp}
+                          </Typography>
+                          {activity.score && (
+                            <Chip 
+                              label={`${activity.score}${activity.type === 'quiz' ? '%' : ''}`}
+                              size="small"
+                              color="primary"
+                              variant="outlined"
+                            />
+                          )}
+                        </Box>
+                      </Paper>
+                    </Grid>
+                  ))}
+                </Grid>
+              </GlassCard>
+            </FadeIn>
+          </Grid>
+        </Grid>
+      </Container>
+
+      {/* SkillQuiz Dialog */}
+      {showQuiz && (
+        <SkillQuiz 
+          onComplete={handleQuizComplete} 
+          onClose={() => setShowQuiz(false)} 
         />
-      </Box>
-    </ThemeProvider>
+      )}
+
+      {/* Snackbar for quiz results */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={() => setSnackbarOpen(false)}
+        message="Quiz Completed! Your skills have been updated."
+      />
+    </Box>
   );
 };
 
