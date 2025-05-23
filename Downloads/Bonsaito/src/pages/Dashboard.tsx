@@ -728,6 +728,66 @@ const Dashboard: React.FC = () => {
                   correctAnswersCount={correctAnswersCount}
                   showProgressText={false}
                 />
+                
+                {/* Daily Progress Section */}
+                <Box sx={{ mt: 3, pt: 3, borderTop: `1px solid ${themeMode === 'light' ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.08)'}` }}>
+                  <Typography variant="subtitle1" sx={{ 
+                    fontWeight: 'bold', 
+                    mb: 2,
+                    color: getTextColor('primary'),
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}>
+                    <AssignmentIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
+                    Today's Progress
+                  </Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={6}>
+                      <Box sx={{
+                        p: 2,
+                        borderRadius: 2,
+                        backgroundColor: themeMode === 'light' 
+                          ? 'rgba(76, 175, 80, 0.1)' 
+                          : 'rgba(76, 175, 80, 0.2)',
+                        border: `1px solid ${theme.palette.success.main}30`,
+                        textAlign: 'center'
+                      }}>
+                        <Typography variant="h4" sx={{ 
+                          fontWeight: 'bold', 
+                          color: theme.palette.success.main,
+                          mb: 0.5
+                        }}>
+                          3
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: getTextColor('secondary') }}>
+                          Quizzes Completed
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Box sx={{
+                        p: 2,
+                        borderRadius: 2,
+                        backgroundColor: themeMode === 'light' 
+                          ? 'rgba(33, 150, 243, 0.1)' 
+                          : 'rgba(33, 150, 243, 0.2)',
+                        border: `1px solid ${theme.palette.info.main}30`,
+                        textAlign: 'center'
+                      }}>
+                        <Typography variant="h4" sx={{ 
+                          fontWeight: 'bold', 
+                          color: theme.palette.info.main,
+                          mb: 0.5
+                        }}>
+                          25
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: getTextColor('secondary') }}>
+                          Minutes Studied
+                        </Typography>
+                      </Box>
+                    </Grid>
+                  </Grid>
+                </Box>
             </Paper>
           </Grid>
 
