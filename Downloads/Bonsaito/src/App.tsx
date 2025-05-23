@@ -11,6 +11,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import UploadReport from './pages/UploadReport';
 import Lessons from './pages/Lessons';
+import VideoLessons from './pages/VideoLessons';
 import Profile from './pages/Profile';
 import AdminDashboard from './pages/AdminDashboard';
 import NotFound from './pages/NotFound';
@@ -104,6 +105,7 @@ function App() {
               />
               <Route path="/upload" element={<UploadReport />} />
               <Route path="/lessons" element={<Lessons />} />
+              <Route path="/video-lessons" element={<VideoLessons />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/admin" element={<AdminDashboard />} />
             </Route>
