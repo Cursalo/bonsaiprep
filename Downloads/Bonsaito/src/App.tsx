@@ -11,6 +11,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import UploadReport from './pages/UploadReport';
 import Lessons from './pages/Lessons';
+import Profile from './pages/Profile';
 import AdminDashboard from './pages/AdminDashboard';
 import NotFound from './pages/NotFound';
 
@@ -87,10 +88,11 @@ function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
-            <Route path="/onboarding" element={<OnboardingFlow />} />
             
             {/* Protected Routes */}
             <Route element={<ProtectedRoute />}>
+              <Route path="/onboarding" element={<OnboardingFlow />} />
+              
               {/* Redirect to onboarding if first login */}
               <Route 
                 path="/dashboard" 
@@ -102,6 +104,7 @@ function App() {
               />
               <Route path="/upload" element={<UploadReport />} />
               <Route path="/lessons" element={<Lessons />} />
+              <Route path="/profile" element={<Profile />} />
               <Route path="/admin" element={<AdminDashboard />} />
             </Route>
             <Route path="*" element={<NotFound />} />

@@ -229,39 +229,39 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({
     setImageError(true);
   };
 
-  // Add global keyframes for floating and growth animations
+  // Add global keyframes for floating and growth animations with mobile-responsive scaling
   useEffect(() => {
     const style = document.createElement('style');
     style.innerHTML = `
       @keyframes floatBonsai {
-        0% { transform: translateY(10px) scale(0.35); filter: contrast(130%); }
-        50% { transform: translateY(0px) scale(0.35); filter: contrast(130%); }
-        100% { transform: translateY(10px) scale(0.35); filter: contrast(130%); }
+        0% { transform: translateY(5px) scale(${isMobile ? '0.25' : '0.35'}); filter: contrast(130%); }
+        50% { transform: translateY(0px) scale(${isMobile ? '0.25' : '0.35'}); filter: contrast(130%); }
+        100% { transform: translateY(5px) scale(${isMobile ? '0.25' : '0.35'}); filter: contrast(130%); }
       }
       @keyframes growBonsai {
-        0% { transform: translateY(10px) scale(0.33); filter: contrast(130%); }
-        50% { transform: translateY(5px) scale(0.37); filter: contrast(140%); }
-        100% { transform: translateY(10px) scale(0.35); filter: contrast(130%); }
+        0% { transform: translateY(5px) scale(${isMobile ? '0.23' : '0.33'}); filter: contrast(130%); }
+        50% { transform: translateY(2px) scale(${isMobile ? '0.27' : '0.37'}); filter: contrast(140%); }
+        100% { transform: translateY(5px) scale(${isMobile ? '0.25' : '0.35'}); filter: contrast(130%); }
       }
     `;
     document.head.appendChild(style);
     return () => { document.head.removeChild(style); };
-  }, []);
+  }, [isMobile]);
 
   // Get background style based on theme and user preference
   const getBackgroundStyle = () => {
     const config = treeBackgroundConfigs[treeBackground];
     
-    // Base style
+    // Base style with responsive sizing
     const baseStyle = {
       position: 'relative' as const,
       width: '100%',
-      aspectRatio: '16/9',
+      height: isMobile ? '200px' : '300px', // Fixed height instead of aspect ratio for better mobile control
       display: 'flex',
       justifyContent: 'center',
       alignItems: 'center',
       transition: 'all 0.5s ease-in-out',
-      borderRadius: '20px',
+      borderRadius: isMobile ? '12px' : '20px',
       overflow: 'hidden',
       backgroundColor: config.backgroundColor,
     };
@@ -368,8 +368,8 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({
             alt={`Bonsai tree showing ${correctAnswersCount} correct answers`}
             style={{
               ...imageProps,
-              maxWidth: isMobile ? '90%' : '70%',
-              maxHeight: '90%',
+              maxWidth: isMobile ? '80%' : '60%',
+              maxHeight: isMobile ? '80%' : '85%',
               width: 'auto',
               height: 'auto',
               objectFit: 'contain',

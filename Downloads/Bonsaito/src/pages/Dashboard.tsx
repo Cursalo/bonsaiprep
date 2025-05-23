@@ -422,6 +422,7 @@ const Dashboard: React.FC = () => {
             { path: '/dashboard', icon: <HomeIcon />, label: 'Dashboard' },
             { path: '/upload', icon: <UploadIcon />, label: 'Upload Score Report' },
             { path: '/lessons', icon: <PlayLessonIcon />, label: 'My Lessons' },
+            { path: '/profile', icon: <SchoolIcon />, label: 'My Profile' },
             { path: '/video-lessons', icon: <PlayLessonIcon />, label: 'Video Lessons' },
             { path: '/progress', icon: <InsightsIcon />, label: 'Progress' },
           ].map((item) => (

@@ -1167,14 +1167,14 @@ const UploadReport: React.FC = () => {
                                           alignItems: 'center',
                                           color: showExplanations[question.id] && 
                                                 question.answer === String.fromCharCode(65 + i) ? 
-                                                'rgba(129, 199, 132, 0.9)' : 'rgba(255, 255, 255, 0.87)'
+                                                getTextStyles(themeMode).accent.color : getTextStyles(themeMode).heading.color
                                         }}>
                                           <Typography variant="body1">
                                             {String.fromCharCode(65 + i)}. {opt}
                                           </Typography>
                                           {showExplanations[question.id] && 
                                             question.answer === String.fromCharCode(65 + i) && 
-                                            <CheckCircleIcon sx={{ ml:.5, color: 'rgba(129, 199, 132, 0.9)' }} />
+                                            <CheckCircleIcon sx={{ ml:.5, color: getTextStyles(themeMode).accent.color }} />
                                           }
                                         </Box>
                                       }
@@ -1183,16 +1183,17 @@ const UploadReport: React.FC = () => {
                                         mb: 1, 
                                         borderRadius: 1, 
                                         border: '1px solid',
-                                        borderColor: 'rgba(255, 255, 255, 0.1)',
+                                        borderColor: themeMode === 'light' ? 'rgba(0, 0, 0, 0.12)' : 'rgba(255, 255, 255, 0.1)',
                                         backgroundColor: showExplanations[question.id] && 
                                                   question.answer === String.fromCharCode(65 + i) ? 
-                                                  'rgba(76, 175, 80, 0.08)' : 'rgba(30, 30, 30, 0.3)',
+                                                  'rgba(76, 175, 80, 0.08)' : 
+                                                  (themeMode === 'light' ? 'rgba(248, 249, 250, 0.8)' : 'rgba(30, 30, 30, 0.3)'),
                                         transition: 'all 0.2s ease',
                                         '&:hover': {
                                           backgroundColor: !showExplanations[question.id] ? 
-                                            'rgba(30, 30, 30, 0.6)' : 
+                                            (themeMode === 'light' ? 'rgba(248, 249, 250, 1)' : 'rgba(30, 30, 30, 0.6)') : 
                                             (question.answer === String.fromCharCode(65 + i) ? 
-                                              'rgba(76, 175, 80, 0.08)' : 'rgba(30, 30, 30, 0.3)')
+                                              'rgba(76, 175, 80, 0.08)' : (themeMode === 'light' ? 'rgba(248, 249, 250, 0.8)' : 'rgba(30, 30, 30, 0.3)'))
                                         }
                                       }}
                                       disabled={showExplanations[question.id]}
@@ -1234,10 +1235,10 @@ const UploadReport: React.FC = () => {
                                         icon={<CheckCircleIcon fontSize="inherit" />}
                                         sx={{ 
                                           width: '100%',
-                                          backgroundColor: 'rgba(46, 125, 50, 0.15)',
-                                          color: 'rgba(255, 255, 255, 0.87)',
+                                          backgroundColor: themeMode === 'light' ? 'rgba(46, 125, 50, 0.08)' : 'rgba(46, 125, 50, 0.15)',
+                                          color: getTextStyles(themeMode).heading.color,
                                           '& .MuiAlert-icon': {
-                                            color: 'rgba(129, 199, 132, 0.9)'
+                                            color: getTextStyles(themeMode).accent.color
                                           }
                                         }}
                                       >
@@ -1251,10 +1252,10 @@ const UploadReport: React.FC = () => {
                                         icon={<CancelIcon fontSize="inherit" />}
                                         sx={{ 
                                           width: '100%',
-                                          backgroundColor: 'rgba(211, 47, 47, 0.15)',
-                                          color: 'rgba(255, 255, 255, 0.87)',
+                                          backgroundColor: themeMode === 'light' ? 'rgba(211, 47, 47, 0.08)' : 'rgba(211, 47, 47, 0.15)',
+                                          color: getTextStyles(themeMode).heading.color,
                                           '& .MuiAlert-icon': {
-                                            color: 'rgba(244, 67, 54, 0.9)'
+                                            color: themeMode === 'light' ? 'rgba(211, 47, 47, 0.9)' : 'rgba(244, 67, 54, 0.9)'
                                           }
                                         }}
                                       >
@@ -1268,9 +1269,9 @@ const UploadReport: React.FC = () => {
                                   <Box sx={{ 
                                     mt: 2, 
                                     p: 2, 
-                                    bgcolor: 'rgba(18, 18, 18, 0.8)', 
+                                    bgcolor: themeMode === 'light' ? 'rgba(248, 249, 250, 0.8)' : 'rgba(18, 18, 18, 0.8)', 
                                     borderRadius: 1.5,
-                                    border: '1px solid rgba(136, 212, 152, 0.2)',
+                                    border: `1px solid ${getTextStyles(themeMode).accent.color}`,
                                     position: 'relative',
                                     '&::before': {
                                       content: '""',
@@ -1279,7 +1280,7 @@ const UploadReport: React.FC = () => {
                                       left: 0,
                                       width: '4px',
                                       height: '100%',
-                                      backgroundColor: 'rgba(136, 212, 152, 0.9)',
+                                      backgroundColor: getTextStyles(themeMode).accent.color,
                                       borderTopLeftRadius: 4,
                                       borderBottomLeftRadius: 4
                                     }
@@ -1363,29 +1364,35 @@ const UploadReport: React.FC = () => {
                   // Use styling similar to Dashboard for the Bonsai Tree container
                   position: 'relative', 
                   width: '100%',
-                  height: { xs: '250px', sm: '300px', md: '400px' }, // Responsive height instead of aspect ratio
+                  height: { xs: '200px', sm: '250px', md: '300px' }, // Responsive height
                   backgroundColor: 'transparent', 
-                  backgroundImage: `url('/altar4.png')`, // Use the same altar image
+                  backgroundImage: `url('/altar4.png')`,
                   backgroundSize: 'cover',
                   backgroundPosition: '60% bottom',
                   backgroundRepeat: 'no-repeat',
                   display: 'flex',
                   justifyContent: 'center',
                   alignItems: 'center',
-                  borderRadius: '12px', // Keep existing card's border radius for the container
-                  overflow: 'hidden', // Ensure content respects border radius
-                  margin: '20px auto' // Add some margin for spacing within the card
+                  borderRadius: { xs: '8px', sm: '12px' }, // Responsive border radius
+                  overflow: 'hidden',
+                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                    zIndex: 1,
+                  }
                 }}>
-                  <Box style={{ 
-                    transform: 'translateY(1px)',
-                    maxWidth: '100%',
-                    maxHeight: '100%'
-                  }}> {/* Wrapper Box for styling */}
+                  <Box sx={{ position: 'relative', zIndex: 2, width: '100%', height: '100%' }}>
                     <BonsaiTree 
                       skills={skills} 
                       totalSkills={totalSkills} 
                       correctAnswersCount={correctAnswers.length} 
-                      maxCorrectAnswers={10} 
+                      showProgressText={false}
                     />
                   </Box>
                 </Box>
