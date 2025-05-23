@@ -279,7 +279,7 @@ interface ThemeContextProviderProps {
 
 export const ThemeContextProvider: React.FC<ThemeContextProviderProps> = ({ children }) => {
   const [themeMode, setThemeMode] = useState<ThemeMode>('dark');
-  const [treeBackground, setTreeBackground] = useState<TreeBackgroundOption>('altar');
+  const [treeBackground, setTreeBackground] = useState<TreeBackgroundOption>('plain');
 
   // Load preferences from localStorage
   useEffect(() => {

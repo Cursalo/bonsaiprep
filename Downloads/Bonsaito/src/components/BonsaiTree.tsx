@@ -281,8 +281,11 @@ const BonsaiTree: React.FC<BonsaiTreeProps> = ({
     if (treeBackground === 'plain') {
       return {
         ...baseStyle,
-        backgroundColor: themeMode === 'light' ? '#ffffff' : '#f8f9fa',
-        border: `1px solid ${theme.palette.divider}`,
+        backgroundColor: themeMode === 'light' ? '#ffffff' : 'rgba(30, 30, 30, 0.8)',
+        border: `1px solid ${themeMode === 'light' ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.08)'}`,
+        boxShadow: themeMode === 'light' 
+          ? '0 4px 20px rgba(0, 0, 0, 0.08)' 
+          : '0 4px 20px rgba(0, 0, 0, 0.4)',
       };
     }
 

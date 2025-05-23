@@ -488,7 +488,7 @@ const Dashboard: React.FC = () => {
       <Container 
         maxWidth="xl" 
         sx={{ 
-          pt: isMobile ? 10 : 12, 
+          pt: isMobile ? 12 : 16, 
           pb: 4,
           px: isMobile ? 2 : 3,
           ml: !isMobile && drawerOpen ? '300px' : 0,
@@ -496,11 +496,11 @@ const Dashboard: React.FC = () => {
         }}
       >
         {/* Welcome Header */}
-        <Box sx={{ mb: 4 }}>
+        <Box sx={{ mb: 6 }}>
           <Typography variant={isMobile ? 'h4' : 'h3'} sx={{ 
             fontWeight: 'bold',
             color: getTextColor('primary'),
-            mb: 1
+            mb: 2
           }}>
             {getGreeting()}, {userData?.firstName || 'Student'}! 👋
           </Typography>
