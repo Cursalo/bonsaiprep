@@ -86,33 +86,33 @@ interface QuestionSkillMapping {
 // Function to simulate processing delay
 const addProcessingDelay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Text styles for better readability based on dark theme best practices
-const textStyles = {
+// Text styles for better readability based on theme
+const getTextStyles = (themeMode: 'light' | 'dark') => ({
   heading: {
-    color: 'rgba(255, 255, 255, 0.87)', // High-emphasis text at 87% opacity
-    textShadow: '0 1px 2px rgba(0,0,0,0.2)'
+    color: themeMode === 'light' ? 'rgba(0, 0, 0, 0.87)' : 'rgba(255, 255, 255, 0.87)',
+    textShadow: themeMode === 'dark' ? '0 1px 2px rgba(0,0,0,0.2)' : 'none'
   },
   subheading: {
-    color: 'rgba(255, 255, 255, 0.87)', // High-emphasis text at 87% opacity
+    color: themeMode === 'light' ? 'rgba(0, 0, 0, 0.87)' : 'rgba(255, 255, 255, 0.87)',
     opacity: 0.9
   },
   body: {
-    color: 'rgba(255, 255, 255, 0.7)' // Medium-emphasis text at 70% opacity
+    color: themeMode === 'light' ? 'rgba(0, 0, 0, 0.7)' : 'rgba(255, 255, 255, 0.7)'
   },
   label: {
-    color: 'rgba(255, 255, 255, 0.87)',  // High-emphasis text at 87% opacity
+    color: themeMode === 'light' ? 'rgba(0, 0, 0, 0.87)' : 'rgba(255, 255, 255, 0.87)',
     fontWeight: 500
   },
   secondary: {
-    color: 'rgba(255, 255, 255, 0.6)' // Secondary text at 60% opacity
+    color: themeMode === 'light' ? 'rgba(0, 0, 0, 0.6)' : 'rgba(255, 255, 255, 0.6)'
   },
   disabled: {
-    color: 'rgba(255, 255, 255, 0.38)' // Disabled text at 38% opacity
+    color: themeMode === 'light' ? 'rgba(0, 0, 0, 0.38)' : 'rgba(255, 255, 255, 0.38)'
   },
   accent: {
-    color: 'rgba(136, 212, 152, 0.9)' // Desaturated accent color
+    color: themeMode === 'light' ? 'rgba(26, 147, 111, 0.9)' : 'rgba(136, 212, 152, 0.9)'
   }
-};
+});
 
 const UploadReport: React.FC = () => {
   const theme = useTheme();
@@ -1021,7 +1021,7 @@ const UploadReport: React.FC = () => {
                       }}
                     >
                       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                        <Typography sx={textStyles.body}>
+                        <Typography sx={getTextStyles(themeMode).body}>
                           You've correctly answered {correctAnswers.length} question{correctAnswers.length !== 1 ? 's' : ''}! 
                           Your Bonsai Tree is growing with each correct answer.
                         </Typography>
@@ -1072,14 +1072,14 @@ const UploadReport: React.FC = () => {
                         }}
                       >
                         <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', justifyContent: 'space-between' }}>
-                          <Typography variant="h6" sx={{ ...textStyles.heading, fontWeight: 'bold' }}>
+                          <Typography variant="h6" sx={{ ...getTextStyles(themeMode).heading, fontWeight: 'bold' }}>
                             {topic} ({questions.length})
                           </Typography>
                           
                           {/* Show mini progress for this topic */}
                           {questions.length > 0 && (
                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                              <Typography variant="body2" sx={{ ...textStyles.secondary, mr: 1 }}>
+                              <Typography variant="body2" sx={{ ...getTextStyles(themeMode).secondary, mr: 1 }}>
                                 {questions.filter(q => correctAnswers.includes(q.id)).length}/{questions.length} Correct
                               </Typography>
                               {questions.some(q => correctAnswers.includes(q.id)) && (
@@ -1115,7 +1115,7 @@ const UploadReport: React.FC = () => {
                             }}
                           >
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                              <Typography variant="subtitle1" sx={{ ...textStyles.heading, fontWeight: 'bold' }}>
+                              <Typography variant="subtitle1" sx={{ ...getTextStyles(themeMode).heading, fontWeight: 'bold' }}>
                                 Question {topicIndex + 1}.{qIndex + 1}
                                 
                                 {/* Show which skill this question helps */}
@@ -1128,8 +1128,8 @@ const UploadReport: React.FC = () => {
                                       component="span"
                                       variant="body2"
                                       sx={{ 
-                                        ml: 1, 
-                                        color: 'rgba(255, 255, 255, 0.6)',
+                                        ml: 1,
+                                        color: getTextStyles(themeMode).secondary.color,
                                         cursor: 'help',
                                         textDecoration: 'underline',
                                         textDecorationStyle: 'dotted'
@@ -1153,7 +1153,7 @@ const UploadReport: React.FC = () => {
                               )}
                             </Box>
                             
-                            <Typography variant="body1" paragraph sx={{ ...textStyles.body, whiteSpace: 'pre-wrap' }}>
+                            <Typography variant="body1" paragraph sx={{ ...getTextStyles(themeMode).body, whiteSpace: 'pre-wrap' }}>
                               {question.text}
                             </Typography>
                             
@@ -1170,9 +1170,9 @@ const UploadReport: React.FC = () => {
                                       control={
                                         <Radio 
                                           sx={{
-                                            color: 'rgba(255, 255, 255, 0.6)',
+                                            color: getTextStyles(themeMode).secondary.color,
                                             '&.Mui-checked': {
-                                              color: 'rgba(136, 212, 152, 0.9)',
+                                              color: getTextStyles(themeMode).accent.color,
                                             }
                                           }}
                                         />
@@ -1300,10 +1300,10 @@ const UploadReport: React.FC = () => {
                                       borderBottomLeftRadius: 4
                                     }
                                   }}>
-                                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold', ...textStyles.heading, mb: 0.5, pl: 1 }}>
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold', ...getTextStyles(themeMode).heading, mb: 0.5, pl: 1 }}>
                                       Explanation:
                                     </Typography>
-                                    <Typography variant="body2" sx={{ ...textStyles.body, whiteSpace: 'pre-wrap', pl: 1 }}>
+                                    <Typography variant="body2" sx={{ ...getTextStyles(themeMode).body, whiteSpace: 'pre-wrap', pl: 1 }}>
                                       {question.explanation}
                                     </Typography>
                                   </Box>
