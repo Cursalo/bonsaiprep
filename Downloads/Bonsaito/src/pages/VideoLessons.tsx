@@ -33,42 +33,7 @@ const VideoLessons: React.FC = () => {
     py: 2,
   });
 
-  return (
-    <Box sx={getBackgroundStyle()}>
-      <Container maxWidth="xl">
-        {/* Video Lessons Header */}
-        <Box sx={{ mb: 3, textAlign: 'center' }}>
-          <Typography 
-            variant={isMobile ? 'h4' : 'h3'} 
-            sx={{ 
-              ...getTextStyles(themeMode).heading,
-              fontWeight: 'bold',
-              mb: 1,
-              background: `linear-gradient(135deg, ${getTextStyles(themeMode).accent.color}, #4caf50)`,
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text'
-            }}
-          >
-            🎬 Video Lessons
-          </Typography>
-          <Typography 
-            variant="h6" 
-            sx={{ 
-              ...getTextStyles(themeMode).body,
-              maxWidth: '600px',
-              mx: 'auto'
-            }}
-          >
-            Master SAT concepts with expert-led video tutorials designed to accelerate your learning
-          </Typography>
-        </Box>
-        
-        {/* Use the existing Lessons component */}
-        <Lessons />
-      </Container>
-    </Box>
-  );
+  return <Lessons />;
 };
 
 export default VideoLessons; 

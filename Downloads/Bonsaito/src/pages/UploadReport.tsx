@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -60,6 +60,11 @@ import LocalFloristIcon from '@mui/icons-material/LocalFlorist';
 import EmojiNatureIcon from '@mui/icons-material/EmojiNature';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import HomeIcon from '@mui/icons-material/Home';
+import UploadIcon from '@mui/icons-material/Upload';
+import PlayLessonIcon from '@mui/icons-material/PlayLesson';
+import InsightsIcon from '@mui/icons-material/Insights';
+import QuizIcon from '@mui/icons-material/Quiz';
 import { useDropzone } from 'react-dropzone';
 import { uploadFileToSupabase } from '../services/ocrService'; 
 import { generateQuestionsFromMistakes, GeneratedQuestion } from '../services/geminiPdfService';
@@ -72,6 +77,7 @@ import { FadeIn, ScaleIn, FloatAnimation, SlideIn } from '../components/Animatio
 import BonsaiTree from '../components/BonsaiTree';
 import { updateCorrectAnswersCount, getUserProgress } from '../services/userProgressService';
 import TestHistoryList from '../components/TestHistoryList';
+import ThemeToggle from '../components/ThemeToggle';
 
 // Define an interface for user answers
 interface StudentAnswers {
@@ -118,6 +124,7 @@ const UploadReport: React.FC = () => {
   const { themeMode } = useThemeContext();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const navigate = useNavigate();
+  const location = useLocation();
   const { skills, updateSkillProgress, totalSkills } = useSkills();
   
   const [drawerOpen, setDrawerOpen] = useState<boolean>(false); 
@@ -456,17 +463,166 @@ const UploadReport: React.FC = () => {
     py: 4,
   });
 
+  const getTextColor = (variant: 'primary' | 'secondary') => {
+    return variant === 'primary'
+      ? (themeMode === 'light' ? 'rgba(0, 0, 0, 0.87)' : 'rgba(255, 255, 255, 0.87)')
+      : (themeMode === 'light' ? 'rgba(0, 0, 0, 0.6)' : 'rgba(255, 255, 255, 0.6)');
+  };
+
   return (
     <Box sx={getBackgroundStyle()}>
-      <Container maxWidth="md">
+      {/* Navigation */}
+      <AppBar 
+        position="fixed" 
+        elevation={0}
+        sx={{
+          backgroundColor: themeMode === 'light' 
+            ? 'rgba(255, 255, 255, 0.98)' 
+            : 'rgba(18, 18, 18, 0.98)',
+          backdropFilter: 'blur(20px)',
+          borderBottom: `1px solid ${themeMode === 'light' ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.08)'}`,
+        }}
+      >
+        <Toolbar>
+          <IconButton
+            color="inherit"
+            aria-label="open drawer"
+            edge="start"
+            onClick={handleDrawerToggle}
+            sx={{ 
+              mr: 2,
+              color: getTextColor('primary')
+            }}
+          >
+            <MenuIcon />
+          </IconButton>
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            flexGrow: 1,
+            justifyContent: 'center'
+          }}>
+            <img 
+              src={themeMode === 'light' ? '/bonsaiblack.png' : '/bonsaiwhitenobg.png'}
+              alt="Bonsai Prep Logo" 
+              style={{ 
+                height: '40px',
+                width: 'auto',
+                objectFit: 'contain',
+                maxWidth: '200px'
+              }} 
+            />
+          </Box>
+          
+          <ThemeToggle showBackgroundSelector={true} />
+          
+          <Avatar sx={{ 
+            bgcolor: theme.palette.primary.main,
+            ml: 1,
+            fontWeight: 'bold'
+          }}>
+            {loadingUserData ? '' : userData?.firstName?.charAt(0) || 'U'}
+          </Avatar>
+        </Toolbar>
+      </AppBar>
+
+      {/* Drawer */}
+      <Drawer
+        variant={isMobile ? 'temporary' : 'persistent'}
+        anchor="left"
+        open={drawerOpen}
+        onClose={handleDrawerToggle}
+        sx={{
+          '& .MuiDrawer-paper': {
+            width: isMobile ? 280 : 300,
+            backgroundColor: themeMode === 'light' 
+              ? 'rgba(255, 255, 255, 0.98)' 
+              : 'rgba(18, 18, 18, 0.98)',
+            backdropFilter: 'blur(20px)',
+            borderRight: `1px solid ${themeMode === 'light' ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.08)'}`,
+          },
+        }}
+      >
+        <Box sx={{ 
+          pt: 10, 
+          pb: 2,
+          px: 2
+        }}>
+          <Typography variant="h6" sx={{ 
+            textAlign: 'center', 
+            fontWeight: 'bold',
+            color: getTextColor('primary'),
+            mb: 2
+          }}>
+            Navigation
+          </Typography>
+        </Box>
+        
+        <List>
+          {[
+            { path: '/dashboard', icon: <HomeIcon />, label: 'Dashboard' },
+            { path: '/upload', icon: <UploadIcon />, label: 'Upload Score Report' },
+            { path: '/lessons', icon: <PlayLessonIcon />, label: 'My Lessons' },
+            { path: '/profile', icon: <SchoolIcon />, label: 'My Profile' },
+            { path: '/video-lessons', icon: <PlayLessonIcon />, label: 'Video Lessons' },
+            { path: '/progress', icon: <InsightsIcon />, label: 'Progress' },
+          ].map((item) => (
+            <ListItem
+              key={item.path}
+              button
+              component={Link}
+              to={item.path}
+              sx={{
+                mx: 1,
+                borderRadius: 2,
+                mb: 0.5,
+                backgroundColor: location.pathname === item.path 
+                  ? `${theme.palette.primary.main}20` 
+                  : 'transparent',
+                '&:hover': {
+                  backgroundColor: `${theme.palette.primary.main}10`,
+                },
+              }}
+            >
+              <ListItemIcon sx={{ color: theme.palette.primary.main }}>
+                {item.icon}
+              </ListItemIcon>
+              <ListItemText 
+                primary={item.label}
+                sx={{ 
+                  '& .MuiListItemText-primary': {
+                    fontWeight: location.pathname === item.path ? 600 : 400,
+                    color: getTextColor('primary')
+                  }
+                }}
+              />
+            </ListItem>
+          ))}
+        </List>
+      </Drawer>
+
+      {/* Main Content */}
+      <Container 
+        maxWidth="md" 
+        sx={{ 
+          pt: isMobile ? 12 : 16, 
+          pb: 4,
+          px: isMobile ? 1 : 3,
+          ml: !isMobile && drawerOpen ? '300px' : 0,
+          transition: 'margin 0.3s ease',
+          width: '100%',
+          maxWidth: isMobile ? '100vw' : 'md',
+        }}
+      >
         <GlassCard sx={{ 
-          p: 4, 
+          p: isMobile ? 1.5 : 4, 
+          mx: isMobile ? 0.5 : 0,
           ...getCardStyle()
         }}>
           {/* Header */}
           <Box sx={{ textAlign: 'center', mb: 4 }}>
             <Typography variant="h4" sx={{ ...getTextStyles(themeMode).heading, fontWeight: 'bold', mb: 2 }}>
-              📊 Upload SAT Report
+              Upload SAT Report
             </Typography>
             <Typography variant="body1" sx={getTextStyles(themeMode).secondary}>
               Upload your SAT practice test report or paste the text to get personalized practice questions
@@ -533,7 +689,7 @@ const UploadReport: React.FC = () => {
                 <Box
                   {...getRootProps()}
                   sx={{
-                    p: 4,
+                    p: isMobile ? 2 : 4,
                     textAlign: 'center',
                     border: '2px dashed',
                     borderColor: isDragActive ? getTextStyles(themeMode).accent.color : (themeMode === 'light' ? 'rgba(0, 0, 0, 0.23)' : 'rgba(255, 255, 255, 0.23)'),
@@ -542,7 +698,7 @@ const UploadReport: React.FC = () => {
                       ? (themeMode === 'light' ? 'rgba(26, 147, 111, 0.08)' : 'rgba(26, 147, 111, 0.08)')
                       : (themeMode === 'light' ? 'rgba(248, 249, 250, 0.8)' : 'rgba(18, 18, 18, 0.5)'),
                     cursor: 'pointer',
-                    minHeight: 200,
+                    minHeight: isMobile ? 150 : 200,
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
@@ -557,12 +713,12 @@ const UploadReport: React.FC = () => {
                     alignItems: 'center',
                   }}>
                     <CloudUploadIcon sx={{ 
-                      fontSize: 60, 
+                      fontSize: isMobile ? 40 : 60, 
                       color: getTextStyles(themeMode).accent.color, 
                       mb: 1,
                     }} />
                     <PictureAsPdfIcon sx={{ 
-                      fontSize: 40, 
+                      fontSize: isMobile ? 30 : 40, 
                       color: getTextStyles(themeMode).secondary.color, 
                       mb: 2,
                     }} />
@@ -575,7 +731,7 @@ const UploadReport: React.FC = () => {
                       Drop the file here ...
                     </Typography>
                   ) : (
-                    <Typography variant="h6" sx={{ 
+                    <Typography variant={isMobile ? "body1" : "h6"} sx={{ 
                       ...getTextStyles(themeMode).secondary, 
                       fontWeight: 'medium',
                     }}>

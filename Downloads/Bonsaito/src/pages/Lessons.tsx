@@ -37,7 +37,7 @@ import {
   Bookmark as BookmarkIcon,
   BookmarkBorder as BookmarkBorderIcon
 } from '@mui/icons-material';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import VideoLesson from '../components/VideoLesson';
 import { useSkills } from '../components/SkillsProvider';
 import { useThemeContext } from '../contexts/ThemeContext';
@@ -72,6 +72,7 @@ const Lessons: React.FC = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { themeMode } = useThemeContext();
   const { skills } = useSkills();
+  const location = useLocation();
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<string>('recommended');
@@ -404,7 +405,7 @@ const Lessons: React.FC = () => {
         {/* Header */}
         <Box sx={{ mb: 4, textAlign: 'center' }}>
           <Typography variant="h4" sx={{ ...getTextStyles(themeMode).heading, fontWeight: 'bold', mb: 2 }}>
-            📚 Video Lessons
+            {location.pathname === '/video-lessons' ? '🎬' : '📚'} Video Lessons
           </Typography>
           <Typography variant="subtitle1" sx={{ ...getTextStyles(themeMode).secondary, mb: 4 }}>
             Expert-led lessons tailored to your skill gaps. Master specific SAT concepts with top tutors.
