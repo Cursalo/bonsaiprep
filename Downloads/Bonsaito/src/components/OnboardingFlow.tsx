@@ -19,7 +19,8 @@ import {
   Slider, 
   CircularProgress,
   TextareaAutosize,
-  Checkbox
+  Checkbox,
+  useTheme
 } from '@mui/material';
 import { useDropzone } from 'react-dropzone';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
@@ -32,7 +33,7 @@ import PdfUploader from './PdfUploader';
 import SubscriptionPlans from './SubscriptionPlans';
 import { generateQuestionsFromMistakes } from '../services/geminiPdfService';
 import { toast } from 'react-toastify';
-import { createTheme, ThemeProvider } from '@mui/material/styles';
+import { useThemeContext } from '../contexts/ThemeContext';
 
 // Country data with flags (simplified version for this example)
 const countries = [
@@ -110,36 +111,38 @@ const gradients = [
   'linear-gradient(135deg, #0c3b2e 0%, #18514a 100%)', // Step 9 (Subscription)
 ];
 
-// Custom styles for better text readability based on dark theme best practices
-const textStyles = {
+// Custom styles for better text readability based on theme mode
+const getTextStyles = (themeMode: 'light' | 'dark') => ({
   heading: {
-    color: 'rgba(255, 255, 255, 0.87)', // High-emphasis text at 87% opacity
-    textShadow: '0 1px 2px rgba(0,0,0,0.2)'
+    color: themeMode === 'light' ? 'rgba(0, 0, 0, 0.87)' : 'rgba(255, 255, 255, 0.87)',
+    textShadow: themeMode === 'dark' ? '0 1px 2px rgba(0,0,0,0.2)' : 'none'
   },
   subheading: {
-    color: 'rgba(255, 255, 255, 0.87)', // High-emphasis text at 87% opacity
+    color: themeMode === 'light' ? 'rgba(0, 0, 0, 0.87)' : 'rgba(255, 255, 255, 0.87)',
     opacity: 0.9
   },
   body: {
-    color: 'rgba(255, 255, 255, 0.7)' // Medium-emphasis text at 70% opacity
+    color: themeMode === 'light' ? 'rgba(0, 0, 0, 0.7)' : 'rgba(255, 255, 255, 0.7)'
   },
   label: {
-    color: 'rgba(255, 255, 255, 0.87)',  // High-emphasis text at 87% opacity
+    color: themeMode === 'light' ? 'rgba(0, 0, 0, 0.87)' : 'rgba(255, 255, 255, 0.87)',
     fontWeight: 500
   },
   secondary: {
-    color: 'rgba(255, 255, 255, 0.6)' // Secondary text at 60% opacity
+    color: themeMode === 'light' ? 'rgba(0, 0, 0, 0.6)' : 'rgba(255, 255, 255, 0.6)'
   },
   disabled: {
-    color: 'rgba(255, 255, 255, 0.38)' // Disabled text at 38% opacity
+    color: themeMode === 'light' ? 'rgba(0, 0, 0, 0.38)' : 'rgba(255, 255, 255, 0.38)'
   },
   accent: {
-    color: 'rgba(136, 212, 152, 0.9)' // Desaturated accent color
+    color: themeMode === 'light' ? 'rgba(26, 147, 111, 0.9)' : 'rgba(136, 212, 152, 0.9)'
   }
-};
+});
 
 const OnboardingFlow: React.FC = () => {
   const navigate = useNavigate();
+  const theme = useTheme();
+  const { themeMode } = useThemeContext();
   const [activeStep, setActiveStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [cities, setCities] = useState<string[]>([]);
@@ -184,61 +187,6 @@ const OnboardingFlow: React.FC = () => {
       transform: 'translateX(0px)' 
     },
     config: { tension: 280, friction: 60 }
-  });
-
-  // Create a theme override for form inputs to ensure proper contrast
-  const darkTheme = createTheme({
-    palette: {
-      mode: 'dark',
-      primary: {
-        main: 'rgba(136, 212, 152, 0.9)',
-      },
-      text: {
-        primary: 'rgba(255, 255, 255, 0.87)',
-        secondary: 'rgba(255, 255, 255, 0.6)',
-      },
-      background: {
-        paper: 'rgba(30, 30, 30, 0.8)',
-        default: 'rgba(18, 18, 18, 0.95)',
-      },
-    },
-    components: {
-      MuiInputBase: {
-        styleOverrides: {
-          input: {
-            color: 'rgba(255, 255, 255, 0.87)',
-          },
-          root: {
-            backgroundColor: 'rgba(30, 30, 30, 0.4)',
-          }
-        },
-      },
-      MuiOutlinedInput: {
-        styleOverrides: {
-          root: {
-            '&:hover .MuiOutlinedInput-notchedOutline': {
-              borderColor: 'rgba(136, 212, 152, 0.5)',
-            },
-            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-              borderColor: 'rgba(136, 212, 152, 0.8)',
-            },
-          },
-          notchedOutline: {
-            borderColor: 'rgba(255, 255, 255, 0.23)',
-          },
-        },
-      },
-      MuiFormLabel: {
-        styleOverrides: {
-          root: {
-            color: 'rgba(255, 255, 255, 0.6)',
-            '&.Mui-focused': {
-              color: 'rgba(136, 212, 152, 0.8)',
-            },
-          },
-        },
-      },
-    },
   });
 
   // Load saved progress from localStorage
@@ -530,10 +478,10 @@ const OnboardingFlow: React.FC = () => {
         return (
           <Grid container spacing={3}>
             <Grid item xs={12}>
-              <Typography variant="h4" align="center" gutterBottom sx={textStyles.heading}>
+              <Typography variant="h4" align="center" gutterBottom sx={getTextStyles(themeMode).heading}>
                 Let's get to know you better
               </Typography>
-              <Typography variant="body1" align="center" paragraph sx={textStyles.body}>
+              <Typography variant="body1" align="center" paragraph sx={getTextStyles(themeMode).body}>
                 We'll personalize your learning experience based on your information.
               </Typography>
             </Grid>
@@ -569,10 +517,10 @@ const OnboardingFlow: React.FC = () => {
         return (
           <Grid container spacing={3}>
             <Grid item xs={12}>
-              <Typography variant="h4" align="center" gutterBottom sx={textStyles.heading}>
+              <Typography variant="h4" align="center" gutterBottom sx={getTextStyles(themeMode).heading}>
                 How old are you?
               </Typography>
-              <Typography variant="body1" align="center" paragraph sx={textStyles.body}>
+              <Typography variant="body1" align="center" paragraph sx={getTextStyles(themeMode).body}>
                 We use this to customize content appropriate for your age group.
               </Typography>
             </Grid>
@@ -597,10 +545,10 @@ const OnboardingFlow: React.FC = () => {
         return (
           <Grid container spacing={3}>
             <Grid item xs={12}>
-              <Typography variant="h4" align="center" gutterBottom sx={textStyles.heading}>
+              <Typography variant="h4" align="center" gutterBottom sx={getTextStyles(themeMode).heading}>
                 Where are you located?
               </Typography>
-              <Typography variant="body1" align="center" paragraph sx={textStyles.body}>
+              <Typography variant="body1" align="center" paragraph sx={getTextStyles(themeMode).body}>
                 We'll use this to provide region-specific resources and recommendations.
               </Typography>
             </Grid>
@@ -654,10 +602,10 @@ const OnboardingFlow: React.FC = () => {
         return (
           <Grid container spacing={3}>
             <Grid item xs={12}>
-              <Typography variant="h4" align="center" gutterBottom sx={textStyles.heading}>
+              <Typography variant="h4" align="center" gutterBottom sx={getTextStyles(themeMode).heading}>
                 What's your current SAT score?
               </Typography>
-              <Typography variant="body1" align="center" paragraph sx={textStyles.body}>
+              <Typography variant="body1" align="center" paragraph sx={getTextStyles(themeMode).body}>
                 If you haven't taken the SAT yet or don't know your score, we'll help you upload or enter it later.
               </Typography>
             </Grid>
@@ -694,10 +642,10 @@ const OnboardingFlow: React.FC = () => {
         return (
           <Grid container spacing={3}>
             <Grid item xs={12}>
-              <Typography variant="h4" align="center" gutterBottom sx={textStyles.heading}>
+              <Typography variant="h4" align="center" gutterBottom sx={getTextStyles(themeMode).heading}>
                 What's your target SAT score?
               </Typography>
-              <Typography variant="body1" align="center" paragraph sx={textStyles.body}>
+              <Typography variant="body1" align="center" paragraph sx={getTextStyles(themeMode).body}>
                 Setting a goal helps us customize your learning path.
               </Typography>
             </Grid>
@@ -722,12 +670,12 @@ const OnboardingFlow: React.FC = () => {
               </Box>
             </Grid>
             <Grid item xs={12} sx={{ textAlign: 'center' }}>
-              <Typography variant="h6" sx={{ ...textStyles.subheading, color: '#88d498' }}>
+              <Typography variant="h6" sx={{ ...getTextStyles(themeMode).subheading, color: '#88d498' }}>
                 Target Score: {data.targetSatScore}
               </Typography>
             </Grid>
             <Grid item xs={12} sx={{ textAlign: 'center' }}>
-              <Typography variant="subtitle2" sx={textStyles.body}>
+              <Typography variant="subtitle2" sx={getTextStyles(themeMode).body}>
                 Or choose a preset target:
               </Typography>
               <Box sx={{ mt: 2 }}>
@@ -768,10 +716,10 @@ const OnboardingFlow: React.FC = () => {
         return (
           <Grid container spacing={3}>
             <Grid item xs={12}>
-              <Typography variant="h4" align="center" gutterBottom sx={textStyles.heading}>
+              <Typography variant="h4" align="center" gutterBottom sx={getTextStyles(themeMode).heading}>
                 What's your primary motivation for improving your SAT score?
               </Typography>
-              <Typography variant="body1" align="center" paragraph sx={textStyles.body}>
+              <Typography variant="body1" align="center" paragraph sx={getTextStyles(themeMode).body}>
                 This helps us understand your goals and tailor our guidance.
               </Typography>
             </Grid>
@@ -805,10 +753,10 @@ const OnboardingFlow: React.FC = () => {
         return (
           <Grid container spacing={3}>
             <Grid item xs={12}>
-              <Typography variant="h4" align="center" gutterBottom sx={textStyles.heading}>
+              <Typography variant="h4" align="center" gutterBottom sx={getTextStyles(themeMode).heading}>
                 Copy & Paste your SAT Score Report
               </Typography>
-              <Typography variant="body1" align="center" paragraph sx={textStyles.body}>
+              <Typography variant="body1" align="center" paragraph sx={getTextStyles(themeMode).body}>
                 This will help us analyze your strengths and weaknesses in detail.
               </Typography>
             </Grid>
@@ -825,12 +773,12 @@ const OnboardingFlow: React.FC = () => {
               />
             </Grid>
             <Grid item xs={12}>
-              <Typography variant="h6" align="center" sx={{ ...textStyles.subheading, mt: 3, mb: 2 }}>
+              <Typography variant="h6" align="center" sx={{ ...getTextStyles(themeMode).subheading, mt: 3, mb: 2 }}>
                 OR
               </Typography>
             </Grid>
             <Grid item xs={12}>
-              <Typography variant="body1" align="center" sx={{ ...textStyles.body, mb: 2 }}>
+              <Typography variant="body1" align="center" sx={{ ...getTextStyles(themeMode).body, mb: 2 }}>
                 Upload your SAT score report PDF
               </Typography>
               <Box
@@ -850,10 +798,10 @@ const OnboardingFlow: React.FC = () => {
               >
                 <input {...getInputProps()} />
                 <CloudUploadIcon fontSize="large" sx={{ color: 'rgba(136, 212, 152, 0.8)', mb: 2 }} />
-                <Typography variant="body1" gutterBottom sx={textStyles.body}>
+                <Typography variant="body1" gutterBottom sx={getTextStyles(themeMode).body}>
                   Drag & drop a PDF file here, or click to select a file
                 </Typography>
-                <Typography variant="body2" sx={textStyles.secondary}>
+                <Typography variant="body2" sx={getTextStyles(themeMode).secondary}>
                   Supports PDF files only
                 </Typography>
                 {data.scoreReportFile && (
@@ -864,7 +812,7 @@ const OnboardingFlow: React.FC = () => {
                     borderRadius: 1,
                     border: '1px solid rgba(136, 212, 152, 0.3)'
                   }}>
-                    <Typography variant="body2" sx={textStyles.body}>
+                    <Typography variant="body2" sx={getTextStyles(themeMode).body}>
                       Selected: {data.scoreReportFile.name}
                     </Typography>
                   </Box>
@@ -874,7 +822,7 @@ const OnboardingFlow: React.FC = () => {
             {processingReport && (
               <Grid item xs={12} sx={{ textAlign: 'center', mt: 2 }}>
                 <CircularProgress size={30} sx={{ color: 'rgba(136, 212, 152, 0.8)' }} />
-                <Typography variant="body2" sx={textStyles.secondary}>
+                <Typography variant="body2" sx={getTextStyles(themeMode).secondary}>
                   Processing your report to generate personalized practice questions...
                 </Typography>
               </Grid>
@@ -886,10 +834,10 @@ const OnboardingFlow: React.FC = () => {
         return (
           <Grid container spacing={3}>
             <Grid item xs={12}>
-              <Typography variant="h4" align="center" gutterBottom sx={textStyles.heading}>
+              <Typography variant="h4" align="center" gutterBottom sx={getTextStyles(themeMode).heading}>
                 Review Your Information
               </Typography>
-              <Typography variant="body1" align="center" paragraph sx={textStyles.body}>
+              <Typography variant="body1" align="center" paragraph sx={getTextStyles(themeMode).body}>
                 Please verify that everything is correct before proceeding.
               </Typography>
             </Grid>
@@ -902,36 +850,36 @@ const OnboardingFlow: React.FC = () => {
               }}>
                 <Grid container spacing={2}>
                   <Grid item xs={12} sm={6}>
-                    <Typography variant="subtitle2" sx={textStyles.label}>Name:</Typography>
-                    <Typography variant="body1" gutterBottom sx={textStyles.body}>{data.firstName} {data.lastName}</Typography>
+                    <Typography variant="subtitle2" sx={getTextStyles(themeMode).label}>Name:</Typography>
+                    <Typography variant="body1" gutterBottom sx={getTextStyles(themeMode).body}>{data.firstName} {data.lastName}</Typography>
                   </Grid>
                   <Grid item xs={12} sm={6}>
-                    <Typography variant="subtitle2" sx={textStyles.label}>Age:</Typography>
-                    <Typography variant="body1" gutterBottom sx={textStyles.body}>{data.age}</Typography>
+                    <Typography variant="subtitle2" sx={getTextStyles(themeMode).label}>Age:</Typography>
+                    <Typography variant="body1" gutterBottom sx={getTextStyles(themeMode).body}>{data.age}</Typography>
                   </Grid>
                   <Grid item xs={12} sm={6}>
-                    <Typography variant="subtitle2" sx={textStyles.label}>Location:</Typography>
-                    <Typography variant="body1" gutterBottom sx={textStyles.body}>
+                    <Typography variant="subtitle2" sx={getTextStyles(themeMode).label}>Location:</Typography>
+                    <Typography variant="body1" gutterBottom sx={getTextStyles(themeMode).body}>
                       {data.city}, {data.country}
                     </Typography>
                   </Grid>
                   <Grid item xs={12} sm={6}>
-                    <Typography variant="subtitle2" sx={textStyles.label}>Current SAT Score:</Typography>
-                    <Typography variant="body1" gutterBottom sx={textStyles.body}>
+                    <Typography variant="subtitle2" sx={getTextStyles(themeMode).label}>Current SAT Score:</Typography>
+                    <Typography variant="body1" gutterBottom sx={getTextStyles(themeMode).body}>
                       {data.hasSatScoreReport ? 'To be provided later' : data.satScore}
                     </Typography>
                   </Grid>
                   <Grid item xs={12} sm={6}>
-                    <Typography variant="subtitle2" sx={textStyles.label}>Target SAT Score:</Typography>
-                    <Typography variant="body1" gutterBottom sx={textStyles.body}>{data.targetSatScore}</Typography>
+                    <Typography variant="subtitle2" sx={getTextStyles(themeMode).label}>Target SAT Score:</Typography>
+                    <Typography variant="body1" gutterBottom sx={getTextStyles(themeMode).body}>{data.targetSatScore}</Typography>
                   </Grid>
                   <Grid item xs={12} sm={6}>
-                    <Typography variant="subtitle2" sx={textStyles.label}>Motivation:</Typography>
-                    <Typography variant="body1" gutterBottom sx={textStyles.body}>{data.motivation}</Typography>
+                    <Typography variant="subtitle2" sx={getTextStyles(themeMode).label}>Motivation:</Typography>
+                    <Typography variant="body1" gutterBottom sx={getTextStyles(themeMode).body}>{data.motivation}</Typography>
                   </Grid>
                   {data.scoreReport && (
                     <Grid item xs={12}>
-                      <Typography variant="subtitle2" sx={textStyles.label}>SAT Score Report:</Typography>
+                      <Typography variant="subtitle2" sx={getTextStyles(themeMode).label}>SAT Score Report:</Typography>
                       <Paper variant="outlined" sx={{ 
                         p: 2, 
                         maxHeight: '100px', 
@@ -941,7 +889,7 @@ const OnboardingFlow: React.FC = () => {
                       }}>
                         <Typography variant="body2" sx={{ 
                           whiteSpace: 'pre-wrap',
-                          ...textStyles.body,
+                          ...getTextStyles(themeMode).body,
                           fontSize: '0.85rem'
                         }}>
                           {data.scoreReport.length > 200 
@@ -961,10 +909,10 @@ const OnboardingFlow: React.FC = () => {
         return (
           <Grid container spacing={3}>
             <Grid item xs={12}>
-              <Typography variant="h4" align="center" gutterBottom sx={textStyles.heading}>
+              <Typography variant="h4" align="center" gutterBottom sx={getTextStyles(themeMode).heading}>
                 Choose Your Plan
               </Typography>
-              <Typography variant="body1" align="center" paragraph sx={textStyles.body}>
+              <Typography variant="body1" align="center" paragraph sx={getTextStyles(themeMode).body}>
                 Select the subscription plan that works best for you.
               </Typography>
             </Grid>
@@ -998,37 +946,40 @@ const OnboardingFlow: React.FC = () => {
 
   // Background style for current step
   const getBackgroundStyle = () => {
+    if (themeMode === 'light') {
+      return {
+        backgroundColor: '#fafafa',
+        minHeight: '100vh',
+        transition: 'background-color 0.3s ease',
+      };
+    }
+    
     return {
-      background: 'linear-gradient(135deg, #121212 0%, #1e3a34 100%)', // Using recommended dark theme surface color
-      backgroundSize: '200% 200%',
-      animation: 'gradient 15s ease infinite',
-      height: '100%',
+      backgroundColor: '#121212',
       minHeight: '100vh',
-      transition: 'background 0.5s ease-in-out',
-      display: 'flex',
-      flexDirection: 'column',
-      '@keyframes gradient': {
-        '0%': { backgroundPosition: '0% 50%' },
-        '50%': { backgroundPosition: '100% 50%' },
-        '100%': { backgroundPosition: '0% 50%' }
-      }
-    } as React.CSSProperties;
+      transition: 'background-color 0.3s ease',
+    };
   };
 
   if (loading) {
     return (
-      <Box 
-        sx={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
-          alignItems: 'center', 
+      <Box
+        sx={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
           justifyContent: 'center',
-          minHeight: '100vh',
-          background: 'linear-gradient(135deg, #121212 0%, #1e3a34 100%)' // Using recommended dark theme surface color
+          zIndex: 9999
         }}
       >
         <CircularProgress size={60} sx={{ color: 'rgba(136, 212, 152, 0.9)' }} />
-        <Typography variant="h6" sx={{ mt: 3, ...textStyles.heading }}>
+        <Typography variant="h6" sx={{ mt: 3, ...getTextStyles(themeMode).heading }}>
           Saving your information and preparing your custom experience...
         </Typography>
       </Box>
@@ -1036,109 +987,82 @@ const OnboardingFlow: React.FC = () => {
   }
 
   return (
-    <ThemeProvider theme={darkTheme}>
-      <Box sx={getBackgroundStyle()}>
-        <Container maxWidth="md" sx={{ py: 8 }}>
+    <Box sx={getBackgroundStyle()}>
+      <Container maxWidth="md" sx={{ py: 8 }}>
+        <animated.div style={fadeProps}>
           <Paper 
             elevation={3} 
             sx={{ 
-              p: { xs: 2, sm: 4 }, 
-              borderRadius: 2, 
-              background: 'rgba(33, 33, 33, 0.95)',
+              p: { xs: 3, md: 6 },
+              position: 'relative',
+              backgroundColor: themeMode === 'light' ? 'rgba(255, 255, 255, 0.9)' : 'rgba(30, 30, 30, 0.8)',
               backdropFilter: 'blur(10px)',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-              color: 'rgba(255, 255, 255, 0.87)'
+              borderRadius: 3,
+              border: `1px solid ${themeMode === 'light' ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)'}`
             }}
           >
-            <Stepper 
-              activeStep={activeStep} 
-              alternativeLabel
-              sx={{ mb: 4, display: { xs: 'none', md: 'flex' } }}
-            >
-              {steps.map((label: string) => (
-                <Step key={label}>
-                  <StepLabel>{label}</StepLabel>
-                </Step>
-              ))}
-            </Stepper>
-            
             {/* Mobile stepper status */}
             <Box sx={{ mb: 4, display: { xs: 'block', md: 'none' }, textAlign: 'center' }}>
-              <Typography variant="body2" sx={textStyles.body}>
+              <Typography variant="body2" sx={getTextStyles(themeMode).body}>
                 Step {activeStep + 1} of {steps.length}: {steps[activeStep]}
               </Typography>
             </Box>
-            
-            <animated.div style={fadeProps}>
-              <Box sx={{ minHeight: '300px', mb: 4 }}>
-                {getStepContent()}
-              </Box>
-            </animated.div>
-            
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', pt: 2 }}>
+
+            {/* Step content */}
+            {getStepContent()}
+
+            {/* Navigation buttons */}
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
               <Button
-                color="inherit"
                 disabled={activeStep === 0}
                 onClick={handleBack}
                 startIcon={<ArrowBackIcon />}
                 sx={{ 
-                  color: 'rgba(255, 255, 255, 0.87)',
-                  '&:hover': {
-                    backgroundColor: 'rgba(255, 255, 255, 0.08)'
-                  }
+                  visibility: activeStep === 0 ? 'hidden' : 'visible',
+                  color: getTextStyles(themeMode).secondary.color
                 }}
-                style={{ opacity: activeStep === 0 ? 0 : 1 }}
               >
                 Back
               </Button>
               
               {activeStep === steps.length - 1 ? (
-                <Button 
-                  variant="contained" 
+                <Button
+                  variant="contained"
                   onClick={handleSubmit}
+                  disabled={loading || !data.subscriptionPlan}
                   endIcon={<CheckCircleOutlineIcon />}
-                  sx={{
-                    background: 'linear-gradient(90deg, #1a936f 0%, #114b5f 100%)',
-                    color: 'rgba(255, 255, 255, 0.95)',
-                    fontWeight: 500,
-                    padding: '10px 24px',
+                  sx={{ 
+                    bgcolor: getTextStyles(themeMode).accent.color,
                     '&:hover': {
-                      background: 'linear-gradient(90deg, #114b5f 0%, #1a936f 100%)',
-                      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)'
+                      bgcolor: getTextStyles(themeMode).accent.color,
+                      opacity: 0.8
                     }
                   }}
                 >
-                  Complete & Go to Dashboard
+                  {loading ? 'Completing...' : 'Complete Setup'}
                 </Button>
               ) : (
-                <Button 
+                <Button
                   variant="contained"
                   onClick={handleNext}
+                  disabled={processingReport}
                   endIcon={<ArrowForwardIcon />}
-                  disabled={activeStep === 6 && processingReport}
-                  sx={{
-                    background: 'linear-gradient(90deg, #1a936f 0%, #114b5f 100%)',
-                    color: 'rgba(255, 255, 255, 0.95)',
-                    fontWeight: 500,
-                    padding: '10px 24px',
+                  sx={{ 
+                    bgcolor: getTextStyles(themeMode).accent.color,
                     '&:hover': {
-                      background: 'linear-gradient(90deg, #114b5f 0%, #1a936f 100%)',
-                      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)'
-                    },
-                    '&.Mui-disabled': {
-                      background: 'rgba(136, 212, 152, 0.2)',
-                      color: 'rgba(255, 255, 255, 0.38)'
+                      bgcolor: getTextStyles(themeMode).accent.color,
+                      opacity: 0.8
                     }
                   }}
                 >
-                  Next
+                  {processingReport ? 'Processing...' : 'Next'}
                 </Button>
               )}
             </Box>
           </Paper>
-        </Container>
-      </Box>
-    </ThemeProvider>
+        </animated.div>
+      </Container>
+    </Box>
   );
 };
 

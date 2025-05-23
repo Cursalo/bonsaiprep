@@ -6,9 +6,7 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: linear-gradient(135deg, #0c3b2e 0%, #18514a 100%);
   min-height: 100vh;
-  color: #f8f9fa;
   transition: background-color 0.5s ease;
 }
 
@@ -149,10 +147,6 @@ h1, h2, h3, h4, h5, h6 {
 /* Utility classes */
 .rounded-corners {
   border-radius: 8px !important;
-}
-
-.phthalo-gradient {
-  background: linear-gradient(135deg, #0c3b2e 0%, #18514a 100%) !important;
 }
 
 .shadow-soft {
