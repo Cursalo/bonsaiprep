@@ -263,7 +263,7 @@ export async function GET(request: Request) {
   try {
     // 1. Ejecutar MCP tools en paralelo
     const [braveResults, context7Updates, githubRepos] = await Promise.allSettled([
-      braveSearch('artificial intelligence trends last week'),
+      braveSearch('artificial intelligence trends last 7 days'),
       syncFrameworkDocs(), // Context7 MCP
       fetchTrendingRepos() // fetch.http MCP
     ])
@@ -297,7 +297,7 @@ export async function GET(request: Request) {
 ```
 
 ### Content Integration Flow
-1. **Nightly Cron** ejecuta múltiples MCP tools
+1. **Weekly Cron** ejecuta múltiples MCP tools (Domingos 02:00 UTC)
 2. **Context7 Sync** obtiene docs actualizadas de frameworks
 3. **AI Processing** resume y adapta todo el contenido
 4. **Database Update** inserta nuevos ejemplos/citas versionados

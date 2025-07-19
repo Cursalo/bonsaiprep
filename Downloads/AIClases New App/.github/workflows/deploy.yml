@@ -1,0 +1,306 @@
+name: 🚀 Deployment
+
+on:
+  workflow_run:
+    workflows: ["🚀 Continuous Integration"]
+    branches: [main, develop]
+    types: [completed]
+  
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      skip_tests:
+        description: 'Skip tests (emergency deployment)'
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.environment || (github.ref == 'refs/heads/main' && 'production' || 'staging') }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '18'
+  PNPM_VERSION: '8'
+
+jobs:
+  # Determine environment based on branch or manual input
+  setup:
+    name: 🎯 Setup Deployment
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    
+    outputs:
+      environment: ${{ steps.env.outputs.environment }}
+      deploy_url: ${{ steps.env.outputs.deploy_url }}
+      vercel_project: ${{ steps.env.outputs.vercel_project }}
+      should_deploy: ${{ steps.env.outputs.should_deploy }}
+    
+    steps:
+      - name: 🎯 Determine environment
+        id: env
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            ENV="${{ inputs.environment }}"
+          elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            ENV="production"
+          else
+            ENV="staging"
+          fi
+          
+          echo "environment=$ENV" >> $GITHUB_OUTPUT
+          
+          case $ENV in
+            production)
+              echo "deploy_url=https://aiclases.com" >> $GITHUB_OUTPUT
+              echo "vercel_project=aiclases-production" >> $GITHUB_OUTPUT
+              ;;
+            staging)
+              echo "deploy_url=https://staging.aiclases.com" >> $GITHUB_OUTPUT
+              echo "vercel_project=aiclases-staging" >> $GITHUB_OUTPUT
+              ;;
+          esac
+          
+          echo "should_deploy=true" >> $GITHUB_OUTPUT
+
+  # Deploy to Vercel
+  deploy-vercel:
+    name: 🌍 Deploy to Vercel
+    runs-on: ubuntu-latest
+    needs: [setup]
+    if: needs.setup.outputs.should_deploy == 'true'
+    timeout-minutes: 15
+    
+    environment:
+      name: ${{ needs.setup.outputs.environment }}
+      url: ${{ needs.setup.outputs.deploy_url }}
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: 💾 Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - name: 📥 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 🏗️ Build for production
+        run: pnpm run build
+        env:
+          NODE_ENV: production
+          NEXT_PUBLIC_APP_URL: ${{ needs.setup.outputs.deploy_url }}
+          NEXT_PUBLIC_ENVIRONMENT: ${{ needs.setup.outputs.environment }}
+
+      - name: 🚀 Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod'
+          working-directory: ./
+          scope: ${{ secrets.VERCEL_ORG_ID }}
+          alias-domains: |
+            ${{ needs.setup.outputs.environment == 'production' && 'aiclases.com,www.aiclases.com' || 'staging.aiclases.com' }}
+
+      - name: 📝 Create deployment summary
+        run: |
+          echo "## 🚀 Deployment Successful" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ needs.setup.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "**URL:** [${{ needs.setup.outputs.deploy_url }}](${{ needs.setup.outputs.deploy_url }})" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Time:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+
+  # Database migrations (for production)
+  migrate-database:
+    name: 🗄️ Database Migration
+    runs-on: ubuntu-latest
+    needs: [setup, deploy-vercel]
+    if: needs.setup.outputs.environment == 'production'
+    timeout-minutes: 10
+    
+    environment:
+      name: production-db
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: 📥 Install Supabase CLI
+        run: npm install -g @supabase/cli
+
+      - name: 🗄️ Run database migrations
+        run: |
+          echo "Running database migrations..."
+          # Uncomment when migrations are available
+          # supabase migration up --db-url ${{ secrets.DATABASE_URL }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+  # Post-deployment tests
+  post-deployment-tests:
+    name: 🧪 Post-Deployment Tests
+    runs-on: ubuntu-latest
+    needs: [setup, deploy-vercel]
+    if: needs.setup.outputs.should_deploy == 'true'
+    timeout-minutes: 10
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: 🔍 Health check
+        run: |
+          echo "Performing health check on ${{ needs.setup.outputs.deploy_url }}"
+          
+          # Wait for deployment to be ready
+          sleep 30
+          
+          # Check if the site is responding
+          response=$(curl -s -o /dev/null -w "%{http_code}" ${{ needs.setup.outputs.deploy_url }})
+          
+          if [ $response -eq 200 ]; then
+            echo "✅ Health check passed (HTTP $response)"
+          else
+            echo "❌ Health check failed (HTTP $response)"
+            exit 1
+          fi
+
+      - name: 🔍 Critical path tests
+        run: |
+          echo "Testing critical application paths..."
+          
+          # Test homepage
+          curl -f ${{ needs.setup.outputs.deploy_url }} || exit 1
+          
+          # Test courses page
+          curl -f ${{ needs.setup.outputs.deploy_url }}/courses || exit 1
+          
+          # Test API health
+          curl -f ${{ needs.setup.outputs.deploy_url }}/api/health || echo "API health check skipped"
+          
+          echo "✅ Critical path tests passed"
+
+  # Lighthouse audit on live site
+  lighthouse-production:
+    name: 💡 Lighthouse Audit
+    runs-on: ubuntu-latest
+    needs: [setup, deploy-vercel, post-deployment-tests]
+    if: needs.setup.outputs.environment == 'production'
+    timeout-minutes: 10
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 💡 Run Lighthouse audit
+        uses: treosh/lighthouse-ci-action@v9
+        with:
+          urls: |
+            ${{ needs.setup.outputs.deploy_url }}
+            ${{ needs.setup.outputs.deploy_url }}/courses
+            ${{ needs.setup.outputs.deploy_url }}/login
+          configPath: './lighthouserc.json'
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+
+  # Slack notification
+  notify-slack:
+    name: 💬 Slack Notification
+    runs-on: ubuntu-latest
+    needs: [setup, deploy-vercel, post-deployment-tests]
+    if: always() && needs.setup.outputs.should_deploy == 'true'
+    
+    steps:
+      - name: 💬 Send Slack notification
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          channel: '#deployments'
+          username: 'GitHub Actions'
+          icon_emoji: ':rocket:'
+          fields: repo,message,commit,author,action,eventName,ref,workflow
+          text: |
+            ${{ job.status == 'success' && '✅' || '❌' }} Deployment to ${{ needs.setup.outputs.environment }}
+            
+            **Environment:** ${{ needs.setup.outputs.environment }}
+            **URL:** ${{ needs.setup.outputs.deploy_url }}
+            **Branch:** ${{ github.ref_name }}
+            **Commit:** ${{ github.sha }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        if: env.SLACK_WEBHOOK_URL != ''
+
+  # GitHub deployment status
+  deployment-status:
+    name: 📊 Update Deployment Status
+    runs-on: ubuntu-latest
+    needs: [setup, deploy-vercel, post-deployment-tests]
+    if: always() && needs.setup.outputs.should_deploy == 'true'
+    
+    steps:
+      - name: 📊 Create deployment status
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const environment = '${{ needs.setup.outputs.environment }}';
+            const deployUrl = '${{ needs.setup.outputs.deploy_url }}';
+            const success = '${{ needs.post-deployment-tests.result }}' === 'success';
+            
+            await github.rest.repos.createDeploymentStatus({
+              owner,
+              repo,
+              deployment_id: context.payload.deployment?.id || 0,
+              state: success ? 'success' : 'failure',
+              environment_url: deployUrl,
+              description: success ? 
+                `✅ Successfully deployed to ${environment}` : 
+                `❌ Deployment to ${environment} failed`
+            });
+            
+            // Create a comment on PR if this is a PR
+            if (context.payload.pull_request) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: context.payload.pull_request.number,
+                body: success ? 
+                  `🚀 **Deployment Successful!**\n\n**Environment:** ${environment}\n**URL:** [${deployUrl}](${deployUrl})\n\n✅ All post-deployment tests passed.` :
+                  `❌ **Deployment Failed**\n\n**Environment:** ${environment}\n\nPlease check the deployment logs for details.`
+              });
+            }

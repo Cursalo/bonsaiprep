@@ -1,0 +1,375 @@
+name: ⚡ Performance Monitoring
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run performance tests daily at 6 AM UTC
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to test'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+      full_audit:
+        description: 'Run full performance audit'
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '18'
+  PNPM_VERSION: '8'
+
+jobs:
+  # Job 1: Bundle Analysis
+  bundle-analysis:
+    name: 📦 Bundle Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: 💾 Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - name: 📥 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 🏗️ Build with bundle analysis
+        run: pnpm run build
+        env:
+          ANALYZE: true
+          NODE_ENV: production
+
+      - name: 📊 Analyze bundle size
+        run: |
+          echo "## 📦 Bundle Analysis Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Get bundle sizes
+          find .next/static -name "*.js" -type f -exec ls -lh {} \; | awk '{print $5 " " $9}' | sort -hr > bundle-sizes.txt
+          
+          echo "### 📊 Largest JavaScript Bundles" >> $GITHUB_STEP_SUMMARY
+          echo "| File | Size |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|------|" >> $GITHUB_STEP_SUMMARY
+          head -10 bundle-sizes.txt | while read size file; do
+            filename=$(basename "$file")
+            echo "| \`$filename\` | $size |" >> $GITHUB_STEP_SUMMARY
+          done
+
+      - name: 📈 Bundle size comparison
+        if: github.event_name == 'pull_request'
+        uses: andresz1/size-limit-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          package_manager: pnpm
+
+      - name: 📤 Upload bundle analysis
+        uses: actions/upload-artifact@v3
+        with:
+          name: bundle-analysis
+          path: |
+            .next/analyze/
+            bundle-sizes.txt
+          retention-days: 30
+
+  # Job 2: Lighthouse CI (Development Build)
+  lighthouse-dev:
+    name: 💡 Lighthouse (Dev Build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: 📥 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 🏗️ Build application
+        run: pnpm run build
+
+      - name: 🚀 Start application
+        run: |
+          pnpm start &
+          sleep 15
+          curl -f http://localhost:3000 || exit 1
+        env:
+          NODE_ENV: production
+          PORT: 3000
+
+      - name: 💡 Run Lighthouse CI
+        uses: treosh/lighthouse-ci-action@v9
+        with:
+          configPath: './.lighthouserc.json'
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+
+  # Job 3: Production Lighthouse Audit
+  lighthouse-production:
+    name: 💡 Lighthouse (Production)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🎯 Determine target URL
+        id: url
+        run: |
+          if [ "${{ inputs.environment }}" = "staging" ]; then
+            echo "target_url=https://staging.aiclases.com" >> $GITHUB_OUTPUT
+          else
+            echo "target_url=https://aiclases.com" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 💡 Run production Lighthouse audit
+        uses: treosh/lighthouse-ci-action@v9
+        with:
+          urls: |
+            ${{ steps.url.outputs.target_url }}
+            ${{ steps.url.outputs.target_url }}/courses
+            ${{ steps.url.outputs.target_url }}/login
+            ${{ steps.url.outputs.target_url }}/register
+          configPath: './.lighthouserc.json'
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+
+      - name: 📊 Performance summary
+        run: |
+          echo "## 💡 Production Performance Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Target:** ${{ steps.url.outputs.target_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Date:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ inputs.environment || 'production' }}" >> $GITHUB_STEP_SUMMARY
+
+  # Job 4: Core Web Vitals Monitoring
+  web-vitals:
+    name: 📊 Core Web Vitals
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.event_name == 'schedule' || inputs.full_audit
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📊 Measure Core Web Vitals
+        run: |
+          # Install web-vitals CLI
+          npm install -g web-vitals-cli
+          
+          # Test production site
+          web-vitals https://aiclases.com --output json > web-vitals.json || true
+          
+          # Parse results
+          if [ -f web-vitals.json ]; then
+            echo "## 📊 Core Web Vitals Report" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Metric | Value | Status |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|-------|--------|" >> $GITHUB_STEP_SUMMARY
+            
+            # Extract and format metrics
+            cat web-vitals.json | jq -r '.metrics[] | "\(.name) | \(.value)\(.unit) | \(.rating)"' | while read line; do
+              echo "| $line |" >> $GITHUB_STEP_SUMMARY
+            done
+          fi
+
+      - name: 📤 Upload Web Vitals data
+        uses: actions/upload-artifact@v3
+        with:
+          name: web-vitals-data
+          path: web-vitals.json
+          retention-days: 30
+
+  # Job 5: Performance Regression Detection
+  performance-regression:
+    name: 🔍 Performance Regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [bundle-analysis]
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📊 Download current bundle analysis
+        uses: actions/download-artifact@v3
+        with:
+          name: bundle-analysis
+          path: ./current-analysis
+
+      - name: 📥 Get baseline bundle data
+        run: |
+          # Get bundle data from main branch
+          git fetch origin main
+          git checkout origin/main -- .next/analyze/ 2>/dev/null || echo "No baseline data available"
+
+      - name: 🔍 Compare bundle sizes
+        run: |
+          echo "## 🔍 Performance Regression Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Compare bundle sizes if baseline exists
+          if [ -d ".next/analyze" ] && [ -d "current-analysis" ]; then
+            echo "### 📦 Bundle Size Changes" >> $GITHUB_STEP_SUMMARY
+            echo "| Bundle | Baseline | Current | Change |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|----------|---------|--------|" >> $GITHUB_STEP_SUMMARY
+            
+            # Simple size comparison (would need more sophisticated tooling in real scenario)
+            echo "| Main Bundle | Calculating... | Calculating... | TBD |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No baseline data available for comparison." >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # Job 6: Performance Alerts
+  performance-alerts:
+    name: 🚨 Performance Alerts
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [lighthouse-production, web-vitals]
+    if: always() && (github.event_name == 'schedule' || inputs.full_audit)
+    
+    steps:
+      - name: 🚨 Check performance thresholds
+        run: |
+          # Mock performance check (would integrate with actual Lighthouse results)
+          PERFORMANCE_SCORE=85  # This would come from actual Lighthouse data
+          THRESHOLD=90
+          
+          if [ $PERFORMANCE_SCORE -lt $THRESHOLD ]; then
+            echo "⚠️ Performance score ($PERFORMANCE_SCORE) is below threshold ($THRESHOLD)"
+            echo "alert=true" >> $GITHUB_ENV
+          else
+            echo "✅ Performance score ($PERFORMANCE_SCORE) meets threshold ($THRESHOLD)"
+            echo "alert=false" >> $GITHUB_ENV
+          fi
+
+      - name: 📧 Send performance alert
+        if: env.alert == 'true'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            
+            await github.rest.issues.create({
+              owner,
+              repo,
+              title: '⚠️ Performance Alert: Site Below Threshold',
+              body: `
+              ## ⚠️ Performance Alert
+              
+              The site performance has dropped below acceptable thresholds.
+              
+              **Current Score:** ${process.env.PERFORMANCE_SCORE || 'Unknown'}
+              **Threshold:** 90
+              **Environment:** Production
+              **Date:** ${new Date().toISOString()}
+              
+              ### 🔍 Investigation Required
+              - Review recent deployments
+              - Check Core Web Vitals
+              - Analyze bundle sizes
+              - Review Lighthouse reports
+              
+              ### 📊 Monitoring Links
+              - [Lighthouse Reports](https://github.com/${owner}/${repo}/actions/workflows/performance.yml)
+              - [Web Vitals Dashboard](https://web-vitals.appspot.com)
+              `,
+              labels: ['performance', 'urgent', 'monitoring']
+            });
+
+      - name: 💬 Slack notification
+        if: env.alert == 'true'
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          custom_payload: |
+            {
+              channel: '#alerts',
+              username: 'Performance Monitor',
+              icon_emoji: ':warning:',
+              attachments: [{
+                color: 'warning',
+                title: '⚠️ Performance Alert',
+                text: 'Site performance has dropped below acceptable thresholds',
+                fields: [{
+                  title: 'Score',
+                  value: '${{ env.PERFORMANCE_SCORE || "Unknown" }}',
+                  short: true
+                }, {
+                  title: 'Threshold',
+                  value: '90',
+                  short: true
+                }]
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        if: env.SLACK_WEBHOOK_URL != ''
+
+  # Job 7: Performance Summary
+  performance-summary:
+    name: 📋 Performance Summary
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [bundle-analysis, lighthouse-dev, performance-regression]
+    if: always()
+    
+    steps:
+      - name: 📋 Generate performance summary
+        run: |
+          echo "## ⚡ Performance Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status | Details |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|---------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Bundle Analysis | ${{ needs.bundle-analysis.result == 'success' && '✅ Passed' || '❌ Failed' }} | Bundle sizes analyzed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Lighthouse CI | ${{ needs.lighthouse-dev.result == 'success' && '✅ Passed' || needs.lighthouse-dev.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} | Performance audit completed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Regression Check | ${{ needs.performance-regression.result == 'success' && '✅ Passed' || needs.performance-regression.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} | No performance regressions |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Date:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY

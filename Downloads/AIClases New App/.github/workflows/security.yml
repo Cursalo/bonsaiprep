@@ -1,0 +1,307 @@
+name: 🔒 Security & Compliance
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run security scans daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '18'
+  PNPM_VERSION: '8'
+
+jobs:
+  # Job 1: Dependency vulnerability scanning
+  dependency-scan:
+    name: 🔍 Dependency Vulnerabilities
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: 📥 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 🔍 Run npm audit
+        run: |
+          echo "## 🔍 NPM Audit Results" >> $GITHUB_STEP_SUMMARY
+          pnpm audit --audit-level moderate --format json > audit-results.json || true
+          
+          # Parse and display results
+          cat audit-results.json | jq -r '
+            "**Total vulnerabilities:** " + (.vulnerabilities | length | tostring) + "\n" +
+            "**Critical:** " + ([.vulnerabilities[] | select(.severity == "critical")] | length | tostring) + "\n" +
+            "**High:** " + ([.vulnerabilities[] | select(.severity == "high")] | length | tostring) + "\n" +
+            "**Moderate:** " + ([.vulnerabilities[] | select(.severity == "moderate")] | length | tostring) + "\n" +
+            "**Low:** " + ([.vulnerabilities[] | select(.severity == "low")] | length | tostring)
+          ' >> $GITHUB_STEP_SUMMARY || echo "No vulnerabilities found" >> $GITHUB_STEP_SUMMARY
+
+      - name: 🔍 Check for high/critical vulnerabilities
+        run: |
+          HIGH_VULNS=$(pnpm audit --audit-level high --format json | jq '.vulnerabilities | length' 2>/dev/null || echo "0")
+          if [ "$HIGH_VULNS" -gt 0 ]; then
+            echo "❌ Found $HIGH_VULNS high/critical vulnerabilities"
+            pnpm audit --audit-level high
+            exit 1
+          else
+            echo "✅ No high/critical vulnerabilities found"
+          fi
+
+  # Job 2: Secret scanning
+  secret-scan:
+    name: 🔐 Secret Scanning
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🔐 Run TruffleHog secret scan
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --debug --only-verified
+
+      - name: 🔍 Custom secret patterns
+        run: |
+          echo "🔍 Scanning for custom patterns..."
+          
+          # Check for common secret patterns
+          if grep -r "AKIA[0-9A-Z]\{16\}" . --exclude-dir=.git --exclude-dir=node_modules; then
+            echo "❌ Found potential AWS Access Key"
+            exit 1
+          fi
+          
+          if grep -r "sk_live_[0-9a-zA-Z]\{24\}" . --exclude-dir=.git --exclude-dir=node_modules; then
+            echo "❌ Found potential Stripe Live Key"
+            exit 1
+          fi
+          
+          if grep -r "xoxb-[0-9]\{11\}-[0-9]\{11\}-[0-9a-zA-Z]\{24\}" . --exclude-dir=.git --exclude-dir=node_modules; then
+            echo "❌ Found potential Slack Bot Token"
+            exit 1
+          fi
+          
+          echo "✅ No custom secrets found"
+
+  # Job 3: Static Application Security Testing (SAST)
+  sast-scan:
+    name: 🛡️ SAST Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🛡️ Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: javascript
+          config-file: ./.github/codeql/codeql-config.yml
+
+      - name: 🏗️ Autobuild
+        uses: github/codeql-action/autobuild@v2
+
+      - name: 🛡️ Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+        with:
+          category: "/language:javascript"
+
+      - name: 🔍 ESLint Security Rules
+        run: |
+          npm install -g eslint eslint-plugin-security
+          eslint . --ext .js,.jsx,.ts,.tsx --config .eslintrc.security.js --format json > eslint-security.json || true
+          
+          # Check for security issues
+          ISSUES=$(cat eslint-security.json | jq '[.[] | select(.messages[] | .severity == 2)] | length')
+          if [ "$ISSUES" -gt 0 ]; then
+            echo "❌ Found $ISSUES security issues"
+            cat eslint-security.json | jq '.[] | select(.messages[] | .severity == 2)'
+            exit 1
+          else
+            echo "✅ No security issues found"
+          fi
+
+  # Job 4: License compliance
+  license-check:
+    name: 📜 License Compliance
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: 📥 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 📜 Check licenses
+        run: |
+          npx license-checker --json > licenses.json
+          
+          # Check for problematic licenses
+          PROBLEMATIC=$(cat licenses.json | jq -r 'to_entries[] | select(.value.licenses | test("GPL|AGPL|LGPL")) | .key')
+          
+          if [ -n "$PROBLEMATIC" ]; then
+            echo "❌ Found problematic licenses:"
+            echo "$PROBLEMATIC"
+            exit 1
+          else
+            echo "✅ All licenses are compliant"
+          fi
+
+      - name: 📋 Generate license report
+        run: |
+          echo "## 📜 License Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          npx license-checker --summary >> $GITHUB_STEP_SUMMARY
+
+  # Job 5: Docker security scan
+  docker-scan:
+    name: 🐳 Docker Security
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.event_name != 'schedule'
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🐳 Build Docker image
+        run: |
+          docker build -t aiclases:${{ github.sha }} .
+
+      - name: 🔍 Run Trivy container scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'aiclases:${{ github.sha }}'
+          format: 'sarif'
+          output: 'trivy-docker.sarif'
+
+      - name: 📤 Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-docker.sarif'
+
+  # Job 6: Infrastructure as Code security
+  iac-scan:
+    name: 🏗️ IaC Security
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔍 Run Checkov scan
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: .
+          framework: dockerfile,secrets,github_actions
+          output_format: sarif
+          output_file_path: reports/checkov.sarif
+
+      - name: 📤 Upload Checkov scan results
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: reports/checkov.sarif
+
+  # Job 7: Security monitoring
+  security-monitoring:
+    name: 📊 Security Monitoring
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [dependency-scan, secret-scan, sast-scan, license-check]
+    if: always()
+    
+    steps:
+      - name: 📊 Generate security report
+        run: |
+          echo "## 🔒 Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Dependency Scan | ${{ needs.dependency-scan.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Secret Scan | ${{ needs.secret-scan.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| SAST Analysis | ${{ needs.sast-scan.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| License Check | ${{ needs.license-check.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Scan Date:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+
+      - name: 📧 Security alert notification
+        if: failure()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const title = '🚨 Security Scan Alert';
+            const body = `
+            ## 🚨 Security Scan Failed
+            
+            One or more security scans have failed in the latest commit.
+            
+            **Commit:** ${context.sha}
+            **Branch:** ${context.ref}
+            **Workflow:** ${context.workflow}
+            
+            Please review the [workflow run](${context.payload.repository.html_url}/actions/runs/${context.runId}) for details.
+            
+            **Failed Checks:**
+            ${{ needs.dependency-scan.result != 'success' && '- Dependency Scan\n' || '' }}
+            ${{ needs.secret-scan.result != 'success' && '- Secret Scan\n' || '' }}
+            ${{ needs.sast-scan.result != 'success' && '- SAST Analysis\n' || '' }}
+            ${{ needs.license-check.result != 'success' && '- License Check\n' || '' }}
+            `;
+            
+            // Create an issue for security failures
+            if (context.eventName === 'push' && context.ref === 'refs/heads/main') {
+              await github.rest.issues.create({
+                owner,
+                repo,
+                title,
+                body,
+                labels: ['security', 'urgent']
+              });
+            }
